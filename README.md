@@ -1,1 +1,1 @@
-# deep-learning-applications
+# Deep Learning Applications
