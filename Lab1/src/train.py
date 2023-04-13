@@ -112,7 +112,7 @@ def main(wb, checkpoint_dir, weight_dir, device, num_workers):
 if __name__ == "__main__":
     wab = wandb.init(
         # set the wandb project where this run will be logged
-        project="Rinse and Repeat",
+        project="DLA - Lab1",
         # group="Experiment",
         tags=[],
         resume=False,
@@ -135,7 +135,7 @@ if __name__ == "__main__":
             "weight_decay": 1e-2,
             "scheduler": "One Cycle Learning",
             "max_lr": 5e-4,
-            "num_epochs": 200,
+            "num_epochs": 2,
             "patience": 20,
 
             # run type

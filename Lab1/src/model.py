@@ -37,7 +37,7 @@ class ConvolutionalBlock(nn.Module):
                 self.sequential.append(nn.AdaptiveMaxPool2d(2))
             else:
                 if pool_type == 'convolution':
-                    self.conv1 = nn.Conv2d(in_channels=in_channels, out_channels=in_channels, ..., padding=1, bias=False)
+                    self.conv1 = nn.Conv2d(in_channels=in_channels, out_channels=in_channels, kernel_size=3, stride=2, padding=1, bias=False)
                 elif pool_type == 'kmax':
                     channels = [64, 128, 256, 512]
                     dimension = [511, 256, 128]
@@ -62,11 +62,11 @@ class ConvolutionalBlock(nn.Module):
             return self.sequential(out)
     
 
-class FullyConnectedBlock(nn.Model):
+class FullyConnectedBlock(nn.Module):
     def __init__(self, n_class):
         super(FullyConnectedBlock, self).__init__()
         self.sequential = nn.Sequential(
-            nn.Linear(2048, 1024)
+            nn.Linear(2048, 1024),
             nn.ReLu(),
             nn.Linear(1024, 1024),
             nn.ReLu(),

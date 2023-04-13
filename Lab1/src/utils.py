@@ -58,7 +58,7 @@ def get_loaders(batch_size, num_workers, training=True):
         train_ds = CIFAR10(
             root='./Dataset/',
             train=True,
-            download=True
+            download=True,
             transform=transform
         )
 
