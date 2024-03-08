@@ -1,2 +1,5 @@
-Lab1/src/__pycache__/*
+__pycache__
 .venv
+.env
+wandb
+data

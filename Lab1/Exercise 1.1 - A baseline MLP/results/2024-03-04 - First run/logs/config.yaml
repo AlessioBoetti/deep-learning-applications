@@ -1,0 +1,46 @@
+checkpoint_path: results\2024-03-04 - First run\checkpoint
+config:
+  activation: ReLU
+  architecture: MLP
+  batch_norm: true
+  batch_size: 512
+  dataset_name: MNIST
+  dropout: true
+  dropout_prob: 0.2
+  hidden_layer_sizes:
+  - 400
+  - 150
+  input_size: 784
+  lr: 0.001
+  max_lr: 0.01
+  mnist_norm: true
+  n_classes: 10
+  n_epochs: 150
+  n_hidden_layers: 2
+  optimizer_name: amsgrad
+  patience: 30
+  pretrain: false
+  scheduler: One Cycle Learning
+  train: true
+  weight_decay: 0.01
+data_dir: data
+device: cpu
+explain_gradients: false
+group: Exercise 1.1
+job_type: Train-Test
+log_file: log.txt
+log_filepath: results\2024-03-04 - First run\logs\log.txt
+logs_path: results\2024-03-04 - First run\logs
+model_path: results\2024-03-04 - First run\model
+n_workers_dataloader: 0
+name: 2024-03-04 - First run
+notes: First attempt at training a basic MLP on MNIST dataset.
+problem: None
+project: University - DLA - Lab 1
+results_dir: results
+resume: false
+seed: 1
+tags:
+- MLP
+- Base
+- March
