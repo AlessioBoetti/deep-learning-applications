@@ -107,11 +107,24 @@ class MultiLayerPerceptron(nn.Module):
         return self.layer(x) """
 
 
-def conv3x3(in_channels, out_channels, stride: int = 1, padding: int = 0, dilation: int = 1, groups: int = 1, bias: bool = True):
+def conv3x3(in_channels:int , out_channels: int, stride: int = 1, padding: int = 0, dilation: int = 1, groups: int = 1, bias: bool = True) -> nn.Conv2d:
     return nn.Conv2d(
         in_channels,
         out_channels,
         kernel_size=3,
+        stride=stride,
+        padding=padding,
+        groups=groups,
+        bias=bias,
+        dilation=dilation,
+    )
+
+
+def conv1x1(in_channels: int, out_channels: int, stride: int = 1, padding: int = 0, dilation: int = 1, groups: int = 1, bias: bool = True) -> nn.Conv2d:
+    return nn.Conv2d(
+        in_channels,
+        out_channels,
+        kernel_size=1,
         stride=stride,
         padding=padding,
         groups=groups,
