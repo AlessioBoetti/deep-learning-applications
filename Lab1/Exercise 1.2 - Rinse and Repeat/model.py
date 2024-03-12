@@ -1,4 +1,5 @@
 from typing import List, Tuple
+from collections import OrderedDict
 
 import torch
 import torch.nn as nn
@@ -8,9 +9,8 @@ import torch.nn.functional as F
 """ class BaseModel(nn.Module):
     def __init__(self):
         super().__init__()
-        self.net_name = None
         self.net = None
-    
+        self.net_name = None
 
     def load_model(self, model_path, load_pretrainer: bool = False):
         model_dict = torch.load(model_path)
@@ -28,11 +28,43 @@ import torch.nn.functional as F
     
 
     def build_pretrainer(self):
-        pass
- """
+        pass """
 
 
-class MultiLayerPerceptron(nn.Module):
+class BaseModel(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+    def _get_activation(self, activation):
+        if activation.lower() == 'relu':
+            return nn.ReLU()
+        elif activation.lower() == 'sigmoid':
+            return nn.Sigmoid()
+        elif activation.lower() == 'tanh':
+            return nn.Tanh()
+        elif activation.lower() == 'softmax':
+            return nn.Softmax(dim=1)
+        else:
+            raise NotImplementedError("Activation function '{}' is not implemented.".format(self.activation))
+    
+    def _get_pooling(self, pooling, kw):
+        if pooling.lower() == 'adaptivemaxpool':
+            return nn.AdaptiveMaxPool2d(**kw)
+        elif pooling.lower() == 'maxpool':
+            return nn.MaxPool2d(**kw)
+        else:
+            raise NotImplementedError("Activation function '{}' is not implemented.".format(pooling))
+
+
+@torch.no_grad()
+def init_weights(m):
+    # From https://pytorch.org/docs/stable/notes/modules.html#modules-as-building-blocks
+    if isinstance(m, nn.Linear):
+        nn.init.xavier_normal_(m.weight)
+        m.bias.fill_(0.0)
+
+
+class MultiLayerPerceptron(BaseModel):
     def __init__(
             self, 
             n_hidden_layers: int, 
@@ -53,168 +85,109 @@ class MultiLayerPerceptron(nn.Module):
         self.batch_norm = batch_norm
         self.dropout = True if dropout_prob else False
         self.dropout_prob = dropout_prob
-        self.last_activation
+        self.last_activation = last_activation
         self.flatten_input = flatten_input
+
+        bias = False if batch_norm else True
         
         assert n_hidden_layers == len(hidden_layer_sizes), "Number of hidden layers doesn't match with given hidden sizes."
     
         self.layers = nn.Sequential()
-        self.layers.append(nn.Linear(input_size, hidden_layer_sizes[0]))
-        for i in range(n_hidden_layers - 1):
-            self.layers.append(nn.Linear(hidden_layer_sizes[i], hidden_layer_sizes[i+1]))
+        in_dim = input_size
+        for i, hidden_dim in enumerate(hidden_layer_sizes):
+            self.layers.add_module(f'linear_{i+1}', nn.Linear(in_dim, hidden_dim, bias))
             if batch_norm:
-                self.layers.append(nn.BatchNorm1d(hidden_layer_sizes[i+1]))
-            self.layers.append(self._get_activation())
+                self.layers.add_module(f'bn_{i+1}', nn.BatchNorm1d(hidden_dim))
+            self.layers.add_module(f'act_{i+1}', self._get_activation(activation))
             if dropout_prob:
-                self.layers.append(nn.Dropout(dropout_prob))
-        self.layers.append(nn.Linear(hidden_layer_sizes[-1], output_size))
+                self.layers.add_module(f'dropout_{i+1}', nn.Dropout(dropout_prob))
+            in_dim = hidden_dim
+        self.layers.add_module(f'last_linear', nn.Linear(hidden_layer_sizes[-1], output_size, bias))
+        if last_activation:
+            self.layers.add_module('last_act', self._get_activation(last_activation))
+
+        """ self.layers = nn.Sequential()
+        self.layers.add_module('linear_0', nn.Linear(input_size, hidden_layer_sizes[0], bias))
+        for i in range(n_hidden_layers - 1):
+            self.layers.add_module(f'linear_{i+1}', nn.Linear(hidden_layer_sizes[i], hidden_layer_sizes[i+1], bias))
+            if batch_norm:
+                self.layers.add_module(f'bn_{i+1}', nn.BatchNorm1d(hidden_layer_sizes[i+1]))
+            self.layers.add_module(f'act_{i+1}', self._get_activation(activation))
+            if dropout_prob:
+                self.layers.add_module(f'dropout_{i+1}', nn.Dropout(dropout_prob))
+        self.layers.add_module(f'linear_{i+1}', nn.Linear(hidden_layer_sizes[-1], output_size, bias))
 
         if last_activation:
-            self.layers.append(self._get_activation(last_activation))
-
-    def _get_activation(self):
-        if self.activation.lower() == 'relu':
-            return nn.ReLU()
-        elif self.activation.lower() == 'sigmoid':
-            return nn.Sigmoid()
-        elif self.activation.lower() == 'tanh':
-            return nn.Tanh()
-        elif self.activation.lower() == 'softmax':
-            return nn.Softmax(dim=1)
-        else:
-            raise NotImplementedError("Activation function '{}' is not implemented.".format(self.activation))
+            self.layers.add_module('last_act', self._get_activation(last_activation)) """
 
     def forward(self, x):
         x = x.flatten(1) if self.flatten_input else x
         return self.layers(x)
 
 
-""" class FirstConvLayer(nn.Module):
-    def __init__(self, in_channels, out_channels, kernel_size, stride: int = 1, padding: int = 0, dilation: int = 1):
-        super().__init__()
-        self.layer = nn.Sequential(
-            nn.Conv2d(
-                in_channels, 
-                out_channels, 
-                kernel_size,
-                stride=stride,
-                padding=padding,
-                dilation=dilation
-            )
-        )
-
-    def forward(self, x):
-        return self.layer(x) """
-
-
-def conv3x3(in_channels:int , out_channels: int, stride: int = 1, padding: int = 0, dilation: int = 1, groups: int = 1, bias: bool = True) -> nn.Conv2d:
-    return nn.Conv2d(
-        in_channels,
-        out_channels,
-        kernel_size=3,
-        stride=stride,
-        padding=padding,
-        groups=groups,
-        bias=bias,
-        dilation=dilation,
-    )
-
-
-def conv1x1(in_channels: int, out_channels: int, stride: int = 1, padding: int = 0, dilation: int = 1, groups: int = 1, bias: bool = True) -> nn.Conv2d:
-    return nn.Conv2d(
-        in_channels,
-        out_channels,
-        kernel_size=1,
-        stride=stride,
-        padding=padding,
-        groups=groups,
-        bias=bias,
-        dilation=dilation,
-    )
-
-
-class ConvolutionalBlock(nn.Module):
-    def __init__(self, in_channels, out_channels, residual_conn, downsample, last_layer, pool_type):
+class ConvolutionalBlock(BaseModel):
+    def __init__(self, in_channels: int, out_channels: int, want_shortcut: bool, downsample: bool, last_layer: bool, pool_type: str, activation: str):
         super().__init__()
 
-        self.residual_conn = residual_conn
-        if self.residual_conn:
-            self.shortcut = nn.Sequential(
-                nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=2, bias=False),
-                nn.BatchNorm2d(out_channels)
-            )
-
-        self.layers = nn.Sequential(
-            nn.BatchNorm2d(in_channels),
-            nn.ReLU(),
-            nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=3, padding='same', bias=False),
-            nn.BatchNorm2d(out_channels),
-            nn.ReLU()
-        )
-
-        self.conv1 = nn.Conv2d(in_channels=in_channels, out_channels=in_channels,
-                               kernel_size=3, stride=1, padding=1, bias=False)
+        self.want_shortcut = want_shortcut
+        self.activation = self._get_activation(activation)
+        conv_stride = 1
+        pooling = None
+        tag = None
 
         if downsample:
             if last_layer:
-                self.residual_conn = False
-                self.layers.append(nn.AdaptiveMaxPool2d(2))
+                self.want_shortcut = False
+                pooling = 'adaptivemaxpool'
+                kw = dict(output_size=2)
+                hook = True
             else:
                 if pool_type == 'convolution':
-                    self.conv1 = nn.Conv2d(in_channels=in_channels, out_channels=in_channels,
-                                           kernel_size=3, stride=2, padding=1, bias=False)
+                    conv_stride = 2     # dimezza la grandezza della feature map
                 elif pool_type == 'kmax':
                     channels = [64, 128, 256, 512]
                     dimension = [511, 256, 128]
                     index = channels.index(in_channels)
-                    self.layers.append(nn.AdaptiveMaxPool2d(dimension[index]))
+                    pooling = 'adaptivemaxpool'
+                    kw = dict(output_size=dimension[index])
                 else:
-                    self.layers.append(nn.MaxPool2d(kernel_size=3, stride=2, padding=1))
+                    pooling = 'maxpool'
+                    kw = dict(kernel_size=3, stride=2, padding=1)
+        
+        self.block_layers = nn.Sequential(OrderedDict({
+            'conv_1': nn.Conv2d(in_channels, in_channels, kernel_size=3, stride=conv_stride, padding=1, bias=False),
+            'bn_1': nn.BatchNorm2d(in_channels),
+            'act_1': self.activation,
+            'conv_2': nn.Conv2d(in_channels, out_channels, kernel_size=3, padding='same', bias=False),
+            'bn_2': nn.BatchNorm2d(out_channels),
+            'act_2': self.activation
+        }))
+        if pooling is not None:
+            name = 'pool_hook' if hook else 'pool'
+            self.block_layers.add_module(name, self._get_pooling(pooling, kw))
+        
+        if self.want_shortcut:
+            self.shortcut = nn.Sequential(OrderedDict({
+                'projection': nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=2, bias=False),
+                'bn': nn.BatchNorm2d(out_channels)
+            }))
 
-        self.relu = nn.ReLU()
+        # self.relu = nn.ReLU()
 
     def forward(self, x):
-        if self.residual_conn:
+        if self.want_shortcut:
             short = x
-            out = self.conv1(x)
-            out = self.layers(out)
+            out = self.block_layers(x)
             if out.shape != short.shape:
                 short = self.shortcut(short)
-            out = self.relu(short + out)
+            out = self.activation(short + out)  # self.relu(short + out)
             return out
         else:
-            out = self.conv1(x)
-            return self.layers(out)
+            return self.block_layers(x)
 
 
-class FullyConnectedBlock(nn.Module):
-    def __init__(self, 
-            n_hidden_layers: int, 
-            input_size: int, 
-            hidden_layer_sizes: List[int], 
-            output_size: int, 
-            activation: str, 
-            batch_norm: bool = False, 
-            dropout_prob: float = None,
-            last_activation: str = None,
-            flatten_input: bool = False
-        ):
-        super().__init__(
-            self, 
-            n_hidden_layers, 
-            input_size, 
-            hidden_layer_sizes, 
-            output_size, 
-            activation, 
-            batch_norm, 
-            dropout_prob,
-            last_activation,
-            flatten_input
-        )
-
-
-class ConvolutionalNeuralNetworks(nn.Module):
-    def __init__(self, depth, n_classes, want_shortcut, pool_type):
+class ConvolutionalNeuralNetwork(BaseModel):
+    def __init__(self, depth: int, n_classes: int, want_shortcut: bool, pool_type: str, activation: str, fc_activation: str):
         super().__init__()
         channels = [64, 128, 256, 512]
         if depth == 9:
@@ -226,42 +199,35 @@ class ConvolutionalNeuralNetworks(nn.Module):
         else:
             num_conv_block = [6, 6, 6, 6]
 
-        self.layers = nn.Sequential(
-            nn.Conv2d(in_channels=3, out_channels=64, kernel_size=3),
-        )
+        self.conv_net = nn.Sequential(OrderedDict({
+            'init_conv': nn.Conv2d(in_channels=3, out_channels=64, kernel_size=3)
+        }))
 
-        last_layer = False
-
-        for x in range(len(num_conv_block)):    # Per ogni sezione della rete
+        layer_counter = 0
+        for x in range(len(num_conv_block)):    # Per ogni stadio della rete
             for i in range(num_conv_block[x]):  # Per ogni blocco dello stadio
+                layer_counter += 1
                 if num_conv_block[x] - 1 == i:  # Se siamo all'ultimo blocco dello stadio
                     if len(num_conv_block) - 1 == x:    # Se siamo all'ultimo stadio (e quindi all'ultimo blocco dell'ultimo stadio)
-                        last_layer = True
-                        self.layers.append(
-                            ConvolutionalBlock(channels[x], channels[x], want_shortcut, True, last_layer, pool_type))
+                        self.conv_net.add_module(f'conv_block_{layer_counter}', ConvolutionalBlock(channels[x], channels[x], want_shortcut, True, True, pool_type, activation))
                     else:
-                        self.layers.append(ConvolutionalBlock(channels[x], channels[x] * 2,
-                                                                  want_shortcut, True, last_layer, pool_type))
+                        self.conv_net.add_module(f'conv_block_{layer_counter}', ConvolutionalBlock(channels[x], channels[x] * 2, want_shortcut, True, False, pool_type, activation))
                 else:
-                    self.layers.append(ConvolutionalBlock(channels[x], channels[x],
-                                                              want_shortcut, False, last_layer, pool_type))
+                    self.conv_net.add_module(f'conv_block_{layer_counter}', ConvolutionalBlock(channels[x], channels[x], want_shortcut, False, False, pool_type, activation))
 
-        self.fc = FullyConnectedBlock(
+        self.fc = MultiLayerPerceptron(
             n_hidden_layers=2, 
             input_size=2048, 
-            hidden_layer_sizes=[1024,1024], 
+            hidden_layer_sizes=[1024, 1024], 
             output_size=n_classes, 
-            activation='relu', 
+            activation=fc_activation, 
             batch_norm=True, 
             dropout_prob=0, 
             last_activation=None
         )
 
     def forward(self, x):
-        x = self.layers(x)
+        x = self.conv_net(x)
         x = x.view(x.size(0), -1)
         x = self.fc(x)
         return x
-    
-
-

@@ -1,17 +1,21 @@
 import os
-from typing import List
 import time
-
+import copy
+from typing import List
+from collections import OrderedDict
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.cm as mpl_color_map
 from tqdm import tqdm
+from datetime import datetime
 from PIL import Image
 
 import torch
 import torchmetrics
-from torch.utils.data import DataLoader
 import torch.optim as optim
+import torch.nn.functional as F
 import torchvision.transforms as T
+from torch.utils.data import DataLoader
 from torchvision.datasets import MNIST
 
 
@@ -74,6 +78,7 @@ def train(
     train_start_time = time.time()
     total_batches_running = 0
     total_batches = len(loader)
+    model = model.to(device)
 
     for epoch in range(start, n_epochs):
         model.train()
@@ -120,7 +125,7 @@ def train(
                 if epoch in lr_milestones:
                     logger.info('  LR scheduler: new learning rate is %g' % float(scheduler.get_lr()[0]))
         
-        logger.info('  Epoch {}/{}'.format(epoch + 1, n_epochs))
+        logger.info('Epoch {}/{}'.format(epoch + 1, n_epochs))
         logger.info('  Epoch Train Time: {:.3f}'.format(epoch_time))
         logger.info('  Epoch Train Loss: {:.8f}'.format(epoch_loss_norm))
         for metric, value in epoch_metrics.items():
@@ -143,12 +148,12 @@ def train(
         if val_loader:
             val_loss_norm, val_metrics, val_time, val_n_batches, _ = evaluate(val_loader, model, criterion, metrics, device, logger, validation=True)
             
-            wb_log |= {
+            wb_log.update({
                 'val_loss': val_loss_norm,
                 'val_accuracy': val_metrics['MulticlassAccuracy'],
                 'val_precision': val_metrics['MulticlassPrecision'],
                 'val_recall': val_metrics['MulticlassRecall']
-            }
+            })
 
             if patience:
                 # Save best model
@@ -171,10 +176,10 @@ def train(
                     
                     save_checkpoint(best_checkpoint, cfg['model_path'])
 
-                checkpoint |= {
+                checkpoint.update({
                     "max_accuracy": getattr(patience, 'baseline'),
                     "count": getattr(patience, 'count'),
-                }
+                })
 
         wb.log(wb_log)            
 
@@ -194,6 +199,7 @@ def train(
         'total_batches': total_batches,
         'total_epochs': n_epochs,
         'train_time': train_time,
+        'h-m-s_train_time': str(datetime.timedelta(seconds=train_time)),
         'early_stopping': True if patience else False,
         'best_model_epoch': best_model_epoch if patience else epoch,
         'best_model_train_loss': best_model_train_loss if patience else epoch_loss_norm,
@@ -206,7 +212,7 @@ def train(
         'last_epoch_train_recall':  epoch_metrics['MulticlassRecall'],
     }
     if val_loader:
-        train_results |= {
+        train_results.update({
             'best_model_val_loss': best_model_val_loss if patience else val_loss_norm,
             'last_epoch_val_loss': val_loss_norm,
             'best_model_val_accuracy': best_model_val_accuracy if patience else val_metrics['MulticlassAccuracy'],
@@ -215,7 +221,7 @@ def train(
             'last_epoch_val_precision':  val_metrics['MulticlassPrecision'],
             'best_model_val_recall': best_model_val_recall if patience else val_metrics['MulticlassRecall'],
             'last_epoch_val_recall':  val_metrics['MulticlassRecall'],
-        }
+        })
 
     return model, train_results
 
@@ -436,11 +442,9 @@ class VanillaBackprop():
     def __init__(self, model):
         self.model = model
         self.gradients = None
-        # Put model in evaluation mode
         self.model.eval()
         # Hook the first layer to get the gradient
         self.hook_layers()
-
 
     def hook_layers(self):
         def hook_function(module, grad_in, grad_out):
@@ -450,10 +454,9 @@ class VanillaBackprop():
         first_layer = list(self.model.features._modules.items())[0][1]
         first_layer.register_backward_hook(hook_function)
 
-
-    def generate_gradients(self, input_image, target_class):
+    def generate_gradients(self, input_img, target_class):
         # Forward
-        model_output = self.model(input_image)
+        model_output = self.model(input_img)
         # Zero grads
         self.model.zero_grad()
         # Target for backprop
@@ -465,3 +468,174 @@ class VanillaBackprop():
         # [0] to get rid of the first channel (1,3,224,224)
         gradients_as_arr = self.gradients.data.numpy()[0]
         return gradients_as_arr
+
+
+def apply_colormap_on_image(org_im, activation, colormap_name):
+    """
+        Apply heatmap on image
+    Args:
+        org_img (PIL img): Original image
+        activation_map (numpy arr): Activation map (grayscale) 0-255
+        colormap_name (str): Name of the colormap
+    """
+    # Get colormap
+    color_map = mpl_color_map.get_cmap(colormap_name)
+    no_trans_heatmap = color_map(activation)
+    # Change alpha channel in colormap to make sure original image is displayed
+    heatmap = copy.copy(no_trans_heatmap)
+    heatmap[:, :, 3] = 0.4
+    heatmap = Image.fromarray((heatmap*255).astype(np.uint8))
+    no_trans_heatmap = Image.fromarray((no_trans_heatmap*255).astype(np.uint8))
+
+    # Apply heatmap on image
+    heatmap_on_image = Image.new("RGBA", org_im.size)
+    heatmap_on_image = Image.alpha_composite(heatmap_on_image, org_im.convert('RGBA'))
+    heatmap_on_image = Image.alpha_composite(heatmap_on_image, heatmap)
+    return no_trans_heatmap, heatmap_on_image
+
+
+def save_class_activation_images(org_img, activation_map, filepath):
+    """
+        Saves cam activation map and activation map on the original image
+
+    Args:
+        org_img (PIL img): Original image
+        activation_map (numpy arr): Activation map (grayscale) 0-255
+        filepath (str): File path of the exported image
+    """
+    # Grayscale activation map
+    heatmap, heatmap_on_image = apply_colormap_on_image(org_img, activation_map, 'hsv')
+    save_image(heatmap, filepath + '_heatmap.png')
+    save_image(heatmap_on_image, filepath + '_on_image.png')
+    save_image(activation_map, filepath + '_grayscale.png')
+
+
+class ClassActivationMapping_ORG:
+    # From https://github.com/zhoubolei/CAM/blob/master/pytorch_CAM.py
+    def __init__(self, model):
+        self.model = model
+        self.features_blobs = []
+        # Put model in evaluation mode
+        self.model.eval()
+        # Hook the first layer to get the gradient
+        self.hook_layers()
+    
+    def hook_layers(self):
+        def hook_function(module, input, output):
+            self.features_blobs.append(output.data.cpu().numpy())
+
+        # Register hook to the first layer
+        last_layer = list(self.model.features._modules.items())[-1][1]   # Originally [0][1]
+        last_layer.register_forward_hook(hook_function)
+    
+    def return_cam(feature_conv, weight_softmax, class_idx):
+        # generate the class activation maps upsample to 256x256
+        size_upsample = (256, 256)
+        bz, nc, h, w = feature_conv.shape
+        output_cam = []
+        for idx in class_idx:
+            cam = weight_softmax[idx].dot(feature_conv.reshape((nc, h*w)))
+            cam = cam.reshape(h, w)
+            cam = cam - np.min(cam)
+            cam_img = cam / np.max(cam)
+            cam_img = np.uint8(255 * cam_img)
+            # output_cam.append(cv2.resize(cam_img, size_upsample))
+            output_cam.append(cam_img)
+        return output_cam
+    
+    def generate_cam(self, input_img):
+        params = list(self.model.parameters())
+        weight_softmax = np.squeeze(params[-2].data.numpy())
+        logit = self.model(input_img)
+        h_x = F.softmax(logit, dim=1).data.squeeze()
+        probs, idx = h_x.sort(0, True)
+        probs = probs.numpy()
+        idx = idx.numpy()
+        cams = self.return_cam(self.features_blobs[0], weight_softmax, [idx[0]])
+        return cams
+
+
+class ClassActivationMapping:
+    # From https://github.com/utkuozbulak/pytorch-cnn-visualizations/blob/master/src/gradcam.py
+    def __init__(self, model, target_layer):
+        self.model = model
+        self.model.eval()
+        # self.extractor = CamExtractor(self.model, target_layer)
+        self.gradients = None
+        self.target_layer = target_layer
+    
+    def save_gradient(self, grad):
+        self.gradients = grad
+    
+    def forward_pass_on_convolutions(self, x):
+        """
+            Does a forward pass on convolutions, hooks the function at given layer
+        """
+        conv_output = None
+        # for module_pos, module in self.model._modules.items():
+        #     x = module(x)
+        #     if int(module_pos) == self.target_layer:
+        #         x.register_hook(self.save_gradient)
+        #         conv_output = x  # Save the convolution output on that layer
+        for module_name, module in self.model.named_modules():
+            x = module(x)
+            # if module_name == self.target_layer:
+            if self.target_layer in module_name:
+                x.register_hook(self.save_gradient)
+                conv_output = x
+        return conv_output, x
+    
+    def forward_pass(self, x):
+        """
+            Does a full forward pass on the model
+        """
+        # Forward pass on the convolutions
+        conv_output, x = self.forward_pass_on_convolutions(x)
+        x = x.view(x.size(0), -1)  # Flatten
+        # Forward pass on the classifier
+        x = self.model.fc(x)
+        return conv_output, x
+    
+    def generate_cam(self, input_img, target_class=None):
+        # Full forward pass
+        # conv_output is the output of convolutions at specified layer
+        # model_output is the final output of the model (1, 1000)
+        conv_output, model_output = self.forward_pass(input_img)
+        if target_class is None:
+            target_class = np.argmax(model_output.data.numpy())
+        # Target for backprop
+        one_hot_output = torch.FloatTensor(1, model_output.size()[-1]).zero_()
+        one_hot_output[0][target_class] = 1
+        # Zero grads
+        self.model.conv_net.zero_grad()
+        self.model.fc.zero_grad()
+        # Backward pass with specified target
+        model_output.backward(gradient=one_hot_output, retain_graph=True)
+        # Get hooked gradients
+        guided_gradients = self.gradients.data.numpy()[0]
+        # Get convolution outputs
+        target = conv_output.data.numpy()[0]
+        # Get weights from gradients
+        weights = np.mean(guided_gradients, axis=(1, 2))  # Take averages for each gradient
+        # Create empty numpy array for cam
+        cam = np.ones(target.shape[1:], dtype=np.float32)
+        # Have a look at issue #11 to check why the above is np.ones and not np.zeros
+        # Multiply each weight with its conv output and then, sum
+        for i, w in enumerate(weights):
+            cam += w * target[i, :, :]
+        cam = np.maximum(cam, 0)
+        cam = (cam - np.min(cam)) / (np.max(cam) - np.min(cam))  # Normalize between 0-1
+        cam = np.uint8(cam * 255)  # Scale between 0-255 to visualize
+        cam = np.uint8(Image.fromarray(cam).resize((input_img.shape[2],
+                       input_img.shape[3]), Image.ANTIALIAS))/255
+        # ^ I am extremely unhappy with this line. Originally resizing was done in cv2 which
+        # supports resizing numpy matrices with antialiasing, however,
+        # when I moved the repository to PIL, this option was out of the window.
+        # So, in order to use resizing with ANTIALIAS feature of PIL,
+        # I briefly convert matrix to PIL image and then back.
+        # If there is a more beautiful way, do not hesitate to send a PR.
+
+        # You can also use the code below instead of the code line above, suggested by @ ptschandl
+        # from scipy.ndimage.interpolation import zoom
+        # cam = zoom(cam, np.array(input_img[0].shape[1:])/np.array(cam.shape))
+        return cam

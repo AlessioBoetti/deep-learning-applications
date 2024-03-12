@@ -1,39 +1,44 @@
 #### Weight & Biases settings
 
-name: "2024-03-07 - First run"
+name: "2024-03-11 - First run"
 job_type: "Train-Test"
 group: "Exercise 1.2"
 project: "University - DLA - Lab 1"
 tags: 
-- "MLP"
+- "CNN"
 - "Base"
 - "March"
+- "Clipping"
 notes: "First attempt at training a basic CNN on CIFAR10 dataset."
 
 resume: False
 
 config:
-  architecture: "CNN"
-  depth: 48
+  architecture: "CNN/ResNet"
+  depth: 9
   n_classes: 10
   want_shortcut: False
   activation: "ReLU"
-  pooling: "max"
-  batch_norm: True
-  dropout: True
-  dropout_prob: 0.2
+  fc_activation: "ReLU"
+  pooling: "maxpool"
+  clip_grads: True
 
   # datasets
   dataset_name: "CIFAR10"
+  val_size: 0.2
+  val_shuffle: True
+  normalize: True
+  augment: True
+  use_sampler: True
 
   # hyperparams
   optimizer_name: "amsgrad"  # Lion, Adam
   criterion: "Cross-Entropy Loss"
-  lr: 0.0005
+  lr: 0.00005
   weight_decay: 0.01
   batch_size: 512
   scheduler: "One Cycle Learning"
-  max_lr: 0.01
+  max_lr: 0.0001
   n_epochs: 150
   patience: 30
 
@@ -59,3 +64,4 @@ log_file: "log.txt"
 problem: None
 xai: True
 explain_gradients: False
+explain_cam: True

@@ -61,7 +61,7 @@ def setup_folders(args, cfg):
 
 def setup_logging(logging, cfg):
     # logging.basicConfig(level=logging.INFO)
-    logger = logging.getLogger()
+    logger = logging.getLogger(__name__)
     logger.setLevel(logging.INFO)
 
     log_filepath = os.path.join(cfg['logs_path'], cfg['log_file'])
@@ -69,11 +69,10 @@ def setup_logging(logging, cfg):
 
     handler = logging.FileHandler(log_filepath)
     handler.setLevel(logging.INFO)
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
     handler.setFormatter(formatter)
     logger.addHandler(handler)
 
-    print()
     logger.info('Starting run.')
     logger.info('Logger setup correctly.')
 
@@ -81,11 +80,14 @@ def setup_logging(logging, cfg):
 
 
 def setup_seed(seed, logger):
+    # TODO: Improve randomization to make it global and permanent
     if seed != -1:
         random.seed(seed)
         np.random.seed(seed)
         torch.manual_seed(seed)
-        logger.info('Set seed to %d.' % seed)
+        # https://pytorch.org/docs/stable/generated/torch.use_deterministic_algorithms.html#torch.use_deterministic_algorithms
+        torch.use_deterministic_algorithms(True)
+        logger.info('Seed set to %d.' % seed)
 
 
 def print_logs(logger, cfg, args = None, init: bool = False, pretrain: bool = False, pretest: bool = False, train: bool = False, test: bool = False):
@@ -135,26 +137,36 @@ def save_results(results_path, train_results: dict = None, test_results: dict = 
 
 
 def load_dataset(
-        name, 
-        data_dir, 
+        name: str, 
+        data_dir: str,
+        val_size: float = None,
+        val_shuffle: bool = True,
+        val_shuffle_seed: int = 1,
         problem: str = None, 
         normal_class: Union[int, List[int]] = None, 
         multiclass: bool = None, 
         img_size: int = None,
         normalize: bool = False,
         gcn: bool = False,
-        gcn_minmax: bool = False
+        gcn_minmax: bool = False,
+        augment: bool = False,
+        use_sampler: bool = True,
     ):
 
     dataset_kw = dict(
-        root=data_dir, 
+        root=data_dir,
+        val_size=val_size,
+        val_shuffle=val_shuffle,
+        val_shuffle_seed=val_shuffle_seed,
         problem=problem, 
         normal_class=normal_class, 
         multiclass=multiclass, 
         img_size=img_size,
         normalize=normalize,
         gcn=gcn, 
-        gcn_minmax=gcn_minmax
+        gcn_minmax=gcn_minmax,
+        augment=augment,
+        use_sampler=use_sampler
     )
 
     if name.lower() == 'mnist':
@@ -190,26 +202,35 @@ def main(args, cfg, wb):
 
     # Loading dataset...
     data_dir = args.data_dir if args.data_dir else cfg['data_dir']
-    logger.info('Loading dataset from %s.' % cfg['data_dir'])
-    dataset = load_dataset(wb_cfg['dataset_name'], data_dir, mnist_norm=wb_cfg['mnist_norm'])
+    logger.info('Loading dataset from %s.' % data_dir)
+    dataset = load_dataset(
+        wb_cfg['dataset_name'], 
+        data_dir,
+        wb_cfg['val_size'],
+        wb_cfg['val_shuffle'],
+        cfg['seed'],
+        normalize=wb_cfg['normalize'],
+        augment=wb_cfg['augment'],
+        use_sampler=wb_cfg['use_sampler']        
+    )
     logger.info('Dataset loaded.')
-    
+
 
     # Initializing model...
     logger.info('Initializing %s model.' % wb_cfg['architecture'])
-    model = MultiLayerPerceptron(
-        input_size=wb_cfg['input_size'],
-        n_hidden_layers=wb_cfg['n_hidden_layers'],
-        hidden_layer_sizes=wb_cfg['hidden_layer_sizes'],
-        output_size=wb_cfg['n_classes'],
+    model = ConvolutionalNeuralNetwork(
+        depth=wb_cfg['depth'],
+        n_classes=wb_cfg['n_classes'],
+        want_shortcut=wb_cfg['want_shortcut'],
+        pool_type=wb_cfg['pooling'],
         activation=wb_cfg['activation'],
-        batch_norm=wb_cfg['batch_norm'],
-        dropout_prob=wb_cfg['dropout_prob'] if wb_cfg['dropout'] else None,
+        fc_activation=wb_cfg['fc_activation']
     ).to(device)
     logger.info('Model initialized.')
+    logger.info(model)
     
 
-    # Initializing optimizer
+    # Initializing optimizer...
     opt_name = wb_cfg['optimizer_name'].lower()
     lr = wb_cfg['lr']
     wd = wb_cfg['weight_decay']
@@ -265,7 +286,7 @@ def main(args, cfg, wb):
     # Training model...
     logger.info('Training: %s' % wb_cfg['train'])
     if wb_cfg['train']:
-        train_loader, test_loader = dataset.loaders(train=True, batch_size=wb_cfg['batch_size'], num_workers=cfg['n_workers_dataloader'])
+        train_loader, val_loader, _ = dataset.loaders(train=True, val=True, batch_size=wb_cfg['batch_size'], num_workers=cfg['n_workers_dataloader'], seed=cfg['seed'])
         print_logs(logger, cfg, train=True)
 
         scheduler = torch.optim.lr_scheduler.OneCycleLR(
@@ -277,10 +298,10 @@ def main(args, cfg, wb):
         # scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=wb_cfg['lr_milestones'], gamma=0.1)
 
         wb.watch(model, criterion=criterion, log="all", log_graph=True)
-        nn.utils.clip_grad_norm_(model.parameters(), 5.0)
+        if wb_cfg['clip_grads']:
+            nn.utils.clip_grad_norm_(model.parameters(), 5.0)
 
         logger.info('Starting training...')
-        model = model.to(device)
         model, train_results = train(
             train_loader, 
             model, 
@@ -298,44 +319,49 @@ def main(args, cfg, wb):
             update_scheduler_on_epoch=False,
             update_scheduler_on_batch=True,
             patience=patience,
-            val_loader=test_loader)
+            val_loader=val_loader)
         logger.info('Finished training.')
 
 
     # Testing model...
     logger.info('Starting testing...')
-    test_loader = dataset.loaders(train=False, batch_size=wb_cfg['batch_size'], num_workers=cfg['n_workers_dataloader'])
+    test_loader = dataset.loaders(train=False, batch_size=wb_cfg['batch_size'], num_workers=cfg['n_workers_dataloader'], seed=cfg['seed'])
     test_loss_norm, test_metrics, test_time, test_n_batches, idx_label_scores = evaluate(test_loader, model, criterion, metric_collection, device, logger, validation=False)
     logger.info('Finished testing.')
 
     test_results = {
         'test_time': test_time,
         'test_loss': test_loss_norm,
-        # 'test_accuracy': test_metrics['MulticlassAccuracy'],
-        # 'test_precision': test_metrics['MulticlassPrecision'],
-        # 'test_recall': test_metrics['MulticlassRecall'],
+        'test_accuracy': test_metrics['MulticlassAccuracy'],
+        'test_precision': test_metrics['MulticlassPrecision'],
+        'test_recall': test_metrics['MulticlassRecall'],
         'test_scores': idx_label_scores,
     }
 
     # plot_results()
-
     save_results(cfg['logs_path'], train_results if wb_cfg['train'] else None, test_results)
     save_config(cfg['logs_path'] + '/config.yaml', cfg)
 
     if cfg['explain_gradients']:
         backprop_grads = VanillaBackprop(model)
         
-        # Generate gradients
         batch = next(iter(test_loader))
         img, label, idx = batch
         grads = backprop_grads.generate_gradients(img, label)
         
-        # Save colored gradients
+        # Save colored and grayscale gradients
         save_gradient_images(grads, cfg['xai_path'], 'backprop_grads_color')
-        # Convert to grayscale
         grayscale_grads = convert_to_grayscale(grads)
-        # Save grayscale gradients
         save_gradient_images(grayscale_grads, cfg['xai_path'], 'backprop_grads_grayscale')
+    
+    if cfg['explain_cam']:
+        cam = ClassActivationMapping(model, target_layer='hook')
+
+        batch = next(iter(test_loader))
+        img, label, idx = batch 
+        cams = cam.generate_cam(img, label)
+        
+        save_class_activation_images(img, cams, cfg['xai_path'] + 'gradcam')
 
 
 if __name__ == "__main__":
