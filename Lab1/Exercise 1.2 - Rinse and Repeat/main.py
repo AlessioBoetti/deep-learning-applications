@@ -51,11 +51,8 @@ def setup_folders(args, cfg):
     cfg['checkpoint_path'] = os.path.join(results_dir, run_name, 'checkpoint')
     cfg['model_path'] = os.path.join(results_dir, run_name, 'model')
     cfg['logs_path'] = os.path.join(results_dir, run_name, 'logs')
-
-    if cfg['explain_gradients']:
-        cfg['xai_path'] = os.path.join(results_dir, run_name, 'xai')
-        create_dirs_if_not_exist([cfg['xai_path']])
-    create_dirs_if_not_exist([cfg['data_dir'], cfg['checkpoint_path'], cfg['model_path'], cfg['logs_path']])
+    cfg['xai_path'] = os.path.join(results_dir, run_name, 'xai')
+    create_dirs_if_not_exist([cfg['data_dir'], cfg['checkpoint_path'], cfg['model_path'], cfg['logs_path'], cfg['xai_path']])
     return cfg
 
 
@@ -69,7 +66,7 @@ def setup_logging(logging, cfg):
 
     handler = logging.FileHandler(log_filepath)
     handler.setLevel(logging.INFO)
-    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+    formatter = logging.Formatter('%(asctime)s - %(message)s')
     handler.setFormatter(formatter)
     logger.addHandler(handler)
 
@@ -127,13 +124,9 @@ def print_logs(logger, cfg, args = None, init: bool = False, pretrain: bool = Fa
     return
 
 
-def save_results(results_path, train_results: dict = None, test_results: dict = None):
-    if train_results:
-        with open(f'{results_path}/train_results.json', 'w') as f:
-                json.dump(train_results, f)
-    if test_results:
-        with open(f'{results_path}/test_results.json', 'w') as f:
-                json.dump(test_results, f)
+def save_results(results_path, results: dict, set: str):
+    with open(f'{results_path}/{set}_results.json', 'w') as f:
+        json.dump(results, f)
 
 
 def load_dataset(
@@ -231,6 +224,7 @@ def main(args, cfg, wb):
     
 
     # Initializing optimizer...
+    logger.info('Initializing %s optimizer.' % wb_cfg['optimizer_name'])
     opt_name = wb_cfg['optimizer_name'].lower()
     lr = wb_cfg['lr']
     wd = wb_cfg['weight_decay']
@@ -238,9 +232,10 @@ def main(args, cfg, wb):
         optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=wd, amsgrad=opt_name == 'amsgrad')
     elif opt_name == 'lion':
         optimizer = Lion(model.parameters(), lr=lr, weight_decay=wd)
-    criterion = select_loss_fn(wb_cfg['criterion'])
     scaler = torch.cuda.amp.GradScaler()
+    logger.info('Optimizer initialized.')
 
+    criterion = select_loss_fn(wb_cfg['criterion'])
     metric_collection = get_metrics(wb, device)
 
 
@@ -250,17 +245,18 @@ def main(args, cfg, wb):
     if args.load_model:
         cfg['model_loaded_from'] = args.load_model
         model_path = args.load_model
-    elif wb.resumed:
+    elif cfg['resume']:
         model_path = cfg['checkpoint_path']
     elif os.listdir(cfg['model_path']):
         model_path = cfg['model_path']
     
     if model_path is not None:
         logger.info('Loading model from %s.' % model_path)
-        model, optimizer, start, monitored_value, count = load_model(model_path, model, optimizer)
+        model, optimizer, start, monitored_value, count = load_model(os.path.join(model_path, 'model.pth.tar'), model, optimizer)
         patience = EarlyStopping('max', wb_cfg['patience'], count, monitored_value) if wb_cfg['patience'] else None
         logger.info('Model loaded.')
     else:
+        logger.info('Starting model from scratch.')
         start = 0
         patience = EarlyStopping('max', wb_cfg['patience']) if wb_cfg['patience'] else None
     
@@ -286,7 +282,7 @@ def main(args, cfg, wb):
     # Training model...
     logger.info('Training: %s' % wb_cfg['train'])
     if wb_cfg['train']:
-        train_loader, val_loader, _ = dataset.loaders(train=True, val=True, batch_size=wb_cfg['batch_size'], num_workers=cfg['n_workers_dataloader'], seed=cfg['seed'])
+        train_loader, val_loader, _, _ = dataset.loaders(train=True, val=True, batch_size=wb_cfg['batch_size'], num_workers=cfg['n_workers_dataloader'], seed=cfg['seed'])
         print_logs(logger, cfg, train=True)
 
         scheduler = torch.optim.lr_scheduler.OneCycleLR(
@@ -322,24 +318,44 @@ def main(args, cfg, wb):
             val_loader=val_loader)
         logger.info('Finished training.')
 
+        save_results(cfg['logs_path'], train_results, 'train')
+
 
     # Testing model...
-    logger.info('Starting testing...')
-    test_loader = dataset.loaders(train=False, batch_size=wb_cfg['batch_size'], num_workers=cfg['n_workers_dataloader'], seed=cfg['seed'])
-    test_loss_norm, test_metrics, test_time, test_n_batches, idx_label_scores = evaluate(test_loader, model, criterion, metric_collection, device, logger, validation=False)
-    logger.info('Finished testing.')
+    logger.info('Testing: %s' % wb_cfg['test'])
+    if wb_cfg['test']:
+        transformed_test_loader, org_test_loader = dataset.loaders(train=False, batch_size=wb_cfg['batch_size'], num_workers=cfg['n_workers_dataloader'], seed=cfg['seed'])
+        logger.info('Starting testing on transformed test set...')
+        test_loss_norm, test_metrics, test_time, test_n_batches, idx_label_scores = evaluate(transformed_test_loader, model, criterion, metric_collection, device, logger, validation=False)
+        logger.info('Finished testing.')
 
-    test_results = {
-        'test_time': test_time,
-        'test_loss': test_loss_norm,
-        'test_accuracy': test_metrics['MulticlassAccuracy'],
-        'test_precision': test_metrics['MulticlassPrecision'],
-        'test_recall': test_metrics['MulticlassRecall'],
-        'test_scores': idx_label_scores,
-    }
+        test_results = {
+            'test_time': test_time,
+            'test_loss': test_loss_norm,
+            'test_accuracy': test_metrics['MulticlassAccuracy'],
+            'test_precision': test_metrics['MulticlassPrecision'],
+            'test_recall': test_metrics['MulticlassRecall'],
+            'test_scores': idx_label_scores,
+        }
+        save_results(cfg['logs_path'], test_results, 'transformed_test')
+
+        logger.info('Starting testing on original test set...')
+        test_loss_norm, test_metrics, test_time, test_n_batches, idx_label_scores = evaluate(org_test_loader, model, criterion, metric_collection, device, logger, validation=False)
+        logger.info('Finished testing.')
+
+        test_results = {
+            'test_time': test_time,
+            'test_loss': test_loss_norm,
+            'test_accuracy': test_metrics['MulticlassAccuracy'],
+            'test_precision': test_metrics['MulticlassPrecision'],
+            'test_recall': test_metrics['MulticlassRecall'],
+            'test_scores': idx_label_scores,
+        }
+
+        save_results(cfg['logs_path'], test_results, 'original_test')
+
 
     # plot_results()
-    save_results(cfg['logs_path'], train_results if wb_cfg['train'] else None, test_results)
     save_config(cfg['logs_path'] + '/config.yaml', cfg)
 
     if cfg['explain_gradients']:
@@ -355,13 +371,25 @@ def main(args, cfg, wb):
         save_gradient_images(grayscale_grads, cfg['xai_path'], 'backprop_grads_grayscale')
     
     if cfg['explain_cam']:
+        logger.info('Explaining model predictions with Class Activation Mappings...')
         cam = ClassActivationMapping(model, target_layer='hook')
 
-        batch = next(iter(test_loader))
-        img, label, idx = batch 
-        cams = cam.generate_cam(img, label)
+        transformed_test_loader, org_test_loader = dataset.loaders(train=False, batch_size=wb_cfg['batch_size'], num_workers=cfg['n_workers_dataloader'], seed=cfg['seed'])
+        iter_loader = iter(transformed_test_loader)
+        iter_org_loader = iter(org_test_loader)
+
+        for i in np.arange(10):
+            batch = next(iter_loader)
+            imgs, labels, idx = batch
+            img = imgs[i].unsqueeze(0)
+            label = labels[i]
+            cams = cam.generate_cam(img, label)
+
+            org_batch = next(iter_org_loader)
+            org_img = org_batch[0][i]
+            save_class_activation_images(org_img, cams, cfg['xai_path'] + f'/gradcam_{i+1}')
         
-        save_class_activation_images(img, cams, cfg['xai_path'] + 'gradcam')
+        logger.info('Finished explaining model.')
 
 
 if __name__ == "__main__":

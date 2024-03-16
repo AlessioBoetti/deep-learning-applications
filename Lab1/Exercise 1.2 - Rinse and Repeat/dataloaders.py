@@ -110,6 +110,7 @@ class BaseDataset(object):
         self.train_set = None
         self.valid_set = None
         self.test_set = None
+        self.org_test_set = None
         self.train_sampler = None
         self.val_sampler = None
         self.use_sampler = None
@@ -150,16 +151,17 @@ class BaseDataset(object):
         # Shuffling should be done every epoch (shuffle=True does this).
 
         test_loader = DataLoader(dataset=self.test_set, **kw)
+        org_test_loader = DataLoader(dataset=self.org_test_set, **kw)
         if train:
             shuffle_train = False if self.train_sampler is not None else True
             train_loader = DataLoader(dataset=self.train_set, shuffle=shuffle_train, sampler=self.train_sampler, **kw)
             if val:
                 shuffle_val = False if self.val_sampler is not None else shuffle_val
                 val_loader = DataLoader(dataset=self.val_set, sampler=self.val_sampler, **kw)
-                return train_loader, val_loader, test_loader
+                return train_loader, val_loader, test_loader, org_test_loader
             else:
-                return train_loader, test_loader        
-        return test_loader
+                return train_loader, test_loader, org_test_loader        
+        return test_loader, org_test_loader
 
 
 class MNIST_Dataset(BaseDataset):
@@ -297,6 +299,11 @@ class CIFAR10_Dataset(BaseDataset):
                                  [min_max[normal_class][1] - min_max[normal_class][0]] * 3) if gcn_minmax else lambda x: x,
         ])
 
+        basic_transform = transforms.Compose([
+            transforms.Resize(img_size) if img_size else lambda x: x,
+            transforms.ToTensor()
+        ])
+
         if problem is not None:
             if problem.lower() == 'od':
                 target_transform = transforms.Lambda(lambda x: int(x in self.outlier_classes))
@@ -305,6 +312,7 @@ class CIFAR10_Dataset(BaseDataset):
 
         self.train_set = MyCIFAR10(root=self.root, train=True, download=True, transform=transform, target_transform=target_transform)
         self.test_set = MyCIFAR10(root=self.root, train=False, download=True, transform=transform, target_transform=target_transform)
+        self.org_test_set = MyCIFAR10(root=self.root, train=False, download=True, transform=basic_transform, target_transform=target_transform)
 
         if problem is not None:
             if problem.lower() == 'od':

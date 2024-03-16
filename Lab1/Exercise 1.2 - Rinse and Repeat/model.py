@@ -132,27 +132,28 @@ class ConvolutionalBlock(BaseModel):
         self.want_shortcut = want_shortcut
         self.activation = self._get_activation(activation)
         conv_stride = 1
-        pooling = None
-        tag = None
+        self.pooling = None
+        hook = None
 
         if downsample:
             if last_layer:
                 self.want_shortcut = False
-                pooling = 'adaptivemaxpool'
+                pool_type = 'adaptivemaxpool'
                 kw = dict(output_size=2)
                 hook = True
             else:
                 if pool_type == 'convolution':
                     conv_stride = 2     # dimezza la grandezza della feature map
-                elif pool_type == 'kmax':
+                    pool_type = None
+                elif pool_type == 'adaptivemaxpool':
                     channels = [64, 128, 256, 512]
                     dimension = [511, 256, 128]
                     index = channels.index(in_channels)
-                    pooling = 'adaptivemaxpool'
                     kw = dict(output_size=dimension[index])
-                else:
-                    pooling = 'maxpool'
+                elif pool_type == 'maxpool':
                     kw = dict(kernel_size=3, stride=2, padding=1)
+                else:
+                    raise NotImplementedError('Valid pool types are "convolution", "adaptivemaxpool" or "maxpool"')
         
         self.block_layers = nn.Sequential(OrderedDict({
             'conv_1': nn.Conv2d(in_channels, in_channels, kernel_size=3, stride=conv_stride, padding=1, bias=False),
@@ -162,15 +163,26 @@ class ConvolutionalBlock(BaseModel):
             'bn_2': nn.BatchNorm2d(out_channels),
             'act_2': self.activation
         }))
-        if pooling is not None:
+        if pool_type is not None:
             name = 'pool_hook' if hook else 'pool'
-            self.block_layers.add_module(name, self._get_pooling(pooling, kw))
+            self.block_layers.add_module(name, self._get_pooling(pool_type, kw))
         
         if self.want_shortcut:
             self.shortcut = nn.Sequential(OrderedDict({
                 'projection': nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=2, bias=False),
                 'bn': nn.BatchNorm2d(out_channels)
             }))
+        
+        # self.conv1 = nn.Conv2d(in_channels, in_channels, kernel_size=3, stride=conv_stride, padding=1, bias=False)
+        # self.bn1 = nn.BatchNorm2d(in_channels)
+        # self.act1 = self.activation
+        # self.conv2 = nn.Conv2d(in_channels, out_channels, kernel_size=3, padding='same', bias=False)
+        # self.bn2 = nn.BatchNorm2d(out_channels)
+        # self.act2 = self.activation
+        # if self.pooling is not None:
+        #     # name = 'pool_hook' if hook else 'pool'
+        #     self.pool = self._get_pooling(self.pooling, kw)
+
 
         # self.relu = nn.ReLU()
 
@@ -184,6 +196,33 @@ class ConvolutionalBlock(BaseModel):
             return out
         else:
             return self.block_layers(x)
+    
+    """ def forward(self, x):
+        if self.want_shortcut:
+            short = x
+            out = self.block_layers(x)
+            if out.shape != short.shape:
+                short = self.shortcut(short)
+            out = self.activation(short + out)  # self.relu(short + out)
+            return out
+        else:
+            print(f'Inside cnn block: {x.shape}')
+            x = self.conv1(x)
+            print(x.shape)
+            x = self.bn1(x)
+            print(x.shape)
+            x = self.act1(x)
+            print(x.shape)
+            x = self.conv2(x)
+            print(x.shape)
+            x = self.bn2(x)
+            print(x.shape)
+            x = self.act2(x)
+            print(x.shape)
+            if self.pooling:
+                x = self.pool(x)
+                print(x.shape)
+            return x """
 
 
 class ConvolutionalNeuralNetwork(BaseModel):

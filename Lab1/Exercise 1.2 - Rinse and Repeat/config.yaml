@@ -9,9 +9,9 @@ tags:
 - "Base"
 - "March"
 - "Clipping"
-notes: "First attempt at training a basic CNN on CIFAR10 dataset."
+notes: "First attempt at training a basic CNN on CIFAR10 dataset"
 
-resume: False
+resume: True
 
 config:
   architecture: "CNN/ResNet"
@@ -45,7 +45,8 @@ config:
   # run type
   # evaluation: False
   pretrain: False
-  train: True     # Testing is always done.
+  train: True
+  test: True
 
 
 

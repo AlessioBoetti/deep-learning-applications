@@ -398,6 +398,8 @@ def save_image(im, path):
     if isinstance(im, (np.ndarray, np.generic)):
         im = format_np_output(im)
         im = Image.fromarray(im)
+    elif isinstance(im, torch.Tensor):
+        im = T.functional.to_pil_image(im)
     im.save(path)
 
 
@@ -470,7 +472,7 @@ class VanillaBackprop():
         return gradients_as_arr
 
 
-def apply_colormap_on_image(org_im, activation, colormap_name):
+def apply_colormap_on_image(org_img, activation, colormap_name):
     """
         Apply heatmap on image
     Args:
@@ -488,8 +490,9 @@ def apply_colormap_on_image(org_im, activation, colormap_name):
     no_trans_heatmap = Image.fromarray((no_trans_heatmap*255).astype(np.uint8))
 
     # Apply heatmap on image
-    heatmap_on_image = Image.new("RGBA", org_im.size)
-    heatmap_on_image = Image.alpha_composite(heatmap_on_image, org_im.convert('RGBA'))
+    heatmap_on_image = Image.new("RGBA", org_img.size()[-2:])
+    org_img = T.functional.to_pil_image(org_img) if isinstance(org_img, torch.Tensor) else org_img
+    heatmap_on_image = Image.alpha_composite(heatmap_on_image, org_img.convert('RGBA'))
     heatmap_on_image = Image.alpha_composite(heatmap_on_image, heatmap)
     return no_trans_heatmap, heatmap_on_image
 
@@ -505,9 +508,10 @@ def save_class_activation_images(org_img, activation_map, filepath):
     """
     # Grayscale activation map
     heatmap, heatmap_on_image = apply_colormap_on_image(org_img, activation_map, 'hsv')
+    save_image(org_img, filepath + '_sample_image.png')
     save_image(heatmap, filepath + '_heatmap.png')
-    save_image(heatmap_on_image, filepath + '_on_image.png')
-    save_image(activation_map, filepath + '_grayscale.png')
+    save_image(heatmap_on_image, filepath + '_heatmap_on_image.png')
+    save_image(activation_map, filepath + '_activation_grayscale.png')
 
 
 class ClassActivationMapping_ORG:
@@ -556,11 +560,11 @@ class ClassActivationMapping_ORG:
 
 
 class ClassActivationMapping:
+    # From https://arxiv.org/pdf/1512.04150.pdf
     # From https://github.com/utkuozbulak/pytorch-cnn-visualizations/blob/master/src/gradcam.py
     def __init__(self, model, target_layer):
         self.model = model
         self.model.eval()
-        # self.extractor = CamExtractor(self.model, target_layer)
         self.gradients = None
         self.target_layer = target_layer
     
@@ -577,12 +581,20 @@ class ClassActivationMapping:
         #     if int(module_pos) == self.target_layer:
         #         x.register_hook(self.save_gradient)
         #         conv_output = x  # Save the convolution output on that layer
-        for module_name, module in self.model.named_modules():
-            x = module(x)
-            # if module_name == self.target_layer:
-            if self.target_layer in module_name:
-                x.register_hook(self.save_gradient)
-                conv_output = x
+
+        # for i, (module_name, module) in enumerate(self.model.named_modules()):
+        #     print(f'Iteration {i}')
+        #     print(module_name)
+        #     x = module(x)
+        #     print(f'Shape of x after module forward: {x.shape}')
+        #     # if module_name == self.target_layer:
+        #     if self.target_layer in module_name:
+        #         x.register_hook(self.save_gradient)
+        #         conv_output = x
+
+        x = self.model.conv_net(x)
+        x.register_hook(self.save_gradient)
+        conv_output = x
         return conv_output, x
     
     def forward_pass(self, x):
@@ -627,7 +639,7 @@ class ClassActivationMapping:
         cam = (cam - np.min(cam)) / (np.max(cam) - np.min(cam))  # Normalize between 0-1
         cam = np.uint8(cam * 255)  # Scale between 0-255 to visualize
         cam = np.uint8(Image.fromarray(cam).resize((input_img.shape[2],
-                       input_img.shape[3]), Image.ANTIALIAS))/255
+                       input_img.shape[3]), Image.LANCZOS))/255
         # ^ I am extremely unhappy with this line. Originally resizing was done in cv2 which
         # supports resizing numpy matrices with antialiasing, however,
         # when I moved the repository to PIL, this option was out of the window.
