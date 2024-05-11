@@ -17,8 +17,7 @@ import torch.optim as optim
 import wandb
 from tqdm import tqdm
 
-from dataloaders import MNIST_Dataset, CIFAR10_Dataset
-from model import ConvolutionalNeuralNetwork
+from model import GPTLanguageModel
 from utils import *
 
 
@@ -34,8 +33,14 @@ def parse_args():
 
 
 def load_config(config_filepath):
-    with open(config_filepath, 'r') as f:
-        cfg = json.load(f)
+    if config_filepath.endswith('.yaml'):
+        with open(config_filepath, 'r') as f:
+            cfg = yaml.safe_load(f)
+    elif config_filepath.endswith('.json'):
+        with open(config_filepath, 'r') as f:
+            cfg = json.load(f)
+    else:
+        raise ValueError('The config file is neither YAML nor JSON. Unknown file type.')
     return cfg
 
 
@@ -193,31 +198,25 @@ def main(args, cfg, wb):
     print_logs(logger, cfg, args, init=True)
 
 
-    # Loading dataset...
-    data_dir = args.data_dir if args.data_dir else cfg['data_dir']
-    logger.info('Loading dataset from %s.' % data_dir)
-    dataset = load_dataset(
-        wb_cfg['dataset_name'], 
-        data_dir,
-        wb_cfg['val_size'],
-        wb_cfg['val_shuffle'],
-        cfg['seed'],
-        normalize=wb_cfg['normalize'],
-        augment=wb_cfg['augment'],
-        use_sampler=wb_cfg['use_sampler']        
-    )
-    logger.info('Dataset loaded.')
+    # Loading data...
+    data = args.data if args.data else cfg['data']
+    logger.info('Loading %s' % data)
+    with open(data, 'r', encoding='utf-8') as f:
+        text = f.read()
+    logger.info('Data loaded.')
 
+    # Creating Encoder and Decoder for embeddings
+    chars = sorted(list(set(text)))
+    vocab_size = len(chars)
+    stoi = { ch:i for i,ch in enumerate(chars) }  # string to integer
+    itos = { i:ch for i,ch in enumerate(chars) }  # integer to string
+    encode = lambda s: [stoi[c] for c in s]  # encoder: take a string, output a list of integers
+    decode = lambda l: ''.join([itos[i] for i in l])  # decoder: take a list of integers, output a string
 
     # Initializing model...
     logger.info('Initializing %s model.' % wb_cfg['architecture'])
-    model = ConvolutionalNeuralNetwork(
-        depth=wb_cfg['depth'],
-        n_classes=wb_cfg['n_classes'],
-        want_shortcut=wb_cfg['want_shortcut'],
-        pool_type=wb_cfg['pooling'],
-        activation=wb_cfg['activation'],
-        fc_activation=wb_cfg['fc_activation']
+    model = GPTLanguageModel(
+        
     ).to(device)
     logger.info('Model initialized.')
     logger.info(model)
@@ -229,7 +228,7 @@ def main(args, cfg, wb):
     lr = wb_cfg['lr']
     wd = wb_cfg['weight_decay']
     if opt_name in ['adam', 'amsgrad']:
-        optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=wd, amsgrad=opt_name == 'amsgrad')
+        optimizer = optim.AdamW(model.parameters(), lr=lr, weight_decay=wd, amsgrad=opt_name == 'amsgrad')
     elif opt_name == 'lion':
         optimizer = Lion(model.parameters(), lr=lr, weight_decay=wd)
     scaler = torch.cuda.amp.GradScaler()
@@ -400,8 +399,8 @@ if __name__ == "__main__":
     if args.load_config:
         cfg = load_config(args.load_config)
     else:
-        with open('./config.yaml', 'r') as config_file:
-            cfg = yaml.safe_load(config_file)
+        with open('./config.yaml', 'r') as f:
+            cfg = yaml.safe_load(f)
 
     # From https://docs.wandb.ai/ref/python/init
     wb = wandb.init(
