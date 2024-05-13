@@ -1,7 +1,7 @@
 #### Weight & Biases settings
 
 wandb:
-  name: "2024-05-12 - Test"
+  name: "2024-05-12 - First run"
   resume: False
   job_type: "Train-Test"
   group: "Exercise 1.1"
@@ -63,10 +63,10 @@ config:
   pretrain: False
   pretest: False
   train: True
-  test: False
+  test: True
 
   training:
-    n_epochs: 1
+    n_epochs: 150
     eval_interval: 1
     checkpoint_every: 1
     patience: 20

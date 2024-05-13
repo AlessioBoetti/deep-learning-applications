@@ -1,4 +1,3 @@
-import os
 import random
 import numpy as np
 from typing import Union, Any, Callable, Dict, List, Optional, Tuple
@@ -104,6 +103,12 @@ class MyCIFAR10(CIFAR10):
         return img, target, index  # only line changed
 
 
+def seed_worker(worker_id):
+    worker_seed = torch.initial_seed() % 2**32
+    np.random.seed(worker_seed)
+    random.seed(worker_seed)
+
+
 class BaseDataset(object):
     def __init__(self):
         super().__init__()
@@ -117,16 +122,12 @@ class BaseDataset(object):
 
     def __repr__(self):
         return self.__class__.__name__
-    
-    def seed_worker(worker_id):
-        worker_seed = torch.initial_seed() % 2**32
-        np.random.seed(worker_seed)
-        random.seed(worker_seed)
 
     def loaders(
         self, 
         train: bool,  
         batch_size: int,
+        device: str,
         val: bool = False, 
         shuffle_train: bool = False, 
         num_workers: int = 0, 
@@ -136,14 +137,14 @@ class BaseDataset(object):
     ) -> Union[DataLoader, DataLoader]:
                 
         # https://pytorch.org/docs/stable/notes/randomness.html#dataloader
-        g = torch.Generator()
+        g = torch.Generator(device)
         g.manual_seed(seed)
         kw = dict(
             batch_size=batch_size, 
             num_workers=num_workers, 
             pin_memory=pin_memory, 
             persistent_workers=persistent_workers,
-            worker_init_fn=self.seed_worker,
+            worker_init_fn=seed_worker,
             generator=g
         )
 
@@ -159,8 +160,7 @@ class BaseDataset(object):
                 shuffle_val = False if self.val_sampler is not None else shuffle_val
                 val_loader = DataLoader(dataset=self.val_set, sampler=self.val_sampler, **kw)
                 return train_loader, val_loader, test_loader, org_test_loader
-            else:
-                return train_loader, None, test_loader, org_test_loader        
+            return train_loader, None, test_loader, org_test_loader        
         return None, None, test_loader, org_test_loader
 
 
@@ -178,6 +178,7 @@ class MNIST_Dataset(BaseDataset):
         normalize: bool = False,
         gcn: str = None,   # 'l1' oppure 'l2' 
         gcn_minmax: bool = False,
+        augment: bool = False,
         use_sampler: bool = True,
     ):
         super().__init__()
@@ -205,14 +206,38 @@ class MNIST_Dataset(BaseDataset):
                     (-0.8280402650205075, 10.581538445782988),
                     (-0.7369959242164307, 10.697039838804978)]
 
-        transform = transforms.Compose([
-            transforms.Resize(img_size) if img_size else lambda x: x,
-            transforms.ToTensor(),
-            transforms.Normalize((0.1307,), (0.3081,)) if normalize else lambda x: x,
-            transforms.Lambda(lambda x: global_contrast_normalization(x, scale=gcn)) if gcn else lambda x: x,
-            transforms.Normalize([min_max[normal_class][0]],
-                                 [min_max[normal_class][1] - min_max[normal_class][0]]) if gcn_minmax else lambda x: x,
-        ])
+        transform_list, basic_transform_list = [], []
+        if img_size:
+            transform_list.append(transforms.Resize(img_size))
+            basic_transform_list.append(transforms.Resize(img_size))
+        transform_list.append(transforms.ToTensor())
+        basic_transform_list.append(transforms.ToTensor())
+        if normalize:
+            transform_list.append(transforms.Normalize((0.1307,), (0.3081,)))
+        if gcn:
+            transform_list.append(transforms.Lambda(lambda x: global_contrast_normalization(x, scale=gcn)))
+        if gcn_minmax:
+            transform_list.append(transforms.Normalize(
+                [min_max[normal_class][0]],
+                [min_max[normal_class][1] - min_max[normal_class][0]]
+            ))
+        
+        transform = transforms.Compose(transform_list)
+        basic_transform = transforms.Compose(basic_transform_list)
+
+        # transform = transforms.Compose([
+        #     transforms.Resize(img_size) if img_size else lambda x: x,
+        #     transforms.ToTensor(),
+        #     transforms.Normalize((0.1307,), (0.3081,)) if normalize else lambda x: x,
+        #     transforms.Lambda(lambda x: global_contrast_normalization(x, scale=gcn)) if gcn else lambda x: x,
+        #     transforms.Normalize([min_max[normal_class][0]],
+        #                          [min_max[normal_class][1] - min_max[normal_class][0]]) if gcn_minmax else lambda x: x,
+        # ])
+
+        # basic_transform = transforms.Compose([
+        #     transforms.Resize(img_size) if img_size else lambda x: x,
+        #     transforms.ToTensor()
+        # ])
         
         if problem is not None:
             if problem.lower() == 'od':
@@ -222,14 +247,13 @@ class MNIST_Dataset(BaseDataset):
 
         self.train_set = MyMNIST(root=self.root, train=True, download=True, transform=transform, target_transform=target_transform)
         self.test_set = MyMNIST(root=self.root, train=False, download=True, transform=transform, target_transform=target_transform)
+        self.org_test_set = MyMNIST(root=self.root, train=False, download=True, transform=basic_transform, target_transform=target_transform)
 
         if problem is not None:
             if problem.lower() == 'od':
                 train_idx_normal = get_target_label_idx(self.train_set.train_labels.clone().data.cpu().numpy(), self.normal_classes)
                 self.train_set = Subset(self.train_set, train_idx_normal)
-            else:
-                raise NotImplementedError(f'Problem {problem} is not valid. Only Outlier Detection is implemented.')
-        
+            
         if val_size:
             self.val_set = MyMNIST(root=self.root, train=True, download=True, transform=transform, target_transform=target_transform)
             n_train = len(self.train_set)
@@ -259,7 +283,7 @@ class CIFAR10_Dataset(BaseDataset):
         multiclass: bool = None, 
         img_size: int = None,
         normalize: bool = False,
-        gcn: bool = False, 
+        gcn: str = None,   # 'l1' oppure 'l2' 
         gcn_minmax: bool = False,
         augment: bool = False,
         use_sampler: bool = True,
@@ -288,21 +312,42 @@ class CIFAR10_Dataset(BaseDataset):
                     (-6.876682005899029, 12.282371383343161),
                     (-15.603507135507172, 15.2464923804279),
                     (-6.132882973622672, 8.046098172351265)]
-            
-        transform = transforms.Compose([
-            transforms.Resize(img_size) if img_size else lambda x: x,
-            transforms.AutoAugment(transforms.AutoAugmentPolicy.CIFAR10) if augment else lambda x: x,
-            transforms.ToTensor(),
-            transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)) if normalize else lambda x: x,       # Correct values are: mean=(0.49139968, 0.48215827 ,0.44653124), std=(0.24703233 0.24348505 0.26158768)
-            transforms.Lambda(lambda x: global_contrast_normalization(x, scale='l1')) if gcn else lambda x: x,
-            transforms.Normalize([min_max[normal_class][0]] * 3,
-                                 [min_max[normal_class][1] - min_max[normal_class][0]] * 3) if gcn_minmax else lambda x: x,
-        ])
 
-        basic_transform = transforms.Compose([
-            transforms.Resize(img_size) if img_size else lambda x: x,
-            transforms.ToTensor()
-        ])
+        transform_list, basic_transform_list = [], []
+        if img_size:
+            transform_list.append(transforms.Resize(img_size))
+            basic_transform_list.append(transforms.Resize(img_size))
+        if augment:
+            transform_list.append(transforms.AutoAugment(transforms.AutoAugmentPolicy.CIFAR10))
+        transform_list.append(transforms.ToTensor())
+        basic_transform_list.append(transforms.ToTensor())
+        if normalize:
+            transform_list.append(transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)))  # Correct values are: mean=(0.49139968, 0.48215827 ,0.44653124), std=(0.24703233 0.24348505 0.26158768)
+        if gcn:
+            transform_list.append(transforms.Lambda(lambda x: global_contrast_normalization(x, scale=gcn)))
+        if gcn_minmax:
+            transform_list.append(transforms.Normalize(
+                [min_max[normal_class][0]] * 3,
+                [min_max[normal_class][1] - min_max[normal_class][0]] * 3
+            ))
+
+        transform = transforms.Compose(transform_list)
+        basic_transform = transforms.Compose(basic_transform_list)
+
+        # transform = transforms.Compose([
+        #     transforms.Resize(img_size) if img_size else lambda x: x,
+        #     transforms.AutoAugment(transforms.AutoAugmentPolicy.CIFAR10) if augment else lambda x: x,
+        #     transforms.ToTensor(),
+        #     transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)) if normalize else lambda x: x,  # Correct values are: mean=(0.49139968, 0.48215827 ,0.44653124), std=(0.24703233 0.24348505 0.26158768)
+        #     transforms.Lambda(lambda x: global_contrast_normalization(x, scale=gcn)) if gcn else lambda x: x,
+        #     transforms.Normalize([min_max[normal_class][0]] * 3,
+        #                          [min_max[normal_class][1] - min_max[normal_class][0]] * 3) if gcn_minmax else lambda x: x,
+        # ])
+
+        # basic_transform = transforms.Compose([
+        #     transforms.Resize(img_size) if img_size else lambda x: x,
+        #     transforms.ToTensor()
+        # ])
 
         if problem is not None:
             if problem.lower() == 'od':

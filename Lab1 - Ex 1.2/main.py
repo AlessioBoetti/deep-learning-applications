@@ -15,7 +15,7 @@ import wandb
 from tqdm import tqdm
 
 from dataloaders import MNIST_Dataset, CIFAR10_Dataset
-from model import MultiLayerPerceptron, Lion
+from model import ConvolutionalNeuralNetwork, Lion
 from utils import *
 from xai import *
 
@@ -43,7 +43,7 @@ def setup_folders(args, cfg, run_name):
 
 def setup_logging(logging, cfg):
     # logging.basicConfig(level=logging.INFO)
-    logger = logging.getLogger()
+    logger = logging.getLogger(__name__)
     logger.setLevel(logging.INFO)
 
     log_filepath = os.path.join(cfg['out_path'], cfg['log_file'])
@@ -68,6 +68,8 @@ def setup_seed(seed, logger):
         random.seed(seed)
         np.random.seed(seed)
         torch.manual_seed(seed)
+        torch.cuda.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed)  # For Multi-GPU, exception safe (https://github.com/pytorch/pytorch/issues/108341)
         # https://pytorch.org/docs/stable/generated/torch.use_deterministic_algorithms.html#torch.use_deterministic_algorithms
         torch.use_deterministic_algorithms(True, warn_only=True)
         torch.backends.cudnn.benchmark = False
@@ -90,7 +92,7 @@ def print_logs(logger, cfg, args = None, init: bool = False, pretrain: bool = Fa
         logger.info('Computation device: %s' % cfg['device'])
 
     elif pretrain:
-        logger.info('Pretraining optimizer: %s' % cfg['pretrain_optimizer_name'])
+        logger.info('Pretraining optimizer: %s' % cfg['pretrainer_optimizer_name'])
         logger.info('Pretraining learning rate: %g' % cfg['pretrain_optimizer']['lr'])
         logger.info('Pretraining epochs: %d' % cfg['pretraining']['n_epochs'])
         if 'lr_milestone' in cfg['pretrain_optimizer']:
@@ -346,14 +348,14 @@ def main(args, cfg, wb, run_name):
     logger.info('Loading dataset from "%s".' % cfg['data_dir'])
     dataset = load_dataset(data_dir, val_shuffle_seed=cfg['seed'], **cfg['dataset'])
     dataloader_kw = dict(seed=cfg['seed'], device='cpu', **cfg['dataloader'])  # https://stackoverflow.com/questions/68621210/runtimeerror-expected-a-cuda-device-type-for-generator-but-found-cpu
+
     logger.info('Dataset loaded.')
-    
+
 
     # Initializing model...
     model_cfg, train_cfg = cfg['model'], cfg['training']
     logger.info('Initializing %s model.' % cfg['model_type'])
-    model = MultiLayerPerceptron(
-        flatten_input=True,
+    model = ConvolutionalNeuralNetwork(
         **model_cfg,
     ).to(device)
     logger.info('Model initialized.')
@@ -361,7 +363,7 @@ def main(args, cfg, wb, run_name):
     logger.info(model)
     
 
-    # Initializing optimizer
+    # Initializing optimizer...
     logger.info('Initializing %s optimizer.' % cfg['optimizer_name'])
     optimizer = setup_optimizer(model, cfg)
     logger.info('Optimizer initialized.')
@@ -396,7 +398,7 @@ def main(args, cfg, wb, run_name):
         start, best = 0, None
         patience = EarlyStopping('max', train_cfg['patience']) if train_cfg['patience'] else None
     
-    save_config('config.yaml', cfg['out_path'])    
+    save_config('config.yaml', cfg['out_path'])  
 
     # Pretraining model...
     logger.info('Pretraining: %s' % cfg['pretrain'])
@@ -431,7 +433,7 @@ def main(args, cfg, wb, run_name):
         #     weight_decay=cfg.settings['ae_weight_decay'],
         #     device=cfg.settings['device'],
         #     n_jobs_dataloader=cfg.settings['n_jobs_dataloader'])
-    
+
 
     # Training model...
     logger.info('Training: %s' % cfg['train'])
@@ -442,8 +444,8 @@ def main(args, cfg, wb, run_name):
 
         scheduler = setup_scheduler(optimizer, cfg, train_loader, train_cfg['n_epochs'] - start)
 
-        wb.watch(model, criterion=criterion, log="gradients", log_graph=False)
-
+        wb.watch(model, criterion=criterion, log="all", log_graph=True)
+        
         if cfg['clip_grads']:
             nn.utils.clip_grad_norm_(model.parameters(), cfg['clip_grads'])
 
@@ -547,7 +549,7 @@ def main(args, cfg, wb, run_name):
             save_class_activation_images(org_img, cams, cfg['xai_path'] + f'/gradcam_{i+1}')
         
         logger.info('Finished explaining predictions with Class Activation Mappings..')
-    
+
     logger.info('Finished run.')
     logger.info('Closing experiment.')
     print('Finished run. Closing experiment.')
@@ -560,7 +562,7 @@ if __name__ == "__main__":
     if args.load_config:
         cfg = load_config(args.load_config)
     else:
-        with open('config.yaml', 'r') as config_file:
+        with open('./config.yaml', 'r') as config_file:
             cfg = yaml.safe_load(config_file)
 
     # From https://docs.wandb.ai/ref/python/init
@@ -568,6 +570,7 @@ if __name__ == "__main__":
         config=cfg['config'],
         **cfg['wandb']
     )
+    
     run_name = cfg['wandb']['name']
     cfg = cfg['config']
     
