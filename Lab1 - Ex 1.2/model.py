@@ -243,7 +243,7 @@ class ConvolutionalBlock(BaseModel):
 
 
 class ConvolutionalNeuralNetwork(BaseModel):
-    def __init__(self, depth: int, n_classes: int, want_shortcut: bool, pool_type: str, activation: str, fc_activation: str):
+    def __init__(self, depth: int, output_size: int, want_shortcut: bool, pool_type: str, activation: str, fc_activation: str):
         super().__init__()
         channels = [64, 128, 256, 512]
         if depth == 9:
@@ -275,10 +275,10 @@ class ConvolutionalNeuralNetwork(BaseModel):
             n_hidden_layers=2, 
             input_size=2048, 
             hidden_layer_sizes=[1024, 1024], 
-            output_size=n_classes, 
+            output_size=output_size, 
             activation=fc_activation, 
             batch_norm=True, 
-            dropout_prob=0, 
+            dropout=0, 
             last_activation=None
         )
 

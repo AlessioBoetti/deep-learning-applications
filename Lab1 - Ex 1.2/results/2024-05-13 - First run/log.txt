@@ -264,3 +264,194 @@
 2024-05-13 14:54:40,060 -   Validation MulticlassPrecision: 61.5742
 2024-05-13 14:54:40,060 -   Validation MulticlassRecall: 60.6324
 2024-05-13 14:54:40,062 -   Found best model, saving model.
+2024-05-13 18:41:51,993 - Starting run.
+2024-05-13 18:41:51,993 - Logger setup correctly.
+2024-05-13 18:41:51,997 - Seed set to 1.
+2024-05-13 18:41:51,997 - Resuming experiment.
+2024-05-13 18:41:51,997 - Log filepath: results\2024-05-13 - First run\log.txt.
+2024-05-13 18:41:51,997 - Data dir: data.
+2024-05-13 18:41:51,997 - Dataset: CIFAR10
+2024-05-13 18:41:51,997 - Number of dataloader workers: 4
+2024-05-13 18:41:51,997 - Network: CNN
+2024-05-13 18:41:51,997 - Computation device: cuda:0
+2024-05-13 18:41:51,997 - Loading dataset from "data".
+2024-05-13 18:41:55,665 - Dataset loaded.
+2024-05-13 18:41:55,665 - Initializing CNN model.
+2024-05-13 18:41:55,915 - Model initialized.
+2024-05-13 18:41:55,915 - Showing model structure:
+2024-05-13 18:41:55,915 - ConvolutionalNeuralNetwork(
+  (conv_net): Sequential(
+    (init_conv): Conv2d(3, 64, kernel_size=(3, 3), stride=(1, 1))
+    (conv_block_1): ConvolutionalBlock(
+      (block_layers): Sequential(
+        (conv_1): Conv2d(64, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+        (bn_1): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (act_1): ReLU()
+        (conv_2): Conv2d(64, 128, kernel_size=(3, 3), stride=(1, 1), padding=same, bias=False)
+        (bn_2): BatchNorm2d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (act_2): ReLU()
+        (pool): MaxPool2d(kernel_size=3, stride=2, padding=1, dilation=1, ceil_mode=False)
+      )
+    )
+    (conv_block_2): ConvolutionalBlock(
+      (block_layers): Sequential(
+        (conv_1): Conv2d(128, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+        (bn_1): BatchNorm2d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (act_1): ReLU()
+        (conv_2): Conv2d(128, 256, kernel_size=(3, 3), stride=(1, 1), padding=same, bias=False)
+        (bn_2): BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (act_2): ReLU()
+        (pool): MaxPool2d(kernel_size=3, stride=2, padding=1, dilation=1, ceil_mode=False)
+      )
+    )
+    (conv_block_3): ConvolutionalBlock(
+      (block_layers): Sequential(
+        (conv_1): Conv2d(256, 256, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+        (bn_1): BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (act_1): ReLU()
+        (conv_2): Conv2d(256, 512, kernel_size=(3, 3), stride=(1, 1), padding=same, bias=False)
+        (bn_2): BatchNorm2d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (act_2): ReLU()
+        (pool): MaxPool2d(kernel_size=3, stride=2, padding=1, dilation=1, ceil_mode=False)
+      )
+    )
+    (conv_block_4): ConvolutionalBlock(
+      (block_layers): Sequential(
+        (conv_1): Conv2d(512, 512, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+        (bn_1): BatchNorm2d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (act_1): ReLU()
+        (conv_2): Conv2d(512, 512, kernel_size=(3, 3), stride=(1, 1), padding=same, bias=False)
+        (bn_2): BatchNorm2d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (act_2): ReLU()
+        (pool_hook): AdaptiveMaxPool2d(output_size=2)
+      )
+    )
+  )
+  (fc): MultiLayerPerceptron(
+    (layers): Sequential(
+      (linear_1): Linear(in_features=2048, out_features=1024, bias=False)
+      (bn_1): BatchNorm1d(1024, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (act_1): ReLU()
+      (linear_2): Linear(in_features=1024, out_features=1024, bias=False)
+      (bn_2): BatchNorm1d(1024, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (act_2): ReLU()
+      (last_linear): Linear(in_features=1024, out_features=10, bias=False)
+    )
+  )
+)
+2024-05-13 18:41:55,916 - Initializing AdamW optimizer.
+2024-05-13 18:41:55,916 - Optimizer initialized.
+2024-05-13 18:41:55,924 - Loading model from "results\2024-05-13 - First run/checkpoint.pth.tar".
+2024-05-13 18:41:56,382 - Model loaded.
+2024-05-13 18:41:56,383 - Pretraining: False
+2024-05-13 18:41:56,383 - Testing pretrained model: False
+2024-05-13 18:41:56,383 - Training: True
+2024-05-13 18:41:56,384 - Training optimizer: AdamW
+2024-05-13 18:41:56,384 - Training learning rate: 5e-05
+2024-05-13 18:41:56,384 - Training epochs: 150
+2024-05-13 18:41:56,384 - Training batch size: 512
+2024-05-13 18:41:56,384 - Training weight decay: 0.01
+2024-05-13 18:41:56,386 - Starting training...
+2024-05-13 18:46:23,066 - Epoch 16/150
+2024-05-13 18:46:23,066 -   Epoch Train Time: 266.670
+2024-05-13 18:46:23,066 -   Epoch Train Loss: 0.90090066
+2024-05-13 18:46:23,066 -   Epoch Train MulticlassAccuracy: 69.3145
+2024-05-13 18:46:23,066 -   Epoch Train MulticlassPrecision: 69.1914
+2024-05-13 18:46:23,066 -   Epoch Train MulticlassRecall: 69.3145
+2024-05-13 18:47:18,700 -   Validation Time: 55.626
+2024-05-13 18:47:18,701 -   Validation Loss: 1.05261875
+2024-05-13 18:47:18,701 -   Validation MulticlassAccuracy: 63.0500
+2024-05-13 18:47:18,701 -   Validation MulticlassPrecision: 62.9898
+2024-05-13 18:47:18,701 -   Validation MulticlassRecall: 63.0500
+2024-05-13 18:47:18,702 -   Found best model, saving model.
+2024-05-13 18:51:16,933 - Epoch 17/150
+2024-05-13 18:51:16,933 -   Epoch Train Time: 236.415
+2024-05-13 18:51:16,933 -   Epoch Train Loss: 0.86933158
+2024-05-13 18:51:16,933 -   Epoch Train MulticlassAccuracy: 70.5752
+2024-05-13 18:51:16,933 -   Epoch Train MulticlassPrecision: 70.4271
+2024-05-13 18:51:16,933 -   Epoch Train MulticlassRecall: 70.5752
+2024-05-13 18:51:23,357 -   Validation Time: 6.417
+2024-05-13 18:51:23,357 -   Validation Loss: 1.06473407
+2024-05-13 18:51:23,357 -   Validation MulticlassAccuracy: 62.6554
+2024-05-13 18:51:23,357 -   Validation MulticlassPrecision: 62.8825
+2024-05-13 18:51:23,357 -   Validation MulticlassRecall: 62.6554
+2024-05-13 18:55:17,638 - Epoch 18/150
+2024-05-13 18:55:17,638 -   Epoch Train Time: 233.508
+2024-05-13 18:55:17,638 -   Epoch Train Loss: 0.84530514
+2024-05-13 18:55:17,638 -   Epoch Train MulticlassAccuracy: 71.3290
+2024-05-13 18:55:17,638 -   Epoch Train MulticlassPrecision: 71.1713
+2024-05-13 18:55:17,638 -   Epoch Train MulticlassRecall: 71.3290
+2024-05-13 18:55:24,103 -   Validation Time: 6.458
+2024-05-13 18:55:24,103 -   Validation Loss: 1.03559065
+2024-05-13 18:55:24,103 -   Validation MulticlassAccuracy: 63.6537
+2024-05-13 18:55:24,103 -   Validation MulticlassPrecision: 63.5788
+2024-05-13 18:55:24,103 -   Validation MulticlassRecall: 63.6537
+2024-05-13 18:55:24,103 -   Found best model, saving model.
+2024-05-13 18:59:19,569 - Epoch 19/150
+2024-05-13 18:59:19,570 -   Epoch Train Time: 234.137
+2024-05-13 18:59:19,570 -   Epoch Train Loss: 0.83077327
+2024-05-13 18:59:19,570 -   Epoch Train MulticlassAccuracy: 71.8938
+2024-05-13 18:59:19,570 -   Epoch Train MulticlassPrecision: 71.7189
+2024-05-13 18:59:19,570 -   Epoch Train MulticlassRecall: 71.8938
+2024-05-13 18:59:26,138 -   Validation Time: 6.561
+2024-05-13 18:59:26,138 -   Validation Loss: 1.04325567
+2024-05-13 18:59:26,138 -   Validation MulticlassAccuracy: 63.0450
+2024-05-13 18:59:26,138 -   Validation MulticlassPrecision: 62.9743
+2024-05-13 18:59:26,138 -   Validation MulticlassRecall: 63.0450
+2024-05-13 19:03:32,626 - Epoch 20/150
+2024-05-13 19:03:32,626 -   Epoch Train Time: 246.121
+2024-05-13 19:03:32,626 -   Epoch Train Loss: 0.82391686
+2024-05-13 19:03:32,626 -   Epoch Train MulticlassAccuracy: 72.1582
+2024-05-13 19:03:32,626 -   Epoch Train MulticlassPrecision: 72.0227
+2024-05-13 19:03:32,626 -   Epoch Train MulticlassRecall: 72.1582
+2024-05-13 19:03:39,143 -   Validation Time: 6.509
+2024-05-13 19:03:39,144 -   Validation Loss: 1.02703371
+2024-05-13 19:03:39,144 -   Validation MulticlassAccuracy: 63.6068
+2024-05-13 19:03:39,144 -   Validation MulticlassPrecision: 63.9211
+2024-05-13 19:03:39,144 -   Validation MulticlassRecall: 63.6068
+2024-05-13 19:07:44,842 - Epoch 21/150
+2024-05-13 19:07:44,842 -   Epoch Train Time: 245.431
+2024-05-13 19:07:44,842 -   Epoch Train Loss: 0.80759221
+2024-05-13 19:07:44,842 -   Epoch Train MulticlassAccuracy: 72.5912
+2024-05-13 19:07:44,842 -   Epoch Train MulticlassPrecision: 72.4323
+2024-05-13 19:07:44,842 -   Epoch Train MulticlassRecall: 72.5912
+2024-05-13 19:07:51,308 -   Validation Time: 6.461
+2024-05-13 19:07:51,309 -   Validation Loss: 1.01224440
+2024-05-13 19:07:51,309 -   Validation MulticlassAccuracy: 64.5296
+2024-05-13 19:07:51,309 -   Validation MulticlassPrecision: 64.1665
+2024-05-13 19:07:51,309 -   Validation MulticlassRecall: 64.5296
+2024-05-13 19:07:51,309 -   Found best model, saving model.
+2024-05-13 19:11:52,133 - Epoch 22/150
+2024-05-13 19:11:52,133 -   Epoch Train Time: 239.515
+2024-05-13 19:11:52,133 -   Epoch Train Loss: 0.79921898
+2024-05-13 19:11:52,133 -   Epoch Train MulticlassAccuracy: 72.9424
+2024-05-13 19:11:52,133 -   Epoch Train MulticlassPrecision: 72.8266
+2024-05-13 19:11:52,133 -   Epoch Train MulticlassRecall: 72.9424
+2024-05-13 19:11:58,656 -   Validation Time: 6.517
+2024-05-13 19:11:58,656 -   Validation Loss: 1.02343865
+2024-05-13 19:11:58,656 -   Validation MulticlassAccuracy: 64.0711
+2024-05-13 19:11:58,656 -   Validation MulticlassPrecision: 64.1782
+2024-05-13 19:11:58,656 -   Validation MulticlassRecall: 64.0711
+2024-05-13 19:16:05,872 - Epoch 23/150
+2024-05-13 19:16:05,872 -   Epoch Train Time: 246.956
+2024-05-13 19:16:05,872 -   Epoch Train Loss: 0.78319168
+2024-05-13 19:16:05,872 -   Epoch Train MulticlassAccuracy: 73.8389
+2024-05-13 19:16:05,872 -   Epoch Train MulticlassPrecision: 73.7433
+2024-05-13 19:16:05,872 -   Epoch Train MulticlassRecall: 73.8389
+2024-05-13 19:16:12,387 -   Validation Time: 6.510
+2024-05-13 19:16:12,387 -   Validation Loss: 1.02404274
+2024-05-13 19:16:12,387 -   Validation MulticlassAccuracy: 64.8723
+2024-05-13 19:16:12,387 -   Validation MulticlassPrecision: 64.8524
+2024-05-13 19:16:12,387 -   Validation MulticlassRecall: 64.8723
+2024-05-13 19:16:12,387 -   Found best model, saving model.
+2024-05-13 19:20:06,962 - Epoch 24/150
+2024-05-13 19:20:06,963 -   Epoch Train Time: 233.027
+2024-05-13 19:20:06,963 -   Epoch Train Loss: 0.76443844
+2024-05-13 19:20:06,963 -   Epoch Train MulticlassAccuracy: 74.3883
+2024-05-13 19:20:06,963 -   Epoch Train MulticlassPrecision: 74.2803
+2024-05-13 19:20:06,963 -   Epoch Train MulticlassRecall: 74.3883
+2024-05-13 19:20:13,456 -   Validation Time: 6.487
+2024-05-13 19:20:13,457 -   Validation Loss: 1.03871851
+2024-05-13 19:20:13,457 -   Validation MulticlassAccuracy: 64.2655
+2024-05-13 19:20:13,457 -   Validation MulticlassPrecision: 64.7108
+2024-05-13 19:20:13,457 -   Validation MulticlassRecall: 64.2655

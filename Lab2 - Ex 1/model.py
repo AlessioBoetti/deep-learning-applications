@@ -2,8 +2,57 @@ from typing import List, Tuple
 from collections import OrderedDict
 
 import torch
+import torch.optim as optim
 import torch.nn as nn
 import torch.nn.functional as F
+
+
+@torch.no_grad()
+def init_weights(m):
+    # From https://pytorch.org/docs/stable/notes/modules.html#modules-as-building-blocks
+    if isinstance(m, nn.Linear):
+        nn.init.xavier_normal_(m.weight)
+        m.bias.fill_(0.0)
+
+
+class Lion(optim.Optimizer):
+    def __init__(self, params, lr=1e-4, betas=(0.9, 0.99), weight_decay=0.0):
+        if not 0.0 <= lr:
+            raise ValueError('Invalid learning rate: {}'.format(lr))
+        if not 0.0 <= betas[0] < 1.0:
+            raise ValueError('Invalid beta parameter at index 0: {}'.format(betas[0]))
+        if not 0.0 <= betas[1] < 1.0:
+            raise ValueError('Invalid beta parameter at index 1: {}'.format(betas[1]))
+        defaults = dict(lr=lr, betas=betas, weight_decay=weight_decay)
+        super().__init__(params, defaults)
+
+    @torch.no_grad()
+    def step(self, closure=None):
+        loss = None
+        if closure is not None:
+            with torch.enable_grad():
+                loss = closure()
+
+        for group in self.param_groups:
+            for p in group['params']:
+                if p.grad is None:
+                    continue
+
+                p.data.mul_(1 - group['lr'] * group['weight_decay'])
+
+                grad = p.grad
+                state = self.state[p]
+                if len(state) == 0:
+                    state['exp_avg'] = torch.zeros_like(p)
+
+                exp_avg = state['exp_avg']
+                beta1, beta2 = group['betas']
+
+                update = exp_avg * beta1 + grad * (1 - beta1)
+                p.add_(torch.sign(update), alpha=-group['lr'])
+                exp_avg.mul_(beta2).add_(grad, alpha=1 - beta2)
+
+        return loss
 
 
 """ class BaseModel(nn.Module):
@@ -45,7 +94,7 @@ class BaseModel(nn.Module):
         elif activation.lower() == 'softmax':
             return nn.Softmax(dim=1)
         else:
-            raise NotImplementedError("Activation function '{}' is not implemented.".format(self.activation))
+            raise NotImplementedError("Activation function '{}' is not implemented.".format(activation))
     
     def _get_pooling(self, pooling, kw):
         if pooling.lower() == 'adaptivemaxpool':
@@ -54,14 +103,6 @@ class BaseModel(nn.Module):
             return nn.MaxPool2d(**kw)
         else:
             raise NotImplementedError("Activation function '{}' is not implemented.".format(pooling))
-
-
-@torch.no_grad()
-def init_weights(m):
-    # From https://pytorch.org/docs/stable/notes/modules.html#modules-as-building-blocks
-    if isinstance(m, nn.Linear):
-        nn.init.xavier_normal_(m.weight)
-        m.bias.fill_(0.0)
 
 
 class MultiLayerPerceptron(BaseModel):
@@ -73,7 +114,7 @@ class MultiLayerPerceptron(BaseModel):
             output_size: int, 
             activation: str, 
             batch_norm: bool = False, 
-            dropout_prob: float = None,
+            dropout: float = None,
             last_activation: str = None,
             flatten_input: bool = False,
         ):
@@ -83,8 +124,7 @@ class MultiLayerPerceptron(BaseModel):
         self.hidden_layer_sizes = hidden_layer_sizes
         self.activation = activation
         self.batch_norm = batch_norm
-        self.dropout = True if dropout_prob else False
-        self.dropout_prob = dropout_prob
+        self.dropout = dropout
         self.last_activation = last_activation
         self.flatten_input = flatten_input
 
@@ -99,26 +139,13 @@ class MultiLayerPerceptron(BaseModel):
             if batch_norm:
                 self.layers.add_module(f'bn_{i+1}', nn.BatchNorm1d(hidden_dim))
             self.layers.add_module(f'act_{i+1}', self._get_activation(activation))
-            if dropout_prob:
-                self.layers.add_module(f'dropout_{i+1}', nn.Dropout(dropout_prob))
+            if dropout:
+                self.layers.add_module(f'dropout_{i+1}', nn.Dropout(dropout))
             in_dim = hidden_dim
         self.layers.add_module(f'last_linear', nn.Linear(hidden_layer_sizes[-1], output_size, bias))
         if last_activation:
             self.layers.add_module('last_act', self._get_activation(last_activation))
 
-        """ self.layers = nn.Sequential()
-        self.layers.add_module('linear_0', nn.Linear(input_size, hidden_layer_sizes[0], bias))
-        for i in range(n_hidden_layers - 1):
-            self.layers.add_module(f'linear_{i+1}', nn.Linear(hidden_layer_sizes[i], hidden_layer_sizes[i+1], bias))
-            if batch_norm:
-                self.layers.add_module(f'bn_{i+1}', nn.BatchNorm1d(hidden_layer_sizes[i+1]))
-            self.layers.add_module(f'act_{i+1}', self._get_activation(activation))
-            if dropout_prob:
-                self.layers.add_module(f'dropout_{i+1}', nn.Dropout(dropout_prob))
-        self.layers.add_module(f'linear_{i+1}', nn.Linear(hidden_layer_sizes[-1], output_size, bias))
-
-        if last_activation:
-            self.layers.add_module('last_act', self._get_activation(last_activation)) """
 
     def forward(self, x):
         x = x.flatten(1) if self.flatten_input else x
@@ -130,7 +157,6 @@ class ConvolutionalBlock(BaseModel):
         super().__init__()
 
         self.want_shortcut = want_shortcut
-        self.activation = self._get_activation(activation)
         conv_stride = 1
         self.pooling = None
         hook = None
@@ -158,10 +184,10 @@ class ConvolutionalBlock(BaseModel):
         self.block_layers = nn.Sequential(OrderedDict({
             'conv_1': nn.Conv2d(in_channels, in_channels, kernel_size=3, stride=conv_stride, padding=1, bias=False),
             'bn_1': nn.BatchNorm2d(in_channels),
-            'act_1': self.activation,
+            'act_1': self._get_activation(activation),
             'conv_2': nn.Conv2d(in_channels, out_channels, kernel_size=3, padding='same', bias=False),
             'bn_2': nn.BatchNorm2d(out_channels),
-            'act_2': self.activation
+            'act_2': self._get_activation(activation)
         }))
         if pool_type is not None:
             name = 'pool_hook' if hook else 'pool'
@@ -172,19 +198,10 @@ class ConvolutionalBlock(BaseModel):
                 'projection': nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=2, bias=False),
                 'bn': nn.BatchNorm2d(out_channels)
             }))
+            self.activation = self._get_activation(activation)
+            # self.relu = nn.ReLU()
         
-        # self.conv1 = nn.Conv2d(in_channels, in_channels, kernel_size=3, stride=conv_stride, padding=1, bias=False)
-        # self.bn1 = nn.BatchNorm2d(in_channels)
-        # self.act1 = self.activation
-        # self.conv2 = nn.Conv2d(in_channels, out_channels, kernel_size=3, padding='same', bias=False)
-        # self.bn2 = nn.BatchNorm2d(out_channels)
-        # self.act2 = self.activation
-        # if self.pooling is not None:
-        #     # name = 'pool_hook' if hook else 'pool'
-        #     self.pool = self._get_pooling(self.pooling, kw)
 
-
-        # self.relu = nn.ReLU()
 
     def forward(self, x):
         if self.want_shortcut:
@@ -226,7 +243,7 @@ class ConvolutionalBlock(BaseModel):
 
 
 class ConvolutionalNeuralNetwork(BaseModel):
-    def __init__(self, depth: int, n_classes: int, want_shortcut: bool, pool_type: str, activation: str, fc_activation: str):
+    def __init__(self, depth: int, output_size: int, want_shortcut: bool, pool_type: str, activation: str, fc_activation: str):
         super().__init__()
         channels = [64, 128, 256, 512]
         if depth == 9:
@@ -258,10 +275,10 @@ class ConvolutionalNeuralNetwork(BaseModel):
             n_hidden_layers=2, 
             input_size=2048, 
             hidden_layer_sizes=[1024, 1024], 
-            output_size=n_classes, 
+            output_size=output_size, 
             activation=fc_activation, 
             batch_norm=True, 
-            dropout_prob=0, 
+            dropout=0, 
             last_activation=None
         )
 

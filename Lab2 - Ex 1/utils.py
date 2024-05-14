@@ -59,6 +59,42 @@ def get_metrics(cfg, wb, device):
     return metric_collection
 
 
+def evaluate(loader, model, criterion, metrics, device, logger, validation: bool):
+    model.eval()
+    running_loss = 0.0
+    val_batches = len(loader)
+    idx_label_scores = []
+    start_time = time.time()
+
+    with torch.no_grad():
+        for batch in loader:
+            inputs, labels, idx = batch
+            inputs = inputs.to(device, non_blocking=True)
+            labels = labels.to(device, non_blocking=True)
+            outputs = model(inputs)
+            loss = criterion(outputs, labels)
+            running_loss += loss.item()
+            metrics(outputs, labels)
+
+            if not validation:
+                idx_label_scores += list(zip(idx.cpu().data.numpy().tolist(),
+                                        labels.cpu().data.numpy().tolist(),
+                                        outputs.cpu().data.numpy().tolist()))
+    
+    total_time = time.time() - start_time
+    loss_norm = running_loss / val_batches
+    metric_dict = {metric: float(metrics[metric].compute().cpu().data.numpy() * 100) for metric in metrics.keys()}
+    metrics.reset()
+
+    log_str = 'Validation' if validation else 'Test'
+    logger.info('  {} Time: {:.3f}'.format(log_str, total_time))
+    logger.info('  {} Loss: {:.8f}'.format(log_str, loss_norm))
+    for metric, value in metric_dict.items():
+        logger.info('  {} {}: {:.4f}'.format(log_str, metric, value)) 
+    
+    return loss_norm, metric_dict, total_time, val_batches, idx_label_scores
+
+
 def save_plot(train_l, train_a, test_l, test_a):
     plt.plot(train_a, '-')
     plt.plot(test_a, '-')

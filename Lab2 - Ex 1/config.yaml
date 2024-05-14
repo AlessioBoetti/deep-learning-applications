@@ -1,69 +1,81 @@
 #### Weight & Biases settings
 
-name: "2024-03-11 - First run"
-job_type: "Train-Test"
-group: "Exercise 1"
-project: "University - DLA - Lab 2"
-tags: 
-- "LLM"
-- "GPT"
-- "Text"
-- "Base"
-- "May"
-notes: "First attempt at training NanoGPT from Andrew Karpathy YouTube tutorial"
+wandb:
+  name: "2024-05-13 - First run"
+  resume: True
+  job_type: "Train-Test"
+  group: "Exercise 1"
+  project: "University - DLA - Lab 2"
+  tags: 
+  - "NanoGPT"
+  - "LLM"
+  - "NLP"
+  - "Base"
 
-resume: False
+  notes: "First attempt at training a basic NanoGPT."
+
+
+#### Experiment settings
 
 config:
-  architecture: "NanoGPT"
-  # depth: 9
-  # n_classes: 10
-  # want_shortcut: False
-  # activation: "ReLU"
-  # fc_activation: "ReLU"
-  # pooling: "maxpool"
-  # clip_grads: True
+  # Machine
+  seed: 1
+  device: "cuda:0"
 
-  # datasets
-  # dataset_name: "CIFAR10"
-  # val_size: 0.2
-  # val_shuffle: True
-  # normalize: True
-  # augment: True
-  # use_sampler: True
+  # Paths and dirs
+  data: "divina_commedia.txt"
+  results_dir: "results"
+  log_file: "log.txt"
 
-  # hyperparams
-  # optimizer_name: "amsgrad"  # Lion, Adam
-  # criterion: "Cross-Entropy Loss"
-  # lr: 0.00005
-  # weight_decay: 0.01
-  # batch_size: 512
-  # scheduler: "One Cycle Learning"
-  # max_lr: 0.0001
-  # n_epochs: 150
-  # patience: 30
+  model_type: "NanoGPT"
+  model:
+    block_size: 256 # what is the maximum context length for predictions?
+    n_embd: 384
+    n_head: 6
+    n_layer: 6
+    dropout: 0.2
+  
+  # criterion: "CrossEntropyLoss"
 
-  # run type
-  # evaluation: False
-  # pretrain: False
-  # train: True
-  # test: True
+  # dataset:
+  #   dataset_name: "CIFAR10"
+  #   val_size: 0.2
+  #   val_shuffle: True
+  #   normalize: True
+  #   augment: True
+  #   use_sampler: True
+  
+  dataloader:
+  #   num_workers: 4
+    batch_size: 64  # how many independent sequences will we process in parallel?
+  #   pin_memory: True
+  #   persistent_workers: True
 
+  optimizer_name: "AdamW"  # Lion, Adam, SGD, Adamax, Adadelta, RMSProp ecc. (https://pytorch.org/docs/stable/optim.html)
+  optimizer:
+    lr: 0.0003
+    weight_decay: 0.01
+    amsgrad: True
+  
+  scheduler_name: "OneCycleLR"  # MultiStepLR
+  scheduler: 
+    max_lr: 0.0001
+  
+  pretrain: False
+  pretest: False
+  train: True
+  test: True
 
+  training:
+    n_epochs: 5000
+    eval_interval: 500
+    checkpoint_every: 10
+    patience: 20
 
-#### Standard Settings
+  clip_grads: False
 
-seed: 1
-device: "cpu"
-n_workers_dataloader: 0
-
-# Paths and dirs
-data: "divina_commedia.txt"
-results_dir: "results"
-log_file: "log.txt"
-
-# Setting
-problem: None
-xai: False
-explain_gradients: False
-explain_cam: False
+  # Goals
+  problem: None
+  xai: False
+  explain_gradients: False
+  explain_cam: False
