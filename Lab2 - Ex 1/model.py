@@ -7,13 +7,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-@torch.no_grad()
-def init_weights(m):
-    # From https://pytorch.org/docs/stable/notes/modules.html#modules-as-building-blocks
-    if isinstance(m, nn.Linear):
-        nn.init.xavier_normal_(m.weight)
-        m.bias.fill_(0.0)
-
 
 class Lion(optim.Optimizer):
     def __init__(self, params, lr=1e-4, betas=(0.9, 0.99), weight_decay=0.0):
@@ -83,6 +76,21 @@ class Lion(optim.Optimizer):
 class BaseModel(nn.Module):
     def __init__(self):
         super().__init__()
+    
+    
+    @torch.no_grad()
+    def _init_weights(self, module, mode: str = None):
+        # From https://pytorch.org/docs/stable/notes/modules.html#modules-as-building-blocks
+        if isinstance(module, nn.Linear):
+            if mode in ['xavier', 'glorot']:
+                nn.init.xavier_normal_(module.weight)
+            else:
+                torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
+            if module.bias is not None:
+                torch.nn.init.zeros_(module.bias)  # oppure module.bias.fill_(0.0)
+        elif isinstance(module, nn.Embedding):
+            torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
+
 
     def _get_activation(self, activation):
         if activation.lower() == 'relu':
@@ -96,6 +104,7 @@ class BaseModel(nn.Module):
         else:
             raise NotImplementedError("Activation function '{}' is not implemented.".format(activation))
     
+
     def _get_pooling(self, pooling, kw):
         if pooling.lower() == 'adaptivemaxpool':
             return nn.AdaptiveMaxPool2d(**kw)
@@ -330,14 +339,13 @@ class BigramLanguageModel(nn.Module):
 class Head(nn.Module):
     """ One head of Self-Attention """
 
-    def __init__(self, n_embed, head_size, block_size, dropout_prob):
+    def __init__(self, n_embed, head_size, block_size, dropout):
         super().__init__()
         self.key = nn.Linear(n_embed, head_size, bias=False)
         self.query = nn.Linear(n_embed, head_size, bias=False)
         self.value = nn.Linear(n_embed, head_size, bias=False)
         self.register_buffer('tril', torch.tril(torch.ones(block_size, block_size)))
-
-        self.dropout = nn.Dropout(dropout_prob)
+        self.dropout = nn.Dropout(dropout)
 
 
     def forward(self, x):
@@ -360,11 +368,11 @@ class Head(nn.Module):
 class MultiHeadAttention(nn.Module):
     """ Multiple heads of Self-Attention in parallel """
 
-    def __init__(self, num_heads, head_size, n_embed, dropout_prob):
+    def __init__(self, num_heads, head_size, n_embed, block_size, dropout):
         super().__init__()
-        self.heads = nn.ModuleList([Head(head_size) for _ in range(num_heads)])
+        self.heads = nn.ModuleList([Head(n_embed, head_size, block_size, dropout) for _ in range(num_heads)])
         self.proj = nn.Linear(head_size * num_heads, n_embed)
-        self.dropout = nn.Dropout(dropout_prob)
+        self.dropout = nn.Dropout(dropout)
 
 
     def forward(self, x):
@@ -376,31 +384,31 @@ class MultiHeadAttention(nn.Module):
 class FeedFoward(nn.Module):
     """ A simple linear layer followed by a non-linearity """
 
-    def __init__(self, n_embed, dropout_prob):
+    def __init__(self, n_embed, dropout):
         super().__init__()
-        self.net = nn.Sequential(
+        self.fc = nn.Sequential(
             nn.Linear(n_embed, 4 * n_embed),
             nn.ReLU(),
             nn.Linear(4 * n_embed, n_embed),
-            nn.Dropout(dropout_prob),
+            nn.Dropout(dropout),
         )
 
     def forward(self, x):
-        return self.net(x)
+        return self.fc(x)
     
 
 class TransformerBlock(nn.Module):
     """ Transformer block: communication followed by computation """
 
-    def __init__(self, n_embed, n_head):
+    def __init__(self, n_embed, n_head, block_size, dropout):
         # n_embed: embedding dimension, n_head: the number of heads we'd like
         super().__init__()
         head_size = n_embed // n_head
-        self.sa = MultiHeadAttention(n_head, head_size)
-        self.ffwd = FeedFoward(n_embed)
         self.ln1 = nn.LayerNorm(n_embed)
+        self.sa = MultiHeadAttention(n_head, head_size, n_embed, block_size, dropout)  # sa sta per self-attention
         self.ln2 = nn.LayerNorm(n_embed)
-
+        self.ffwd = FeedFoward(n_embed, dropout)
+        
 
     def forward(self, x):
         x = x + self.sa(self.ln1(x))
@@ -408,65 +416,43 @@ class TransformerBlock(nn.Module):
         return x
 
 
-class GPTLanguageModel(nn.Module):
+class GPTLanguageModel(BaseModel):
     # From https://www.youtube.com/watch?v=kCc8FmEb1nY
-    def __init__(self, vocab_size, n_embed, block_size, n_head, n_layer):
+    def __init__(self, vocab_size, n_embed, block_size, n_head, n_layers, dropout):
         super().__init__()
         # Each token directly reads off the logits for the next token from a lookup table
         self.token_embedding_table = nn.Embedding(vocab_size, n_embed)
         self.position_embedding_table = nn.Embedding(block_size, n_embed)
-        self.blocks = nn.Sequential(*[TransformerBlock(n_embed, n_head=n_head) for _ in range(n_layer)])
-        self.ln_f = nn.LayerNorm(n_embed) # final layer norm
+        self.blocks = nn.Sequential(*[TransformerBlock(n_embed, n_head, block_size, dropout) for _ in range(n_layers)])
+        self.layer_norm_final = nn.LayerNorm(n_embed)
         self.lm_head = nn.Linear(n_embed, vocab_size)
-
-        # Better init, not covered in the original GPT video, but important, will cover in followup video
         self.apply(self._init_weights)
 
 
-    def _init_weights(self, module):
-        if isinstance(module, nn.Linear):
-            torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
-            if module.bias is not None:
-                torch.nn.init.zeros_(module.bias)
-        elif isinstance(module, nn.Embedding):
-            torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
-
-
-    def forward(self, idx, targets=None):
-        B, T = idx.shape
-
-        # idx and targets are both (B,T) tensor of integers
-        tok_emb = self.token_embedding_table(idx) # (B,T,C)
-        pos_emb = self.position_embedding_table(torch.arange(T, device=device))  # (T,C)
-        x = tok_emb + pos_emb    # (B, T, C)
-        x = self.blocks(x)       # (B, T, C)
-        x = self.ln_f(x)         # (B, T, C)
-        logits = self.lm_head(x) # (B, T, vocab_size)
-
-        if targets is None:
-            loss = None
-        else:
-            B, T, C = logits.shape
-            logits = logits.view(B*T, C)
-            targets = targets.view(B*T)
-            loss = F.cross_entropy(logits, targets)
-
-        return logits, loss
+    def forward(self, idx, device):
+        B, T = idx.shape  # idx is a (B, T) tensor of integers
+        tok_emb = self.token_embedding_table(idx)  # (B, T, C)
+        pos_emb = self.position_embedding_table(torch.arange(T, device=device))  # (T, C)
+        x = tok_emb + pos_emb                   # (B, T, C)
+        x = self.blocks(x)                      # (B, T, C)
+        x = self.layer_norm_final(x)            # (B, T, C)
+        logits = self.lm_head(x)                # (B, T, vocab_size)
+        return logits
 
 
     def generate(self, idx, max_new_tokens, block_size):
         # idx is (B, T) array of indices in the current context
         for _ in range(max_new_tokens):
-            # crop idx to the last block_size tokens
+            # Crop idx to the last block_size tokens
             idx_cond = idx[:, -block_size:]
-            # get the predictions
+            # Get the predictions
             logits, loss = self(idx_cond)
-            # focus only on the last time step
+            # Focus only on the last time step
             logits = logits[:, -1, :] # becomes (B, C)
-            # apply softmax to get probabilities
+            # Apply softmax to get probabilities
             probs = F.softmax(logits, dim=-1) # (B, C)
-            # sample from the distribution
+            # Sample from the distribution
             idx_next = torch.multinomial(probs, num_samples=1) # (B, 1)
-            # append sampled index to the running sequence
+            # Append sampled index to the running sequence
             idx = torch.cat((idx, idx_next), dim=1) # (B, T+1)
         return idx

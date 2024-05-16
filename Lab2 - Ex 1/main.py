@@ -14,7 +14,7 @@ import torch.optim as optim
 import wandb
 from tqdm import tqdm
 
-from dataloaders import MNIST_Dataset, CIFAR10_Dataset
+# from dataloaders import MNIST_Dataset, CIFAR10_Dataset
 from model import GPTLanguageModel, Lion
 from utils import *
 from xai import *
@@ -24,7 +24,7 @@ def parse_args():
     parser = argparse.ArgumentParser()
 
     parser.add_argument('--load_config', type=str, default=None)
-    parser.add_argument('--data_dir', type=str, default=None)
+    parser.add_argument('--data', type=str, default=None)
     parser.add_argument('--load_model', type=str, default=None)
     args = parser.parse_args()
 
@@ -82,12 +82,12 @@ def print_logs(logger, cfg, args = None, init: bool = False, pretrain: bool = Fa
         if args.load_config is not None:
             logger.info('Loaded configuration from "%s".' % args.load_config)
         logger.info('Log filepath: %s.' % cfg['log_filepath'])
-        logger.info('Data dir: %s.' % cfg['data_dir'])
-        logger.info('Dataset: %s' % cfg['dataset']['dataset_name'])
+        # logger.info('Data dir: %s.' % cfg['data_dir'])
+        # logger.info('Dataset: %s' % cfg['dataset']['dataset_name'])
         if cfg['problem'].lower() == 'od':
             logger.info('Normal class: %d' % cfg['dataset']['normal_class'])
             logger.info('Multiclass: %s' % cfg['dataset']['multiclass'])
-        logger.info('Number of dataloader workers: %d' % cfg['dataloader']['num_workers'])
+        # logger.info('Number of dataloader workers: %d' % cfg['dataloader']['num_workers'])
         logger.info('Network: %s' % cfg['model_type'])
         logger.info('Computation device: %s' % cfg['device'])
 
@@ -118,13 +118,19 @@ def print_logs(logger, cfg, args = None, init: bool = False, pretrain: bool = Fa
     return
 
 
+def train_val_test_split(data, split_size):
+    n = int(split_size*len(data))
+    train_data, val_data = data[:n], data[n:]
+    return train_data, val_data
+
+
 def get_batch(train_data, val_data, split, block_size, batch_size, device):
-    # generate a small batch of data of inputs x and targets y
+    # Generate a small batch of data of inputs x and targets y
     data = train_data if split == 'train' else val_data
     ix = torch.randint(len(data) - block_size, (batch_size,))
     x = torch.stack([data[i:i+block_size] for i in ix])
     y = torch.stack([data[i+1:i+block_size+1] for i in ix])
-    x, y = x.to(device), y.to(device)
+    x, y = x.to(device, non_blocking=True), y.to(device, non_blocking=True)
     return x, y
 
 
@@ -147,39 +153,57 @@ def select_loss_fn(criterion: str):
         raise NotImplementedError
 
 
-def setup_scheduler(optimizer, cfg, train_loader, epochs):
-    scheduler_class = getattr(optim.lr_scheduler, cfg['scheduler_name'])
-    scheduler = scheduler_class(optimizer, **cfg['scheduler'], steps_per_epoch=len(train_loader), epochs=epochs)
-    return scheduler
+@torch.no_grad()
+def estimate_loss(model, train_data, val_data, block_size, batch_size, eval_iters, criterion, logger, device):
+    model.eval()
+    losses = {}
+    start_time = time.time()
+    for split in ['train', 'val']:
+        # losses = torch.zeros(eval_iters)
+        running_loss = 0.0
+        for k in range(eval_iters):
+            input, targets = get_batch(train_data, val_data, split, block_size, batch_size, device)
+            logits = model(input, device)
+            B, T, C = logits.shape
+            logits = logits.view(B*T, C)
+            targets = targets.view(B*T)
+            loss = criterion(logits, targets)
+            # losses[k] = loss.item()
+            running_loss += loss.item()
+        # losses[split] = losses.mean()
+        losses[split] = running_loss / eval_iters
+        logger.info('  Evaluation {} Loss: {:.8f}'.format(split, losses[split]))
+    total_time = time.time() - start_time
+    logger.info('  Evaluation Time: {:.3f}'.format(total_time))
+    return losses, total_time
 
 
 def train(
-        loader, 
         model, 
+        train_data,
+        val_data,
+        block_size, 
+        batch_size,
         start, 
         n_epochs, 
         criterion, 
-        optimizer, 
-        scheduler, 
-        scaler,  
-        metrics, 
+        optimizer,
+        scaler,   
         device, 
         logger,
         wb,
         out_path,
-        update_scheduler_on_batch: bool, 
-        update_scheduler_on_epoch: bool,
         patience = None,
-        val_loader = None, 
         eval_interval: int = 1,
+        eval_iters: int = 100,
         checkpoint_every: int = 5,
         best: dict = None,
-        lr_milestones: List[int] = None, 
+        # lr_milestones: List[int] = None, 
     ): 
 
     train_start_time = time.time()
-    total_batches_running = 0
-    total_batches = len(loader)
+    # total_batches_running = 0
+    # total_batches = len(loader)
     best_results = best
     model = model.to(device)
     model.train()
@@ -188,79 +212,62 @@ def train(
         loss_epoch = 0.0
         epoch_start_time = time.time()
 
-        for batch in tqdm(loader, desc=f"Epoch {epoch + 1}"):
-            # https://discuss.pytorch.org/t/should-we-set-non-blocking-to-true/38234/4
-            inputs, labels, idx = batch
-            inputs = inputs.to(device, non_blocking=True)
-            labels = labels.to(device, non_blocking=True)
+        inputs, targets = get_batch(train_data, val_data, 'train', block_size, batch_size, device)        
+        optimizer.zero_grad(set_to_none=True)  # https://pytorch.org/docs/stable/generated/torch.optim.Optimizer.zero_grad.html
+        with torch.cuda.amp.autocast():
+            # https://pytorch.org/docs/stable/amp.html
+            logits = model(inputs, device)
+            B, T, C = logits.shape
+            logits = logits.view(B*T, C)
+            targets = targets.view(B*T)
+            loss = criterion(logits, targets)
             
-            optimizer.zero_grad(set_to_none=True)  # https://pytorch.org/docs/stable/generated/torch.optim.Optimizer.zero_grad.html
-            with torch.cuda.amp.autocast():
-                # https://pytorch.org/docs/stable/amp.html
-                outputs = model(inputs)
-                loss = criterion(outputs, labels)
-            
-            scaler.scale(loss).backward()
-            scaler.step(optimizer)
-            scaler.update()
-            if update_scheduler_on_batch:
-                # https://discuss.pytorch.org/t/scheduler-step-after-each-epoch-or-after-each-minibatch/111249
-                scheduler.step()
-                if lr_milestones is not None:
-                    if total_batches_running in lr_milestones:
-                        logger.info('  LR scheduler: new learning rate is %g' % float(scheduler.get_lr()[0]))
+        scaler.scale(loss).backward()
+        scaler.step(optimizer)
+        scaler.update()
+        # if update_scheduler_on_batch:
+        #         # https://discuss.pytorch.org/t/scheduler-step-after-each-epoch-or-after-each-minibatch/111249
+        #         scheduler.step()
+        #         if lr_milestones is not None:
+        #             if total_batches_running in lr_milestones:
+        #                 logger.info('  LR scheduler: new learning rate is %g' % float(scheduler.get_lr()[0]))
 
-            loss_epoch += loss.item()
-            total_batches_running += 1
+        loss_epoch += loss.item()
+        # total_batches_running += 1
 
-            metrics(outputs, labels)
+        # metrics(outputs, labels)
 
         epoch_time = time.time() - epoch_start_time
-        epoch_loss_norm = loss_epoch / total_batches
-        epoch_metrics = {metric: float(metrics[metric].compute().cpu().data.numpy() * 100) for metric in metrics.keys()}
-        metrics.reset()
-        
-        if update_scheduler_on_epoch:
-            scheduler.step()
-            if lr_milestones is not None:
-                if epoch in lr_milestones:
-                    logger.info('  LR scheduler: new learning rate is %g' % float(scheduler.get_lr()[0]))
+        # epoch_loss_norm = loss_epoch / total_batches
+        # epoch_metrics = {metric: float(metrics[metric].compute().cpu().data.numpy() * 100) for metric in metrics.keys()}
+        # metrics.reset()
         
         logger.info('Epoch {}/{}'.format(epoch + 1, n_epochs))
         logger.info('  Epoch Train Time: {:.3f}'.format(epoch_time))
-        logger.info('  Epoch Train Loss: {:.8f}'.format(epoch_loss_norm))
-        for metric, value in epoch_metrics.items():
-            logger.info('  Epoch Train {}: {:.4f}'.format(metric, value))
+        logger.info('  Epoch Train Loss: {:.8f}'.format(loss_epoch))  # epoch_loss_norm
+        # for metric, value in epoch_metrics.items():
+        #     logger.info('  Epoch Train {}: {:.4f}'.format(metric, value))
 
-        wb_log = {
-            'train_loss': epoch_loss_norm,
-            'train_accuracy': epoch_metrics['MulticlassAccuracy'],
-            'train_precision': epoch_metrics['MulticlassPrecision'],
-            'train_recall': epoch_metrics['MulticlassRecall']
-        }
+        if epoch % eval_interval == 0 or epoch == n_epochs - 1:
+            checkpoint = {
+                'start': epoch + 1,
+                "state_dict": model.state_dict(),
+                "optimizer": optimizer.state_dict()
+            }
 
-        checkpoint = {
-            'start': epoch + 1,
-            "state_dict": model.state_dict(),
-            "optimizer": optimizer.state_dict()
-        }
+            losses, val_time = estimate_loss(model, train_data, val_data, block_size, batch_size, eval_iters, criterion, logger, device)
 
-        if val_loader and (epoch % eval_interval == 0 or epoch == n_epochs - 1):
-            val_loss_norm, val_metrics, val_time, val_n_batches, _ = evaluate(val_loader, model, criterion, metrics, device, logger, validation=True)
-
-            wb_log.update({
-                'val_loss': val_loss_norm,
-                'val_accuracy': val_metrics['MulticlassAccuracy'],
-                'val_precision': val_metrics['MulticlassPrecision'],
-                'val_recall': val_metrics['MulticlassRecall']
-            })
+            wb_log = {
+                'epoch': epoch + 1,
+                'train_loss': losses['train'],
+                'val_loss': losses['val'],
+            }
 
             if patience:
                 # Save best model
-                if patience(val_metrics['MulticlassAccuracy']):
+                if patience(losses['val']):
                     logger.info('  Found best model, saving model.')
-                    best_results = {'best_epoch': epoch + 1}
-                    best_results.update({f'best_{key}': value for key, value in wb_log.items()})                                        
+                    best_results = {f'best_{key}': value for key, value in wb_log.items()}
                     save_model(checkpoint, out_path, 'model')
                 
                 checkpoint.update({
@@ -286,7 +293,7 @@ def train(
     logger.info('Training time: %.3f' % train_time)
 
     train_results = {
-        'total_batches': total_batches,
+        # 'total_batches': total_batches,
         'total_epochs': n_epochs,
         'train_time': train_time,
         'h-m-s_train_time': str(timedelta(seconds=train_time)),
@@ -327,21 +334,20 @@ def main(args, cfg, wb, run_name):
     itos = { i:ch for i,ch in enumerate(chars) }  # integer to string
     encode = lambda s: [stoi[c] for c in s]  # encoder: take a string, output a list of integers
     decode = lambda l: ''.join([itos[i] for i in l])  # decoder: take a list of integers, output a string
-
     data = torch.tensor(encode(text), dtype=torch.long)
-    n = int(0.9*len(data)) # first 90% will be train, rest val
-    train_data = data[:n]
-    val_data = data[n:]
+
 
     # Initializing model...
     model_cfg, train_cfg = cfg['model'], cfg['training']
     logger.info('Initializing %s model.' % cfg['model_type'])
     model = GPTLanguageModel(
+        vocab_size=vocab_size,
         **model_cfg,
     ).to(device)
     logger.info('Model initialized.')
     logger.info('Showing model structure:')
     logger.info(model)
+    logger.info(f'Number of parameters: {sum(p.numel() for p in model.parameters())/1e6} M')
     
 
     # Initializing optimizer...
@@ -350,7 +356,6 @@ def main(args, cfg, wb, run_name):
     logger.info('Optimizer initialized.')
     scaler = torch.cuda.amp.GradScaler()
     criterion = select_loss_fn(cfg['criterion'])
-    metric_collection = get_metrics(cfg['model'], wb, device)
 
 
     # Loading model and optimizer...
@@ -419,11 +424,9 @@ def main(args, cfg, wb, run_name):
     # Training model...
     logger.info('Training: %s' % cfg['train'])
     if cfg['train']:
-        train_loader, val_loader, _, _ = dataset.loaders(train=True, val=True, **dataloader_kw)
+        train_data, val_data = train_val_test_split(data, split_size=0.9)
         print_logs(logger, cfg, train=True)
         torch.cuda.empty_cache()
-
-        scheduler = setup_scheduler(optimizer, cfg, train_loader, train_cfg['n_epochs'] - start)
 
         wb.watch(model, criterion=criterion, log="all", log_graph=True)
         
@@ -431,24 +434,22 @@ def main(args, cfg, wb, run_name):
             nn.utils.clip_grad_norm_(model.parameters(), cfg['clip_grads'])
 
         logger.info('Starting training...')
-        model, train_results = train(
-            train_loader, 
+        model, train_results = train( 
             model, 
+            train_data,
+            val_data,
+            model_cfg['block_size'], 
+            cfg['dataloader']['batch_size'],
             start, 
             train_cfg['n_epochs'], 
             criterion, 
             optimizer, 
-            scheduler, 
             scaler, 
-            metric_collection, 
             device, 
             logger, 
             wb, 
             cfg['out_path'],  
-            update_scheduler_on_epoch=False,
-            update_scheduler_on_batch=True,
             patience=patience,
-            val_loader=val_loader,
             eval_interval=train_cfg['eval_interval'],
             checkpoint_every=train_cfg['checkpoint_every'],
             best=best)
@@ -457,79 +458,52 @@ def main(args, cfg, wb, run_name):
         save_results(cfg['out_path'], train_results, 'train')
 
 
-    # Testing model...
-    logger.info('Testing: %s' % cfg['test'])
-    if cfg['test']:
-        _, _, transformed_test_loader, org_test_loader = dataset.loaders(train=False, **dataloader_kw)
-
-        logger.info('Starting testing on transformed test set...')
-        test_loss_norm, test_metrics, test_time, test_n_batches, idx_label_scores = evaluate(transformed_test_loader, model, criterion, metric_collection, device, logger, validation=False)
-        logger.info('Finished testing.')
-
-        test_results = {
-            'test_time': test_time,
-            'test_loss': test_loss_norm,
-            'test_accuracy': test_metrics['MulticlassAccuracy'],
-            'test_precision': test_metrics['MulticlassPrecision'],
-            'test_recall': test_metrics['MulticlassRecall'],
-            'test_scores': idx_label_scores,
-        }
-        save_results(cfg['out_path'], test_results, 'transformed_test')
-
-        logger.info('Starting testing on original test set...')
-        test_loss_norm, test_metrics, test_time, test_n_batches, idx_label_scores = evaluate(org_test_loader, model, criterion, metric_collection, device, logger, validation=False)
-        logger.info('Finished testing.')
-
-        test_results = {
-            'test_time': test_time,
-            'test_loss': test_loss_norm,
-            'test_accuracy': test_metrics['MulticlassAccuracy'],
-            'test_precision': test_metrics['MulticlassPrecision'],
-            'test_recall': test_metrics['MulticlassRecall'],
-            'test_scores': idx_label_scores,
-        }
-
-        save_results(cfg['out_path'], test_results, 'original_test')
+    # Generating text...
+    logger.info('Generation: %s' % cfg['test'])
+    if cfg['generate']:
+        context = torch.zeros((1, 1), dtype=torch.long, device=device)
+        print(decode(model.generate(context, max_new_tokens=500)[0].tolist()))
+        # open('more.txt', 'w').write(decode(m.generate(context, max_new_tokens=10000)[0].tolist()))
 
 
     # plot_results()
 
-    if cfg['explain_gradients']:
-        backprop_grads = VanillaBackprop(model)
+    # if cfg['explain_gradients']:
+    #     backprop_grads = VanillaBackprop(model)
         
-        _, _, transformed_test_loader, org_test_loader = dataset.loaders(train=False, **dataloader_kw)
-        batch = next(iter(transformed_test_loader))
-        img, label, idx = batch
-        grads = backprop_grads.generate_gradients(img, label)
+    #     _, _, transformed_test_loader, org_test_loader = dataset.loaders(train=False, **dataloader_kw)
+    #     batch = next(iter(transformed_test_loader))
+    #     img, label, idx = batch
+    #     grads = backprop_grads.generate_gradients(img, label)
         
-        # Save colored and grayscale gradients
-        save_gradient_images(grads, cfg['xai_path'], 'backprop_grads_color')
-        grayscale_grads = convert_to_grayscale(grads)
-        save_gradient_images(grayscale_grads, cfg['xai_path'], 'backprop_grads_grayscale')
+    #     # Save colored and grayscale gradients
+    #     save_gradient_images(grads, cfg['xai_path'], 'backprop_grads_color')
+    #     grayscale_grads = convert_to_grayscale(grads)
+    #     save_gradient_images(grayscale_grads, cfg['xai_path'], 'backprop_grads_grayscale')
 
-        logger.info('Finished explaining model.')
+    #     logger.info('Finished explaining model.')
     
-    if cfg['explain_cam']:
-        logger.info('Explaining model predictions with Class Activation Mappings...')
-        cam = ClassActivationMapping(model, target_layer='hook')
+    # if cfg['explain_cam']:
+    #     logger.info('Explaining model predictions with Class Activation Mappings...')
+    #     cam = ClassActivationMapping(model, target_layer='hook')
 
-        _, _, transformed_test_loader, org_test_loader = dataset.loaders(train=False, **dataloader_kw)
-        iter_loader = iter(transformed_test_loader)
-        iter_org_loader = iter(org_test_loader)
-        batch = next(iter_loader)
-        org_batch = next(iter_org_loader)
-        imgs, labels, idx = batch
-        label_list = [label.item() for label in labels]
-        len_imgs = len(imgs)
+    #     _, _, transformed_test_loader, org_test_loader = dataset.loaders(train=False, **dataloader_kw)
+    #     iter_loader = iter(transformed_test_loader)
+    #     iter_org_loader = iter(org_test_loader)
+    #     batch = next(iter_loader)
+    #     org_batch = next(iter_org_loader)
+    #     imgs, labels, idx = batch
+    #     label_list = [label.item() for label in labels]
+    #     len_imgs = len(imgs)
 
-        for i in np.arange(0, len_imgs, 4):
-            img = imgs[i].unsqueeze(0)
-            label = labels[i]
-            cams = cam.generate_cam(img, label)
-            org_img = org_batch[0][i]
-            save_class_activation_images(org_img, cams, cfg['xai_path'] + f'/gradcam_{i+1}')
+    #     for i in np.arange(0, len_imgs, 4):
+    #         img = imgs[i].unsqueeze(0)
+    #         label = labels[i]
+    #         cams = cam.generate_cam(img, label)
+    #         org_img = org_batch[0][i]
+    #         save_class_activation_images(org_img, cams, cfg['xai_path'] + f'/gradcam_{i+1}')
         
-        logger.info('Finished explaining predictions with Class Activation Mappings..')
+    #     logger.info('Finished explaining predictions with Class Activation Mappings..')
 
     logger.info('Finished run.')
     logger.info('Closing experiment.')

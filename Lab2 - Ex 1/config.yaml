@@ -1,8 +1,8 @@
 #### Weight & Biases settings
 
 wandb:
-  name: "2024-05-13 - First run"
-  resume: True
+  name: "2024-05-17 - First run"
+  resume: False
   job_type: "Train-Test"
   group: "Exercise 1"
   project: "University - DLA - Lab 2"
@@ -29,27 +29,16 @@ config:
 
   model_type: "NanoGPT"
   model:
-    block_size: 256 # what is the maximum context length for predictions?
-    n_embd: 384
+    block_size: 256  # What is the maximum context length for predictions?
+    n_embed: 384
     n_head: 6
-    n_layer: 6
+    n_layers: 6
     dropout: 0.2
   
-  # criterion: "CrossEntropyLoss"
-
-  # dataset:
-  #   dataset_name: "CIFAR10"
-  #   val_size: 0.2
-  #   val_shuffle: True
-  #   normalize: True
-  #   augment: True
-  #   use_sampler: True
+  criterion: "CrossEntropyLoss"
   
   dataloader:
-  #   num_workers: 4
     batch_size: 64  # how many independent sequences will we process in parallel?
-  #   pin_memory: True
-  #   persistent_workers: True
 
   optimizer_name: "AdamW"  # Lion, Adam, SGD, Adamax, Adadelta, RMSProp ecc. (https://pytorch.org/docs/stable/optim.html)
   optimizer:
@@ -64,12 +53,13 @@ config:
   pretrain: False
   pretest: False
   train: True
-  test: True
+  generate: True
 
   training:
-    n_epochs: 5000
-    eval_interval: 500
-    checkpoint_every: 10
+    n_epochs: 150  # 5000
+    eval_interval: 50  # 500
+    eval_iters: 10  # 200
+    checkpoint_every: 5
     patience: 20
 
   clip_grads: False
