@@ -1,0 +1,81 @@
+#### Weight & Biases settings
+
+wandb:
+  name: "2024-05-13 - First run"
+  resume: True
+  job_type: "Train-Test"
+  group: "Exercise 1.2"
+  project: "University - DLA - Lab 1"
+  tags: 
+  - "CNN"
+  - "ResNet"
+  - "Base"
+  - "Clipping"
+  notes: "First attempt at training a basic CNN and ResNet on CIFAR10 dataset."
+
+
+#### Experiment settings
+
+config:
+  # Machine
+  seed: 1
+  device: "cuda:0"
+
+  # Paths and dirs
+  data_dir: "data"
+  results_dir: "results"
+  log_file: "log.txt"
+
+  model_type: "CNN"
+  model:
+    depth: 9
+    output_size: 10
+    want_shortcut: False
+    activation: "ReLU"
+    fc_activation: "ReLU"
+    pool_type: "maxpool"
+  
+  criterion: "CrossEntropyLoss"
+
+  dataset:
+    dataset_name: "CIFAR10"
+    val_size: 0.2
+    val_shuffle: True
+    normalize: True
+    augment: True
+    use_sampler: True
+  
+  dataloader:
+    num_workers: 4
+    batch_size: 512
+    pin_memory: True
+    persistent_workers: True
+
+  optimizer_name: "AdamW"  # Lion, Adam, SGD, Adamax, Adadelta, RMSProp ecc. (https://pytorch.org/docs/stable/optim.html)
+  optimizer:
+    lr: 0.00005
+    weight_decay: 0.01
+    amsgrad: True
+  
+  scheduler_name: "OneCycleLR"  # MultiStepLR
+  scheduler: 
+    max_lr: 0.0001
+  
+  pretrain: False
+  pretest: False
+  train: True
+  test: True
+
+  training:
+    n_epochs: 150
+    eval_interval: 1
+    checkpoint_every: 1
+    patience: 20
+
+  clip_grads: True
+
+  # Goals
+  problem: None
+  xai: False
+  explain_gradients: False
+  explain_cam: False
