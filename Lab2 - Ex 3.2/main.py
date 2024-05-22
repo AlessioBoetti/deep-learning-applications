@@ -15,7 +15,7 @@ import wandb
 from tqdm import tqdm
 
 from dataloaders import MNIST_Dataset, CIFAR10_Dataset, NLP_Dataset
-from model import ConvolutionalNeuralNetwork, Lion
+from model import DistilRoBERTaBase, Lion
 from utils import *
 from xai import *
 
@@ -157,8 +157,8 @@ def load_dataset(
         dataset = CIFAR10_Dataset(**dataset_kw)
     # if dataset_name.lower() == 'mvtec':
     #     dataset = MVTEC_Dataset(**dataset_kw)
-    if dataset_name.lower() == 'nlp':
-        dataset = NLP_Dataset(**dataloader_kw)
+    if dataset_name.lower().replace(' ', '') == 'textclassification':
+        dataset = NLP_Dataset(**dataset_kw)
     return dataset
 
 
@@ -388,14 +388,13 @@ def main(args, cfg, wb, run_name):
     logger.info('Loading dataset from "%s".' % cfg['data_dir'])
     dataset = load_dataset(data_dir, val_shuffle_seed=cfg['seed'], **cfg['dataset'])
     dataloader_kw = dict(seed=cfg['seed'], device='cpu', **cfg['dataloader'])  # https://stackoverflow.com/questions/68621210/runtimeerror-expected-a-cuda-device-type-for-generator-but-found-cpu
-
     logger.info('Dataset loaded.')
 
 
     # Initializing model...
     model_cfg, train_cfg = cfg['model'], cfg['training']
     logger.info('Initializing %s model.' % cfg['model_type'])
-    model = ConvolutionalNeuralNetwork(
+    model = DistilRoBERTaBase(
         **model_cfg,
     ).to(device)
     logger.info('Model initialized.')

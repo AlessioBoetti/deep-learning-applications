@@ -7,6 +7,7 @@ from datetime import timedelta
 import numpy as np
 from dotenv import load_dotenv, find_dotenv
 from typing import Union, List
+import gc
 
 import torch
 import torch.nn as nn
@@ -349,6 +350,9 @@ def train(
         if patience and getattr(patience, 'count') == 0:
             logger.info('  Early stopping. Ending training.')
             break
+
+        gc.collect()
+        torch.cuda.empty_cache()
 
     train_time = time.time() - train_start_time
     logger.info('Training time: %.3f' % train_time)

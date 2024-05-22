@@ -1,17 +1,18 @@
 #### Weight & Biases settings
 
 wandb:
-  name: "2024-05-13 - First run"
-  resume: True
+  name: "2024-05-17 - First run"
+  resume: False
   job_type: "Train-Test"
-  group: "Exercise 1.2"
-  project: "University - DLA - Lab 1"
+  group: "Exercise 1"
+  project: "University - DLA - Lab 2"
   tags: 
-  - "CNN"
-  - "ResNet"
+  - "NanoGPT"
+  - "LLM"
+  - "NLP"
   - "Base"
-  - "Clipping"
-  notes: "First attempt at training a basic CNN and ResNet on CIFAR10 dataset."
+
+  notes: "First attempt at training a basic NanoGPT."
 
 
 #### Experiment settings
@@ -22,38 +23,26 @@ config:
   device: "cuda:0"
 
   # Paths and dirs
-  data_dir: "data"
+  data: "divina_commedia.txt"
   results_dir: "results"
   log_file: "log.txt"
 
-  model_type: "CNN"
+  model_type: "NanoGPT"
   model:
-    depth: 9
-    output_size: 10
-    want_shortcut: False
-    activation: "ReLU"
-    fc_activation: "ReLU"
-    pool_type: "maxpool"
+    block_size: 256  # What is the maximum context length for predictions?
+    n_embed: 384
+    n_head: 6
+    n_layers: 6
+    dropout: 0.2
   
   criterion: "CrossEntropyLoss"
-
-  dataset:
-    dataset_name: "CIFAR10"
-    val_size: 0.2
-    val_shuffle: True
-    normalize: True
-    augment: True
-    use_sampler: True
   
   dataloader:
-    num_workers: 2
-    batch_size: 256
-    pin_memory: True
-    persistent_workers: True
+    batch_size: 64  # how many independent sequences will we process in parallel?
 
   optimizer_name: "AdamW"  # Lion, Adam, SGD, Adamax, Adadelta, RMSProp ecc. (https://pytorch.org/docs/stable/optim.html)
   optimizer:
-    lr: 0.00005
+    lr: 0.0003
     weight_decay: 0.01
     amsgrad: True
   
@@ -67,12 +56,13 @@ config:
   test: True
 
   training:
-    n_epochs: 150
-    eval_interval: 1
-    checkpoint_every: 1
+    n_epochs: 5000
+    eval_interval: 500
+    eval_iters: 200
+    checkpoint_every: 10
     patience: 20
 
-  clip_grads: True
+  clip_grads: False
 
   # Goals
   problem: None

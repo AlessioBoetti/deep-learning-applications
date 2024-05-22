@@ -8,8 +8,10 @@ import torch
 import torchvision.transforms as transforms
 from torch.utils.data import Dataset, DataLoader, Subset, SubsetRandomSampler
 from torchvision.datasets import MNIST, CIFAR10, ImageFolder, DatasetFolder
-from datasets import load_dataset
+
 from huggingface_hub import hf_hub_download
+from transformers import AutoTokenizer
+from datasets import load_dataset
 
 
 def get_target_label_idx(labels, targets):
@@ -385,9 +387,69 @@ class CIFAR10_Dataset(BaseDataset):
                 self.val_set = Subset(self.val_set, val_idx)
 
 
+class QADataset(Dataset):
+    def __init__(self) -> None:
+        ...
+
+
+class TextClassificationDataset(Dataset):
+    def __init__(self, dataset_name, split, model_name, data_dir, max_token_len=128, filename=None):
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+        self.max_token_len = max_token_len
+        self.text, self.label = [], []
+        self.load_dataset(dataset_name, split, data_dir, filename)
+
+    def load_dataset(self, dataset_name, split, data_dir, filename=None):
+        if filename:
+            hf_ds_kw = dict(repo_id=dataset_name, filename=filename, repo_type='dataset', local_dir=data_dir, local_dir_use_symlinks=False)
+            if filename.endswith('.parquet'):
+                df = pd.read_parquet(hf_hub_download(**hf_ds_kw))
+            elif filename.endswith('.csv'):
+                df = pd.read_csv(hf_hub_download(**hf_ds_kw))
+            else:
+                raise NotImplementedError('Dataset filename is a not implemented file type.')
+        else:
+            dataset = load_dataset(dataset_name, split=split, cache_dir=data_dir)
+        
+        df = df.fillna('')
+        df = df.astype(str)
+        df['text'] = df['text'].str.lower()
+        df['text'] = df['text'].str.replace(r'\n', ' ')
+        df['label'] = df['label'].astype(int)
+
+        for idx in df.index:
+            row = df.loc[idx]
+            self.text.append(row['text'])
+            self.label.append(row['label'])   
+
+    def __len__(self):
+        return len(self.label)
+
+    def __getitem__(self, index):
+        text = self.text[index]
+        label = self.label[index]
+        tokens = self.tokenizer.encode_plus(
+            text,
+            add_special_tokens=True,
+            return_tensors='pt',
+            truncation=True,
+            padding='max_length',
+            max_length=self.max_token_len,
+            return_attention_mask=True
+        )
+        return tokens.input_ids.flatten(), tokens.attention_mask.flatten(), label
+    
+
 class NLP_Dataset(BaseDataset):
     def __init__(self, 
-        root: str,
+        dataset_type,
+        dataset_name,
+        model_name,
+        data_dir,
+        max_token_len: int,
+        split: str = None,
+        filename: str = None,
+        val: bool = False,
         val_size: float = None,
         val_shuffle: bool = True,
         val_shuffle_seed: int = 1,
@@ -401,50 +463,33 @@ class NLP_Dataset(BaseDataset):
         augment: bool = False,
         use_sampler: bool = True,
     ):   
-        
-
-    def __init__(self, path, model_name, max_token_len=128):
         super().__init__()
+        if dataset_type.lower().replace(' ', '') == 'textclassification':
+            self.train_set = TextClassificationDataset(
+                dataset_name,
+                split, 
+                model_name, 
+                data_dir, 
+                max_token_len, 
+                filename
+            )
+
+            self.test_set = None
         
-        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
-        self.max_token_len = max_token_len
-        self.text, self.label = [], []
-        self.read_csv(path)
-    
-
-    def load_dataset():
-        df = load_dataset("truthful_qa")
-
-
-    def read_csv(self, path):
-        df = pd.read_csv(path, delimiter=',', names=['label', 'question_title', 'question_content', 'best_answer']).iloc[:, :-1]
-        df = df.fillna('')
-        df = df.astype(str)
-        df['label'] = df['label'].astype(int)
-        df['question_title'] = df['question_title'].str.lower()
-        df['question_content'] = df['question_content'].str.lower()
-        for row in df.itertuples():
-            self.label.append(row.label - 1)  # from 0 to 4
-            string = " ".join([row.question_title, row.question_content])
-            string = string.replace(r'\n', ' ')
-            string = ' '.join(string.split())
-            self.text.append(string)
-
-
-    def __len__(self):
-        return len(self.label)
-
-
-    def __getitem__(self, index):
-        comment = self.text[index]
-        label = self.label[index]
-        tokens = self.tokenizer.encode_plus(comment,
-                                            add_special_tokens=True,
-                                            return_tensors='pt',
-                                            truncation=True,
-                                            padding='max_length',
-                                            max_length=self.max_token_len,
-                                            return_attention_mask=True)
-        return tokens.input_ids.flatten(), tokens.attention_mask.flatten(), label
-
-        
+        if val:
+            self.val_set = None
+            # TODO: Transform the following code
+            # n_train = len(self.train_set)
+            # indices = list(range(n_train))
+            # split = int(np.floor(val_size * n_train))
+            # if val_shuffle:
+            #     np.random.seed(val_shuffle_seed)
+            #     np.random.shuffle(indices)
+            # train_idx, val_idx = indices[split:], indices[:split]
+            
+            # if use_sampler:
+            #     self.train_sampler = SubsetRandomSampler(train_idx)
+            #     self.val_sampler = SubsetRandomSampler(val_idx)     # Shuffling val set is not necessary
+            # else:
+            #     self.train_set = Subset(self.train_set, train_idx)
+            #     self.val_set = Subset(self.val_set, val_idx)

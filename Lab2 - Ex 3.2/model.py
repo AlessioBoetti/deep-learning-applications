@@ -464,12 +464,12 @@ class GPTLanguageModel(BaseModel):
         return idx
 
 
-class DistillRoBERTa(BaseModel):
-    def __init__(self, n_class):
+class DistilRoBERTaBase(BaseModel):
+    def __init__(self, n_classes):
         super().__init__()
         self.model = AutoModel.from_pretrained('distilroberta-base', return_dict=True)
         self.hidden = nn.Linear(self.model.config.hidden_size, self.model.config.hidden_size)
-        self.classifier = nn.Linear(self.model.config.hidden_size, n_class)
+        self.classifier = nn.Linear(self.model.config.hidden_size, n_classes)
         self._init_weights([self.hidden, self.classifier])
 
 
@@ -482,7 +482,7 @@ class DistillRoBERTa(BaseModel):
 
 if __name__ == "__main__":
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    model = distilroberta_base(n_class=10).to(device)
+    model = DistilRoBERTaBase(n_class=10).to(device)
     input_ids = torch.randint(0, 1000, (32, 128)).to(device)
     attention_mask = torch.randint(0, 2, (32, 128)).to(device)
     print(model(input_ids, attention_mask).shape)
