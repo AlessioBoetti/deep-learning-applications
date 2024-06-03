@@ -352,7 +352,7 @@ class Head(nn.Module):
         # Input of size (batch, time-step, channels)
         # Output of size (batch, time-step, head size)
         B, T, C = x.shape
-        k = self.key(x)    # (B, T, hs)
+        k = self.key(x)    # (B, T, hs) (hs is head size)
         q = self.query(x)  # (B, T, hs)
         # Compute attention scores ("affinities")
         weights = q @ k.transpose(-2,-1) * k.shape[-1]**-0.5  # (B, T, hs) @ (B, hs, T) -> (B, T, T)
@@ -440,13 +440,13 @@ class GPTLanguageModel(BaseModel):
         return logits
 
 
-    def generate(self, idx, max_new_tokens, block_size):
+    def generate(self, idx, max_new_tokens, block_size, device):
         # idx is (B, T) array of indices in the current context
         for _ in range(max_new_tokens):
             # Crop idx to the last block_size tokens
             idx_cond = idx[:, -block_size:]
             # Get the predictions
-            logits, loss = self(idx_cond)
+            logits = self(idx_cond, device)
             # Focus only on the last time step
             logits = logits[:, -1, :] # becomes (B, C)
             # Apply softmax to get probabilities

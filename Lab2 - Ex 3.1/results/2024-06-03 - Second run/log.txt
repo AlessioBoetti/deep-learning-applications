@@ -1,0 +1,101 @@
+2024-06-03 19:24:39,929 - Starting run.
+2024-06-03 19:24:39,929 - Logger setup correctly.
+2024-06-03 19:24:39,930 - Seed set to 1.
+2024-06-03 19:24:39,958 - Log filepath: results/2024-06-03 - Second run/log.txt.
+2024-06-03 19:24:39,958 - Data dir: data.
+2024-06-03 19:24:39,958 - Dataset: yelp_review_full
+2024-06-03 19:24:39,958 - Number of dataloader workers: 8
+2024-06-03 19:24:39,958 - Network: BERT
+2024-06-03 19:24:39,958 - Computation device: cuda:0
+2024-06-03 19:24:39,958 - Loading dataset from "data".
+2024-06-03 19:25:57,101 - Dataset loaded.
+2024-06-03 19:25:57,101 - Initializing BERT model, version: distilroberta-base.
+2024-06-03 19:26:30,183 - Model initialized.
+2024-06-03 19:26:30,183 - Showing model structure:
+2024-06-03 19:26:30,183 - BERT(
+  (model): PeftModelForFeatureExtraction(
+    (base_model): LoraModel(
+      (model): RobertaModel(
+        (embeddings): RobertaEmbeddings(
+          (word_embeddings): Embedding(50265, 768, padding_idx=1)
+          (position_embeddings): Embedding(514, 768, padding_idx=1)
+          (token_type_embeddings): Embedding(1, 768)
+          (LayerNorm): LayerNorm((768,), eps=1e-05, elementwise_affine=True)
+          (dropout): Dropout(p=0.1, inplace=False)
+        )
+        (encoder): RobertaEncoder(
+          (layer): ModuleList(
+            (0-5): 6 x RobertaLayer(
+              (attention): RobertaAttention(
+                (self): RobertaSelfAttention(
+                  (query): lora.Linear(
+                    (base_layer): Linear(in_features=768, out_features=768, bias=True)
+                    (lora_dropout): ModuleDict(
+                      (default): Dropout(p=0.1, inplace=False)
+                    )
+                    (lora_A): ModuleDict(
+                      (default): Linear(in_features=768, out_features=8, bias=False)
+                    )
+                    (lora_B): ModuleDict(
+                      (default): Linear(in_features=8, out_features=768, bias=False)
+                    )
+                    (lora_embedding_A): ParameterDict()
+                    (lora_embedding_B): ParameterDict()
+                  )
+                  (key): Linear(in_features=768, out_features=768, bias=True)
+                  (value): lora.Linear(
+                    (base_layer): Linear(in_features=768, out_features=768, bias=True)
+                    (lora_dropout): ModuleDict(
+                      (default): Dropout(p=0.1, inplace=False)
+                    )
+                    (lora_A): ModuleDict(
+                      (default): Linear(in_features=768, out_features=8, bias=False)
+                    )
+                    (lora_B): ModuleDict(
+                      (default): Linear(in_features=8, out_features=768, bias=False)
+                    )
+                    (lora_embedding_A): ParameterDict()
+                    (lora_embedding_B): ParameterDict()
+                  )
+                  (dropout): Dropout(p=0.1, inplace=False)
+                )
+                (output): RobertaSelfOutput(
+                  (dense): Linear(in_features=768, out_features=768, bias=True)
+                  (LayerNorm): LayerNorm((768,), eps=1e-05, elementwise_affine=True)
+                  (dropout): Dropout(p=0.1, inplace=False)
+                )
+              )
+              (intermediate): RobertaIntermediate(
+                (dense): Linear(in_features=768, out_features=3072, bias=True)
+                (intermediate_act_fn): GELUActivation()
+              )
+              (output): RobertaOutput(
+                (dense): Linear(in_features=3072, out_features=768, bias=True)
+                (LayerNorm): LayerNorm((768,), eps=1e-05, elementwise_affine=True)
+                (dropout): Dropout(p=0.1, inplace=False)
+              )
+            )
+          )
+        )
+        (pooler): RobertaPooler(
+          (dense): Linear(in_features=768, out_features=768, bias=True)
+          (activation): Tanh()
+        )
+      )
+    )
+  )
+  (hidden): Linear(in_features=768, out_features=768, bias=True)
+  (classifier): Linear(in_features=768, out_features=10, bias=True)
+)
+2024-06-03 19:26:30,184 - Initializing AdamW optimizer.
+2024-06-03 19:26:30,185 - Optimizer initialized.
+2024-06-03 19:26:30,188 - Starting model from scratch.
+2024-06-03 19:26:30,188 - Pretraining: False
+2024-06-03 19:26:30,188 - Testing pretrained model: False
+2024-06-03 19:26:30,188 - Training: True
+2024-06-03 19:26:30,188 - Training optimizer: AdamW
+2024-06-03 19:26:30,188 - Training learning rate: 5e-05
+2024-06-03 19:26:30,188 - Training epochs: 500
+2024-06-03 19:26:30,188 - Training batch size: 256
+2024-06-03 19:26:30,188 - Training weight decay: 0.01
+2024-06-03 19:26:30,189 - Starting training...

@@ -1,7 +1,7 @@
 #### Weight & Biases settings
 
 wandb:
-  name: "2024-05-25 - Second run (mulambda) (more epochs)"
+  name: "2024-05-25 - First run (mulambda)"
   resume: False
   job_type: "Train-Test"
   group: "Exercise 1"
@@ -56,14 +56,11 @@ config:
   generate: True
 
   training:
-    n_epochs: 2500  # 5000
-    eval_interval: 250  # 500
-    eval_iters: 100  # 200
-    checkpoint_every: 100
-    patience: 50
-  
-  generation:
-    max_new_tokens: 1000
+    n_epochs: 500  # 5000
+    eval_interval: 10  # 500
+    eval_iters: 10  # 200
+    checkpoint_every: 10
+    patience: 20
 
   clip_grads: False
 

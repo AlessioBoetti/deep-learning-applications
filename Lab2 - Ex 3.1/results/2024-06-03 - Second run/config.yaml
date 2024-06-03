@@ -1,18 +1,19 @@
 #### Weight & Biases settings
 
 wandb:
-  name: "2024-05-23 - Ninth Run (mulambda server) (depth = 48, shortcut)"
-  resume: False
-  job_type: "Train-Test"
-  group: "Exercise 1.2"
-  project: "University - DLA - Lab 1"
+  name: "2024-06-03 - Second run"
+  resume: True
+  job_type: "Fine-Tuning"
+  group: "Exercise 3.1"
+  project: "University - DLA - Lab 2"
   tags: 
-  - "CNN"
-  - "ResNet"
+  - "DistilRoBERTa"
+  - "BERT"
+  - "NLP"
   - "Base"
-  - "Clipping"
-  - "Shortcut"
-  notes: "First attempt at training a basic CNN and ResNet on CIFAR10 dataset."
+  - "PEFT"
+  - "LoRA"
+  notes: "Fine-tuning DistilRoBERTa on an NLP dataset."
 
 
 #### Experiment settings
@@ -26,24 +27,32 @@ config:
   data_dir: "data"
   results_dir: "results"
   log_file: "log.txt"
+  hf_cache_dir: "./hf"
 
-  model_type: "ResNet"
+  model_type: "BERT"
   model:
-    depth: 48
+    model_name: "distilroberta-base"
     output_size: 10
-    want_shortcut: True
-    activation: "ReLU"
-    fc_activation: "ReLU"
-    pool_type: "maxpool"
-  
+    init_mode: "xavier"
+    init_dist: "normal"
+    device_map: 'auto'
+    freeze_model_base: False
+    peft: "LoRA"
+
   criterion: "CrossEntropyLoss"
 
   dataset:
-    dataset_name: "CIFAR10"
+    dataset_type: "TextClassification"
+    dataset_name: "yelp_review_full"
+    filename: null
+    train_set_name: "train"
+    test_set_name: "test"
+    val_set_name: null
     val_size: 0.2
+    padding_side: 'right'
+    trunc_side: 'right'
+    max_token_len: 128
     val_shuffle: True
-    normalize: True
-    augment: True
     use_sampler: True
   
   dataloader:
@@ -68,12 +77,12 @@ config:
   test: True
 
   training:
-    n_epochs: 150
-    eval_interval: 1
-    checkpoint_every: 1
-    patience: 20
+    n_epochs: 500
+    eval_interval: 5
+    checkpoint_every: 10
+    patience: 30
 
-  clip_grads: True
+  clip_grads: False
 
   # Goals
   problem: None

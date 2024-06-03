@@ -1,7 +1,7 @@
 #### Weight & Biases settings
 
 wandb:
-  name: "2024-05-23 - Ninth Run (mulambda server) (depth = 48, shortcut)"
+  name: "2024-05-23 - Sixth Run (mulambda server) (depth = 9, shortcut)"
   resume: False
   job_type: "Train-Test"
   group: "Exercise 1.2"
@@ -27,9 +27,9 @@ config:
   results_dir: "results"
   log_file: "log.txt"
 
-  model_type: "ResNet"
+  model_type: "CNN"
   model:
-    depth: 48
+    depth: 9
     output_size: 10
     want_shortcut: True
     activation: "ReLU"

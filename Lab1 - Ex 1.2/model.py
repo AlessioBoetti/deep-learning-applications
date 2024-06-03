@@ -158,7 +158,6 @@ class ConvolutionalBlock(BaseModel):
 
         self.want_shortcut = want_shortcut
         conv_stride = 1
-        self.pooling = None
         hook = None
 
         if downsample:
@@ -180,6 +179,8 @@ class ConvolutionalBlock(BaseModel):
                     kw = dict(kernel_size=3, stride=2, padding=1)
                 else:
                     raise NotImplementedError('Valid pool types are "convolution", "adaptivemaxpool" or "maxpool"')
+        else:
+            pool_type = None
         
         self.block_layers = nn.Sequential(OrderedDict({
             'conv_1': nn.Conv2d(in_channels, in_channels, kernel_size=3, stride=conv_stride, padding=1, bias=False),
@@ -189,7 +190,7 @@ class ConvolutionalBlock(BaseModel):
             'bn_2': nn.BatchNorm2d(out_channels),
             'act_2': self._get_activation(activation)
         }))
-        if pool_type is not None:
+        if pool_type:
             name = 'pool_hook' if hook else 'pool'
             self.block_layers.add_module(name, self._get_pooling(pool_type, kw))
         
@@ -200,7 +201,6 @@ class ConvolutionalBlock(BaseModel):
             }))
             self.activation = self._get_activation(activation)
             # self.relu = nn.ReLU()
-        
 
 
     def forward(self, x):
@@ -213,40 +213,13 @@ class ConvolutionalBlock(BaseModel):
             return out
         else:
             return self.block_layers(x)
-    
-    """ def forward(self, x):
-        if self.want_shortcut:
-            short = x
-            out = self.block_layers(x)
-            if out.shape != short.shape:
-                short = self.shortcut(short)
-            out = self.activation(short + out)  # self.relu(short + out)
-            return out
-        else:
-            print(f'Inside cnn block: {x.shape}')
-            x = self.conv1(x)
-            print(x.shape)
-            x = self.bn1(x)
-            print(x.shape)
-            x = self.act1(x)
-            print(x.shape)
-            x = self.conv2(x)
-            print(x.shape)
-            x = self.bn2(x)
-            print(x.shape)
-            x = self.act2(x)
-            print(x.shape)
-            if self.pooling:
-                x = self.pool(x)
-                print(x.shape)
-            return x """
 
 
 class ConvolutionalNeuralNetwork(BaseModel):
     def __init__(self, depth: int, output_size: int, want_shortcut: bool, pool_type: str, activation: str, fc_activation: str):
         super().__init__()
         channels = [64, 128, 256, 512]
-        if depth == 9:
+        if depth == 9:  # 9 because there are 4 ConvBlocks, each composed of 2 Conv layers, + the init_conv layer
             num_conv_block = [1, 1, 1, 1]   # contains the number of conv blocks for each stage of the network
         elif depth == 17:
             num_conv_block = [2, 2, 2, 2]

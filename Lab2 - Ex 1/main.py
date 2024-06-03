@@ -383,8 +383,7 @@ def main(args, cfg, wb, run_name):
         logger.info('Starting model from scratch.')
         start, best = 0, None
         patience = EarlyStopping('max', train_cfg['patience']) if train_cfg['patience'] else None
-    
-    save_config('config.yaml', cfg['out_path'])  
+        save_config('config.yaml', cfg['out_path'])  
 
     # Pretraining model...
     logger.info('Pretraining: %s' % cfg['pretrain'])
@@ -459,11 +458,25 @@ def main(args, cfg, wb, run_name):
 
 
     # Generating text...
-    logger.info('Generation: %s' % cfg['test'])
+    logger.info('Generation: %s' % cfg['generate'])
     if cfg['generate']:
+        logger.info('Started generation.')
+        start_time = time.time()
         context = torch.zeros((1, 1), dtype=torch.long, device=device)
-        print(decode(model.generate(context, max_new_tokens=500)[0].tolist()))
-        # open('more.txt', 'w').write(decode(m.generate(context, max_new_tokens=10000)[0].tolist()))
+        # print(decode(model.generate(context, max_new_tokens=500)[0].tolist()))
+        with open(f"{cfg['out_path']}/output.txt", 'w') as f:
+            f.write(
+                decode(
+                    model.generate(
+                        context, 
+                        max_new_tokens=cfg['generation']['max_new_tokens'], 
+                        block_size=model_cfg['block_size'], 
+                        device=device
+                    )[0].tolist()
+                )
+            )
+        logger.info(f'Generation time: {time.time() - start_time}')
+        logger.info('Finished generating.')
 
 
     # plot_results()

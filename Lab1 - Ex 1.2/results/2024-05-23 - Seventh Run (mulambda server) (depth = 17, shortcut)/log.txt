@@ -1,0 +1,1881 @@
+2024-05-24 23:41:47,160 - Starting run.
+2024-05-24 23:41:47,160 - Logger setup correctly.
+2024-05-24 23:41:47,162 - Seed set to 1.
+2024-05-24 23:41:47,192 - Log filepath: results/2024-05-23 - Seventh Run (mulambda server) (depth = 17, shortcut)/log.txt.
+2024-05-24 23:41:47,193 - Data dir: data.
+2024-05-24 23:41:47,193 - Dataset: CIFAR10
+2024-05-24 23:41:47,193 - Number of dataloader workers: 8
+2024-05-24 23:41:47,193 - Network: ResNet
+2024-05-24 23:41:47,193 - Computation device: cuda:0
+2024-05-24 23:41:47,193 - Loading dataset from "data".
+2024-05-24 23:41:49,675 - Dataset loaded.
+2024-05-24 23:41:49,675 - Initializing ResNet model.
+2024-05-24 23:41:49,889 - Model initialized.
+2024-05-24 23:41:49,889 - Showing model structure:
+2024-05-24 23:41:49,889 - ConvolutionalNeuralNetwork(
+  (conv_net): Sequential(
+    (init_conv): Conv2d(3, 64, kernel_size=(3, 3), stride=(1, 1))
+    (conv_block_1): ConvolutionalBlock(
+      (block_layers): Sequential(
+        (conv_1): Conv2d(64, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+        (bn_1): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (act_1): ReLU()
+        (conv_2): Conv2d(64, 64, kernel_size=(3, 3), stride=(1, 1), padding=same, bias=False)
+        (bn_2): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (act_2): ReLU()
+      )
+      (shortcut): Sequential(
+        (projection): Conv2d(64, 64, kernel_size=(1, 1), stride=(2, 2), bias=False)
+        (bn): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      )
+      (activation): ReLU()
+    )
+    (conv_block_2): ConvolutionalBlock(
+      (block_layers): Sequential(
+        (conv_1): Conv2d(64, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+        (bn_1): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (act_1): ReLU()
+        (conv_2): Conv2d(64, 128, kernel_size=(3, 3), stride=(1, 1), padding=same, bias=False)
+        (bn_2): BatchNorm2d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (act_2): ReLU()
+        (pool): MaxPool2d(kernel_size=3, stride=2, padding=1, dilation=1, ceil_mode=False)
+      )
+      (shortcut): Sequential(
+        (projection): Conv2d(64, 128, kernel_size=(1, 1), stride=(2, 2), bias=False)
+        (bn): BatchNorm2d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      )
+      (activation): ReLU()
+    )
+    (conv_block_3): ConvolutionalBlock(
+      (block_layers): Sequential(
+        (conv_1): Conv2d(128, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+        (bn_1): BatchNorm2d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (act_1): ReLU()
+        (conv_2): Conv2d(128, 128, kernel_size=(3, 3), stride=(1, 1), padding=same, bias=False)
+        (bn_2): BatchNorm2d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (act_2): ReLU()
+      )
+      (shortcut): Sequential(
+        (projection): Conv2d(128, 128, kernel_size=(1, 1), stride=(2, 2), bias=False)
+        (bn): BatchNorm2d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      )
+      (activation): ReLU()
+    )
+    (conv_block_4): ConvolutionalBlock(
+      (block_layers): Sequential(
+        (conv_1): Conv2d(128, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+        (bn_1): BatchNorm2d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (act_1): ReLU()
+        (conv_2): Conv2d(128, 256, kernel_size=(3, 3), stride=(1, 1), padding=same, bias=False)
+        (bn_2): BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (act_2): ReLU()
+        (pool): MaxPool2d(kernel_size=3, stride=2, padding=1, dilation=1, ceil_mode=False)
+      )
+      (shortcut): Sequential(
+        (projection): Conv2d(128, 256, kernel_size=(1, 1), stride=(2, 2), bias=False)
+        (bn): BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      )
+      (activation): ReLU()
+    )
+    (conv_block_5): ConvolutionalBlock(
+      (block_layers): Sequential(
+        (conv_1): Conv2d(256, 256, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+        (bn_1): BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (act_1): ReLU()
+        (conv_2): Conv2d(256, 256, kernel_size=(3, 3), stride=(1, 1), padding=same, bias=False)
+        (bn_2): BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (act_2): ReLU()
+      )
+      (shortcut): Sequential(
+        (projection): Conv2d(256, 256, kernel_size=(1, 1), stride=(2, 2), bias=False)
+        (bn): BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      )
+      (activation): ReLU()
+    )
+    (conv_block_6): ConvolutionalBlock(
+      (block_layers): Sequential(
+        (conv_1): Conv2d(256, 256, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+        (bn_1): BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (act_1): ReLU()
+        (conv_2): Conv2d(256, 512, kernel_size=(3, 3), stride=(1, 1), padding=same, bias=False)
+        (bn_2): BatchNorm2d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (act_2): ReLU()
+        (pool): MaxPool2d(kernel_size=3, stride=2, padding=1, dilation=1, ceil_mode=False)
+      )
+      (shortcut): Sequential(
+        (projection): Conv2d(256, 512, kernel_size=(1, 1), stride=(2, 2), bias=False)
+        (bn): BatchNorm2d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      )
+      (activation): ReLU()
+    )
+    (conv_block_7): ConvolutionalBlock(
+      (block_layers): Sequential(
+        (conv_1): Conv2d(512, 512, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+        (bn_1): BatchNorm2d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (act_1): ReLU()
+        (conv_2): Conv2d(512, 512, kernel_size=(3, 3), stride=(1, 1), padding=same, bias=False)
+        (bn_2): BatchNorm2d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (act_2): ReLU()
+      )
+      (shortcut): Sequential(
+        (projection): Conv2d(512, 512, kernel_size=(1, 1), stride=(2, 2), bias=False)
+        (bn): BatchNorm2d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      )
+      (activation): ReLU()
+    )
+    (conv_block_8): ConvolutionalBlock(
+      (block_layers): Sequential(
+        (conv_1): Conv2d(512, 512, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+        (bn_1): BatchNorm2d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (act_1): ReLU()
+        (conv_2): Conv2d(512, 512, kernel_size=(3, 3), stride=(1, 1), padding=same, bias=False)
+        (bn_2): BatchNorm2d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (act_2): ReLU()
+        (pool_hook): AdaptiveMaxPool2d(output_size=2)
+      )
+    )
+  )
+  (fc): MultiLayerPerceptron(
+    (layers): Sequential(
+      (linear_1): Linear(in_features=2048, out_features=1024, bias=False)
+      (bn_1): BatchNorm1d(1024, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (act_1): ReLU()
+      (linear_2): Linear(in_features=1024, out_features=1024, bias=False)
+      (bn_2): BatchNorm1d(1024, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (act_2): ReLU()
+      (last_linear): Linear(in_features=1024, out_features=10, bias=False)
+    )
+  )
+)
+2024-05-24 23:41:49,890 - Initializing AdamW optimizer.
+2024-05-24 23:41:49,890 - Optimizer initialized.
+2024-05-24 23:41:49,896 - Starting model from scratch.
+2024-05-24 23:41:49,896 - Pretraining: False
+2024-05-24 23:41:49,897 - Testing pretrained model: False
+2024-05-24 23:41:49,897 - Training: True
+2024-05-24 23:41:49,897 - Training optimizer: AdamW
+2024-05-24 23:41:49,897 - Training learning rate: 5e-05
+2024-05-24 23:41:49,897 - Training epochs: 150
+2024-05-24 23:41:49,897 - Training batch size: 256
+2024-05-24 23:41:49,897 - Training weight decay: 0.01
+2024-05-24 23:41:49,899 - Starting training...
+2024-05-24 23:42:00,887 - Epoch 1/150
+2024-05-24 23:42:00,887 -   Epoch Train Time: 10.983
+2024-05-24 23:42:00,887 -   Epoch Train Loss: 2.16181446
+2024-05-24 23:42:00,887 -   Epoch Train MulticlassAccuracy: 20.9812
+2024-05-24 23:42:00,887 -   Epoch Train MulticlassPrecision: 21.5482
+2024-05-24 23:42:00,887 -   Epoch Train MulticlassRecall: 20.9812
+2024-05-24 23:42:02,972 -   Validation Time: 2.082
+2024-05-24 23:42:02,972 -   Validation Loss: 2.02130618
+2024-05-24 23:42:02,972 -   Validation MulticlassAccuracy: 27.3971
+2024-05-24 23:42:02,972 -   Validation MulticlassPrecision: 26.7955
+2024-05-24 23:42:02,972 -   Validation MulticlassRecall: 27.3971
+2024-05-24 23:42:02,972 -   Found best model, saving model.
+2024-05-24 23:42:12,676 - Epoch 2/150
+2024-05-24 23:42:12,676 -   Epoch Train Time: 9.029
+2024-05-24 23:42:12,676 -   Epoch Train Loss: 1.93738545
+2024-05-24 23:42:12,676 -   Epoch Train MulticlassAccuracy: 31.2234
+2024-05-24 23:42:12,676 -   Epoch Train MulticlassPrecision: 30.7607
+2024-05-24 23:42:12,676 -   Epoch Train MulticlassRecall: 31.2234
+2024-05-24 23:42:14,141 -   Validation Time: 1.462
+2024-05-24 23:42:14,141 -   Validation Loss: 1.87312152
+2024-05-24 23:42:14,141 -   Validation MulticlassAccuracy: 33.5314
+2024-05-24 23:42:14,141 -   Validation MulticlassPrecision: 33.0876
+2024-05-24 23:42:14,141 -   Validation MulticlassRecall: 33.5314
+2024-05-24 23:42:14,141 -   Found best model, saving model.
+2024-05-24 23:42:26,010 - Epoch 3/150
+2024-05-24 23:42:26,010 -   Epoch Train Time: 9.026
+2024-05-24 23:42:26,011 -   Epoch Train Loss: 1.80317110
+2024-05-24 23:42:26,011 -   Epoch Train MulticlassAccuracy: 35.9033
+2024-05-24 23:42:26,011 -   Epoch Train MulticlassPrecision: 35.4448
+2024-05-24 23:42:26,011 -   Epoch Train MulticlassRecall: 35.9033
+2024-05-24 23:42:27,504 -   Validation Time: 1.491
+2024-05-24 23:42:27,504 -   Validation Loss: 1.74467054
+2024-05-24 23:42:27,504 -   Validation MulticlassAccuracy: 36.7080
+2024-05-24 23:42:27,504 -   Validation MulticlassPrecision: 36.4877
+2024-05-24 23:42:27,504 -   Validation MulticlassRecall: 36.7080
+2024-05-24 23:42:27,504 -   Found best model, saving model.
+2024-05-24 23:42:39,396 - Epoch 4/150
+2024-05-24 23:42:39,396 -   Epoch Train Time: 9.073
+2024-05-24 23:42:39,396 -   Epoch Train Loss: 1.69011027
+2024-05-24 23:42:39,397 -   Epoch Train MulticlassAccuracy: 39.9619
+2024-05-24 23:42:39,397 -   Epoch Train MulticlassPrecision: 39.4511
+2024-05-24 23:42:39,397 -   Epoch Train MulticlassRecall: 39.9619
+2024-05-24 23:42:40,890 -   Validation Time: 1.489
+2024-05-24 23:42:40,890 -   Validation Loss: 1.67536038
+2024-05-24 23:42:40,890 -   Validation MulticlassAccuracy: 39.8906
+2024-05-24 23:42:40,890 -   Validation MulticlassPrecision: 39.8098
+2024-05-24 23:42:40,890 -   Validation MulticlassRecall: 39.8906
+2024-05-24 23:42:40,890 -   Found best model, saving model.
+2024-05-24 23:42:52,809 - Epoch 5/150
+2024-05-24 23:42:52,809 -   Epoch Train Time: 9.103
+2024-05-24 23:42:52,809 -   Epoch Train Loss: 1.59887895
+2024-05-24 23:42:52,809 -   Epoch Train MulticlassAccuracy: 43.2021
+2024-05-24 23:42:52,809 -   Epoch Train MulticlassPrecision: 42.6773
+2024-05-24 23:42:52,810 -   Epoch Train MulticlassRecall: 43.2021
+2024-05-24 23:42:54,271 -   Validation Time: 1.459
+2024-05-24 23:42:54,272 -   Validation Loss: 1.60366642
+2024-05-24 23:42:54,272 -   Validation MulticlassAccuracy: 42.5273
+2024-05-24 23:42:54,272 -   Validation MulticlassPrecision: 42.1549
+2024-05-24 23:42:54,272 -   Validation MulticlassRecall: 42.5273
+2024-05-24 23:42:54,272 -   Found best model, saving model.
+2024-05-24 23:43:06,225 - Epoch 6/150
+2024-05-24 23:43:06,225 -   Epoch Train Time: 9.134
+2024-05-24 23:43:06,225 -   Epoch Train Loss: 1.51770161
+2024-05-24 23:43:06,225 -   Epoch Train MulticlassAccuracy: 46.5120
+2024-05-24 23:43:06,225 -   Epoch Train MulticlassPrecision: 46.0506
+2024-05-24 23:43:06,225 -   Epoch Train MulticlassRecall: 46.5120
+2024-05-24 23:43:07,715 -   Validation Time: 1.487
+2024-05-24 23:43:07,715 -   Validation Loss: 1.53039190
+2024-05-24 23:43:07,715 -   Validation MulticlassAccuracy: 45.3853
+2024-05-24 23:43:07,715 -   Validation MulticlassPrecision: 44.9659
+2024-05-24 23:43:07,716 -   Validation MulticlassRecall: 45.3853
+2024-05-24 23:43:07,716 -   Found best model, saving model.
+2024-05-24 23:43:19,631 - Epoch 7/150
+2024-05-24 23:43:19,631 -   Epoch Train Time: 9.125
+2024-05-24 23:43:19,631 -   Epoch Train Loss: 1.44094876
+2024-05-24 23:43:19,631 -   Epoch Train MulticlassAccuracy: 49.0270
+2024-05-24 23:43:19,632 -   Epoch Train MulticlassPrecision: 48.5121
+2024-05-24 23:43:19,632 -   Epoch Train MulticlassRecall: 49.0270
+2024-05-24 23:43:21,098 -   Validation Time: 1.463
+2024-05-24 23:43:21,098 -   Validation Loss: 1.47168061
+2024-05-24 23:43:21,098 -   Validation MulticlassAccuracy: 46.7846
+2024-05-24 23:43:21,098 -   Validation MulticlassPrecision: 46.9144
+2024-05-24 23:43:21,098 -   Validation MulticlassRecall: 46.7846
+2024-05-24 23:43:21,098 -   Found best model, saving model.
+2024-05-24 23:43:33,159 - Epoch 8/150
+2024-05-24 23:43:33,159 -   Epoch Train Time: 9.196
+2024-05-24 23:43:33,159 -   Epoch Train Loss: 1.37336667
+2024-05-24 23:43:33,159 -   Epoch Train MulticlassAccuracy: 51.7708
+2024-05-24 23:43:33,159 -   Epoch Train MulticlassPrecision: 51.3377
+2024-05-24 23:43:33,159 -   Epoch Train MulticlassRecall: 51.7708
+2024-05-24 23:43:34,651 -   Validation Time: 1.490
+2024-05-24 23:43:34,651 -   Validation Loss: 1.41634206
+2024-05-24 23:43:34,651 -   Validation MulticlassAccuracy: 49.6528
+2024-05-24 23:43:34,652 -   Validation MulticlassPrecision: 49.6476
+2024-05-24 23:43:34,652 -   Validation MulticlassRecall: 49.6528
+2024-05-24 23:43:34,652 -   Found best model, saving model.
+2024-05-24 23:43:46,660 - Epoch 9/150
+2024-05-24 23:43:46,660 -   Epoch Train Time: 9.147
+2024-05-24 23:43:46,660 -   Epoch Train Loss: 1.29279326
+2024-05-24 23:43:46,660 -   Epoch Train MulticlassAccuracy: 54.5208
+2024-05-24 23:43:46,660 -   Epoch Train MulticlassPrecision: 54.0850
+2024-05-24 23:43:46,660 -   Epoch Train MulticlassRecall: 54.5208
+2024-05-24 23:43:48,140 -   Validation Time: 1.478
+2024-05-24 23:43:48,140 -   Validation Loss: 1.39539121
+2024-05-24 23:43:48,140 -   Validation MulticlassAccuracy: 50.3774
+2024-05-24 23:43:48,140 -   Validation MulticlassPrecision: 51.7796
+2024-05-24 23:43:48,140 -   Validation MulticlassRecall: 50.3774
+2024-05-24 23:43:48,141 -   Found best model, saving model.
+2024-05-24 23:44:00,080 - Epoch 10/150
+2024-05-24 23:44:00,080 -   Epoch Train Time: 9.154
+2024-05-24 23:44:00,080 -   Epoch Train Loss: 1.23694674
+2024-05-24 23:44:00,080 -   Epoch Train MulticlassAccuracy: 56.9463
+2024-05-24 23:44:00,080 -   Epoch Train MulticlassPrecision: 56.6221
+2024-05-24 23:44:00,080 -   Epoch Train MulticlassRecall: 56.9463
+2024-05-24 23:44:01,572 -   Validation Time: 1.489
+2024-05-24 23:44:01,572 -   Validation Loss: 1.32796084
+2024-05-24 23:44:01,572 -   Validation MulticlassAccuracy: 52.5978
+2024-05-24 23:44:01,572 -   Validation MulticlassPrecision: 53.5405
+2024-05-24 23:44:01,572 -   Validation MulticlassRecall: 52.5978
+2024-05-24 23:44:01,573 -   Found best model, saving model.
+2024-05-24 23:44:13,488 - Epoch 11/150
+2024-05-24 23:44:13,488 -   Epoch Train Time: 9.159
+2024-05-24 23:44:13,489 -   Epoch Train Loss: 1.16964626
+2024-05-24 23:44:13,489 -   Epoch Train MulticlassAccuracy: 59.2158
+2024-05-24 23:44:13,489 -   Epoch Train MulticlassPrecision: 58.8951
+2024-05-24 23:44:13,489 -   Epoch Train MulticlassRecall: 59.2158
+2024-05-24 23:44:14,967 -   Validation Time: 1.475
+2024-05-24 23:44:14,967 -   Validation Loss: 1.32244615
+2024-05-24 23:44:14,967 -   Validation MulticlassAccuracy: 52.9946
+2024-05-24 23:44:14,967 -   Validation MulticlassPrecision: 53.7150
+2024-05-24 23:44:14,967 -   Validation MulticlassRecall: 52.9946
+2024-05-24 23:44:14,967 -   Found best model, saving model.
+2024-05-24 23:44:26,910 - Epoch 12/150
+2024-05-24 23:44:26,910 -   Epoch Train Time: 9.152
+2024-05-24 23:44:26,910 -   Epoch Train Loss: 1.11099692
+2024-05-24 23:44:26,911 -   Epoch Train MulticlassAccuracy: 61.3431
+2024-05-24 23:44:26,911 -   Epoch Train MulticlassPrecision: 61.0234
+2024-05-24 23:44:26,911 -   Epoch Train MulticlassRecall: 61.3431
+2024-05-24 23:44:28,407 -   Validation Time: 1.494
+2024-05-24 23:44:28,407 -   Validation Loss: 1.30267895
+2024-05-24 23:44:28,407 -   Validation MulticlassAccuracy: 54.1384
+2024-05-24 23:44:28,407 -   Validation MulticlassPrecision: 55.7862
+2024-05-24 23:44:28,408 -   Validation MulticlassRecall: 54.1384
+2024-05-24 23:44:28,408 -   Found best model, saving model.
+2024-05-24 23:44:40,418 - Epoch 13/150
+2024-05-24 23:44:40,418 -   Epoch Train Time: 9.194
+2024-05-24 23:44:40,419 -   Epoch Train Loss: 1.05111207
+2024-05-24 23:44:40,419 -   Epoch Train MulticlassAccuracy: 63.7515
+2024-05-24 23:44:40,419 -   Epoch Train MulticlassPrecision: 63.5637
+2024-05-24 23:44:40,419 -   Epoch Train MulticlassRecall: 63.7515
+2024-05-24 23:44:41,918 -   Validation Time: 1.497
+2024-05-24 23:44:41,919 -   Validation Loss: 1.24746512
+2024-05-24 23:44:41,919 -   Validation MulticlassAccuracy: 55.7697
+2024-05-24 23:44:41,919 -   Validation MulticlassPrecision: 56.3632
+2024-05-24 23:44:41,919 -   Validation MulticlassRecall: 55.7697
+2024-05-24 23:44:41,919 -   Found best model, saving model.
+2024-05-24 23:44:54,214 - Epoch 14/150
+2024-05-24 23:44:54,214 -   Epoch Train Time: 9.185
+2024-05-24 23:44:54,214 -   Epoch Train Loss: 0.99741328
+2024-05-24 23:44:54,214 -   Epoch Train MulticlassAccuracy: 65.4937
+2024-05-24 23:44:54,214 -   Epoch Train MulticlassPrecision: 65.2942
+2024-05-24 23:44:54,214 -   Epoch Train MulticlassRecall: 65.4937
+2024-05-24 23:44:55,683 -   Validation Time: 1.466
+2024-05-24 23:44:55,683 -   Validation Loss: 1.17278749
+2024-05-24 23:44:55,683 -   Validation MulticlassAccuracy: 58.8576
+2024-05-24 23:44:55,683 -   Validation MulticlassPrecision: 59.1248
+2024-05-24 23:44:55,683 -   Validation MulticlassRecall: 58.8576
+2024-05-24 23:44:55,683 -   Found best model, saving model.
+2024-05-24 23:45:08,008 - Epoch 15/150
+2024-05-24 23:45:08,008 -   Epoch Train Time: 9.281
+2024-05-24 23:45:08,008 -   Epoch Train Loss: 0.94130896
+2024-05-24 23:45:08,008 -   Epoch Train MulticlassAccuracy: 67.4015
+2024-05-24 23:45:08,009 -   Epoch Train MulticlassPrecision: 67.2397
+2024-05-24 23:45:08,009 -   Epoch Train MulticlassRecall: 67.4015
+2024-05-24 23:45:09,500 -   Validation Time: 1.488
+2024-05-24 23:45:09,500 -   Validation Loss: 1.22911236
+2024-05-24 23:45:09,500 -   Validation MulticlassAccuracy: 57.3224
+2024-05-24 23:45:09,500 -   Validation MulticlassPrecision: 59.7746
+2024-05-24 23:45:09,500 -   Validation MulticlassRecall: 57.3224
+2024-05-24 23:45:20,551 - Epoch 16/150
+2024-05-24 23:45:20,551 -   Epoch Train Time: 9.195
+2024-05-24 23:45:20,551 -   Epoch Train Loss: 0.89318735
+2024-05-24 23:45:20,552 -   Epoch Train MulticlassAccuracy: 69.1545
+2024-05-24 23:45:20,552 -   Epoch Train MulticlassPrecision: 69.0622
+2024-05-24 23:45:20,552 -   Epoch Train MulticlassRecall: 69.1545
+2024-05-24 23:45:22,038 -   Validation Time: 1.484
+2024-05-24 23:45:22,038 -   Validation Loss: 1.26303783
+2024-05-24 23:45:22,038 -   Validation MulticlassAccuracy: 55.7591
+2024-05-24 23:45:22,038 -   Validation MulticlassPrecision: 58.8907
+2024-05-24 23:45:22,038 -   Validation MulticlassRecall: 55.7591
+2024-05-24 23:45:32,619 - Epoch 17/150
+2024-05-24 23:45:32,619 -   Epoch Train Time: 9.202
+2024-05-24 23:45:32,619 -   Epoch Train Loss: 0.84959149
+2024-05-24 23:45:32,619 -   Epoch Train MulticlassAccuracy: 70.7841
+2024-05-24 23:45:32,619 -   Epoch Train MulticlassPrecision: 70.6630
+2024-05-24 23:45:32,619 -   Epoch Train MulticlassRecall: 70.7841
+2024-05-24 23:45:34,122 -   Validation Time: 1.501
+2024-05-24 23:45:34,122 -   Validation Loss: 1.24757498
+2024-05-24 23:45:34,122 -   Validation MulticlassAccuracy: 57.5822
+2024-05-24 23:45:34,122 -   Validation MulticlassPrecision: 60.7419
+2024-05-24 23:45:34,122 -   Validation MulticlassRecall: 57.5822
+2024-05-24 23:45:44,727 - Epoch 18/150
+2024-05-24 23:45:44,727 -   Epoch Train Time: 9.242
+2024-05-24 23:45:44,727 -   Epoch Train Loss: 0.80647443
+2024-05-24 23:45:44,727 -   Epoch Train MulticlassAccuracy: 72.2204
+2024-05-24 23:45:44,727 -   Epoch Train MulticlassPrecision: 72.1280
+2024-05-24 23:45:44,727 -   Epoch Train MulticlassRecall: 72.2204
+2024-05-24 23:45:46,248 -   Validation Time: 1.518
+2024-05-24 23:45:46,248 -   Validation Loss: 1.11301080
+2024-05-24 23:45:46,249 -   Validation MulticlassAccuracy: 61.7478
+2024-05-24 23:45:46,249 -   Validation MulticlassPrecision: 62.1701
+2024-05-24 23:45:46,249 -   Validation MulticlassRecall: 61.7478
+2024-05-24 23:45:46,249 -   Found best model, saving model.
+2024-05-24 23:45:58,246 - Epoch 19/150
+2024-05-24 23:45:58,246 -   Epoch Train Time: 9.217
+2024-05-24 23:45:58,246 -   Epoch Train Loss: 0.76611478
+2024-05-24 23:45:58,246 -   Epoch Train MulticlassAccuracy: 73.9605
+2024-05-24 23:45:58,246 -   Epoch Train MulticlassPrecision: 73.9210
+2024-05-24 23:45:58,246 -   Epoch Train MulticlassRecall: 73.9605
+2024-05-24 23:45:59,728 -   Validation Time: 1.479
+2024-05-24 23:45:59,728 -   Validation Loss: 1.26979508
+2024-05-24 23:45:59,728 -   Validation MulticlassAccuracy: 57.2663
+2024-05-24 23:45:59,728 -   Validation MulticlassPrecision: 62.8085
+2024-05-24 23:45:59,728 -   Validation MulticlassRecall: 57.2663
+2024-05-24 23:46:10,383 - Epoch 20/150
+2024-05-24 23:46:10,383 -   Epoch Train Time: 9.254
+2024-05-24 23:46:10,383 -   Epoch Train Loss: 0.73835174
+2024-05-24 23:46:10,383 -   Epoch Train MulticlassAccuracy: 74.6035
+2024-05-24 23:46:10,384 -   Epoch Train MulticlassPrecision: 74.5219
+2024-05-24 23:46:10,384 -   Epoch Train MulticlassRecall: 74.6035
+2024-05-24 23:46:11,875 -   Validation Time: 1.489
+2024-05-24 23:46:11,875 -   Validation Loss: 1.23344498
+2024-05-24 23:46:11,875 -   Validation MulticlassAccuracy: 59.0650
+2024-05-24 23:46:11,875 -   Validation MulticlassPrecision: 63.4327
+2024-05-24 23:46:11,875 -   Validation MulticlassRecall: 59.0650
+2024-05-24 23:46:22,232 - Epoch 21/150
+2024-05-24 23:46:22,232 -   Epoch Train Time: 9.036
+2024-05-24 23:46:22,232 -   Epoch Train Loss: 0.70825427
+2024-05-24 23:46:22,232 -   Epoch Train MulticlassAccuracy: 75.6050
+2024-05-24 23:46:22,232 -   Epoch Train MulticlassPrecision: 75.5162
+2024-05-24 23:46:22,232 -   Epoch Train MulticlassRecall: 75.6050
+2024-05-24 23:46:24,006 -   Validation Time: 1.771
+2024-05-24 23:46:24,007 -   Validation Loss: 1.15317319
+2024-05-24 23:46:24,007 -   Validation MulticlassAccuracy: 61.4997
+2024-05-24 23:46:24,007 -   Validation MulticlassPrecision: 62.6241
+2024-05-24 23:46:24,007 -   Validation MulticlassRecall: 61.4997
+2024-05-24 23:46:34,423 - Epoch 22/150
+2024-05-24 23:46:34,423 -   Epoch Train Time: 9.101
+2024-05-24 23:46:34,423 -   Epoch Train Loss: 0.66017056
+2024-05-24 23:46:34,423 -   Epoch Train MulticlassAccuracy: 77.1026
+2024-05-24 23:46:34,423 -   Epoch Train MulticlassPrecision: 77.0425
+2024-05-24 23:46:34,423 -   Epoch Train MulticlassRecall: 77.1026
+2024-05-24 23:46:36,167 -   Validation Time: 1.742
+2024-05-24 23:46:36,167 -   Validation Loss: 1.09080836
+2024-05-24 23:46:36,167 -   Validation MulticlassAccuracy: 64.1761
+2024-05-24 23:46:36,167 -   Validation MulticlassPrecision: 64.9585
+2024-05-24 23:46:36,167 -   Validation MulticlassRecall: 64.1761
+2024-05-24 23:46:36,167 -   Found best model, saving model.
+2024-05-24 23:46:48,146 - Epoch 23/150
+2024-05-24 23:46:48,146 -   Epoch Train Time: 9.131
+2024-05-24 23:46:48,146 -   Epoch Train Loss: 0.64231357
+2024-05-24 23:46:48,146 -   Epoch Train MulticlassAccuracy: 77.9483
+2024-05-24 23:46:48,146 -   Epoch Train MulticlassPrecision: 77.9033
+2024-05-24 23:46:48,146 -   Epoch Train MulticlassRecall: 77.9483
+2024-05-24 23:46:49,871 -   Validation Time: 1.722
+2024-05-24 23:46:49,871 -   Validation Loss: 1.15354907
+2024-05-24 23:46:49,871 -   Validation MulticlassAccuracy: 61.9234
+2024-05-24 23:46:49,871 -   Validation MulticlassPrecision: 64.0530
+2024-05-24 23:46:49,871 -   Validation MulticlassRecall: 61.9234
+2024-05-24 23:47:00,263 - Epoch 24/150
+2024-05-24 23:47:00,263 -   Epoch Train Time: 9.081
+2024-05-24 23:47:00,263 -   Epoch Train Loss: 0.61615563
+2024-05-24 23:47:00,263 -   Epoch Train MulticlassAccuracy: 79.0859
+2024-05-24 23:47:00,263 -   Epoch Train MulticlassPrecision: 79.0493
+2024-05-24 23:47:00,263 -   Epoch Train MulticlassRecall: 79.0859
+2024-05-24 23:47:01,976 -   Validation Time: 1.710
+2024-05-24 23:47:01,976 -   Validation Loss: 1.04826957
+2024-05-24 23:47:01,976 -   Validation MulticlassAccuracy: 65.0019
+2024-05-24 23:47:01,976 -   Validation MulticlassPrecision: 65.7753
+2024-05-24 23:47:01,976 -   Validation MulticlassRecall: 65.0019
+2024-05-24 23:47:01,976 -   Found best model, saving model.
+2024-05-24 23:47:13,929 - Epoch 25/150
+2024-05-24 23:47:13,929 -   Epoch Train Time: 9.137
+2024-05-24 23:47:13,929 -   Epoch Train Loss: 0.58190355
+2024-05-24 23:47:13,929 -   Epoch Train MulticlassAccuracy: 80.2224
+2024-05-24 23:47:13,929 -   Epoch Train MulticlassPrecision: 80.1682
+2024-05-24 23:47:13,929 -   Epoch Train MulticlassRecall: 80.2224
+2024-05-24 23:47:15,645 -   Validation Time: 1.713
+2024-05-24 23:47:15,645 -   Validation Loss: 1.10241445
+2024-05-24 23:47:15,645 -   Validation MulticlassAccuracy: 63.8224
+2024-05-24 23:47:15,645 -   Validation MulticlassPrecision: 65.8216
+2024-05-24 23:47:15,645 -   Validation MulticlassRecall: 63.8224
+2024-05-24 23:47:26,000 - Epoch 26/150
+2024-05-24 23:47:26,000 -   Epoch Train Time: 9.028
+2024-05-24 23:47:26,000 -   Epoch Train Loss: 0.56659041
+2024-05-24 23:47:26,000 -   Epoch Train MulticlassAccuracy: 80.4761
+2024-05-24 23:47:26,000 -   Epoch Train MulticlassPrecision: 80.4339
+2024-05-24 23:47:26,001 -   Epoch Train MulticlassRecall: 80.4761
+2024-05-24 23:47:27,701 -   Validation Time: 1.698
+2024-05-24 23:47:27,701 -   Validation Loss: 1.06320766
+2024-05-24 23:47:27,701 -   Validation MulticlassAccuracy: 64.4980
+2024-05-24 23:47:27,701 -   Validation MulticlassPrecision: 66.2137
+2024-05-24 23:47:27,701 -   Validation MulticlassRecall: 64.4980
+2024-05-24 23:47:38,370 - Epoch 27/150
+2024-05-24 23:47:38,370 -   Epoch Train Time: 9.107
+2024-05-24 23:47:38,370 -   Epoch Train Loss: 0.53974029
+2024-05-24 23:47:38,370 -   Epoch Train MulticlassAccuracy: 81.4514
+2024-05-24 23:47:38,370 -   Epoch Train MulticlassPrecision: 81.4170
+2024-05-24 23:47:38,370 -   Epoch Train MulticlassRecall: 81.4514
+2024-05-24 23:47:40,042 -   Validation Time: 1.669
+2024-05-24 23:47:40,042 -   Validation Loss: 1.14093706
+2024-05-24 23:47:40,042 -   Validation MulticlassAccuracy: 63.5529
+2024-05-24 23:47:40,042 -   Validation MulticlassPrecision: 66.4973
+2024-05-24 23:47:40,042 -   Validation MulticlassRecall: 63.5529
+2024-05-24 23:47:50,727 - Epoch 28/150
+2024-05-24 23:47:50,727 -   Epoch Train Time: 9.066
+2024-05-24 23:47:50,727 -   Epoch Train Loss: 0.51561228
+2024-05-24 23:47:50,727 -   Epoch Train MulticlassAccuracy: 82.5474
+2024-05-24 23:47:50,727 -   Epoch Train MulticlassPrecision: 82.5400
+2024-05-24 23:47:50,727 -   Epoch Train MulticlassRecall: 82.5474
+2024-05-24 23:47:52,418 -   Validation Time: 1.687
+2024-05-24 23:47:52,418 -   Validation Loss: 1.08264529
+2024-05-24 23:47:52,418 -   Validation MulticlassAccuracy: 65.8084
+2024-05-24 23:47:52,418 -   Validation MulticlassPrecision: 66.9016
+2024-05-24 23:47:52,418 -   Validation MulticlassRecall: 65.8084
+2024-05-24 23:47:52,418 -   Found best model, saving model.
+2024-05-24 23:48:04,643 - Epoch 29/150
+2024-05-24 23:48:04,644 -   Epoch Train Time: 9.145
+2024-05-24 23:48:04,644 -   Epoch Train Loss: 0.49187673
+2024-05-24 23:48:04,644 -   Epoch Train MulticlassAccuracy: 83.3016
+2024-05-24 23:48:04,644 -   Epoch Train MulticlassPrecision: 83.2719
+2024-05-24 23:48:04,644 -   Epoch Train MulticlassRecall: 83.3016
+2024-05-24 23:48:06,284 -   Validation Time: 1.637
+2024-05-24 23:48:06,284 -   Validation Loss: 1.03021599
+2024-05-24 23:48:06,284 -   Validation MulticlassAccuracy: 66.6881
+2024-05-24 23:48:06,284 -   Validation MulticlassPrecision: 67.0438
+2024-05-24 23:48:06,284 -   Validation MulticlassRecall: 66.6881
+2024-05-24 23:48:06,284 -   Found best model, saving model.
+2024-05-24 23:48:18,487 - Epoch 30/150
+2024-05-24 23:48:18,487 -   Epoch Train Time: 9.089
+2024-05-24 23:48:18,487 -   Epoch Train Loss: 0.46990762
+2024-05-24 23:48:18,487 -   Epoch Train MulticlassAccuracy: 83.9671
+2024-05-24 23:48:18,487 -   Epoch Train MulticlassPrecision: 83.9478
+2024-05-24 23:48:18,487 -   Epoch Train MulticlassRecall: 83.9671
+2024-05-24 23:48:20,107 -   Validation Time: 1.617
+2024-05-24 23:48:20,107 -   Validation Loss: 1.05891324
+2024-05-24 23:48:20,107 -   Validation MulticlassAccuracy: 66.3292
+2024-05-24 23:48:20,107 -   Validation MulticlassPrecision: 67.7860
+2024-05-24 23:48:20,107 -   Validation MulticlassRecall: 66.3292
+2024-05-24 23:48:30,649 - Epoch 31/150
+2024-05-24 23:48:30,649 -   Epoch Train Time: 9.085
+2024-05-24 23:48:30,649 -   Epoch Train Loss: 0.45252509
+2024-05-24 23:48:30,649 -   Epoch Train MulticlassAccuracy: 84.5953
+2024-05-24 23:48:30,649 -   Epoch Train MulticlassPrecision: 84.5847
+2024-05-24 23:48:30,649 -   Epoch Train MulticlassRecall: 84.5953
+2024-05-24 23:48:32,311 -   Validation Time: 1.659
+2024-05-24 23:48:32,311 -   Validation Loss: 0.97582061
+2024-05-24 23:48:32,311 -   Validation MulticlassAccuracy: 68.5387
+2024-05-24 23:48:32,311 -   Validation MulticlassPrecision: 70.0926
+2024-05-24 23:48:32,311 -   Validation MulticlassRecall: 68.5387
+2024-05-24 23:48:32,311 -   Found best model, saving model.
+2024-05-24 23:48:44,604 - Epoch 32/150
+2024-05-24 23:48:44,604 -   Epoch Train Time: 9.164
+2024-05-24 23:48:44,604 -   Epoch Train Loss: 0.43167620
+2024-05-24 23:48:44,604 -   Epoch Train MulticlassAccuracy: 85.3575
+2024-05-24 23:48:44,604 -   Epoch Train MulticlassPrecision: 85.3453
+2024-05-24 23:48:44,604 -   Epoch Train MulticlassRecall: 85.3575
+2024-05-24 23:48:46,244 -   Validation Time: 1.637
+2024-05-24 23:48:46,244 -   Validation Loss: 1.02835076
+2024-05-24 23:48:46,244 -   Validation MulticlassAccuracy: 67.8091
+2024-05-24 23:48:46,244 -   Validation MulticlassPrecision: 69.5980
+2024-05-24 23:48:46,244 -   Validation MulticlassRecall: 67.8091
+2024-05-24 23:48:56,625 - Epoch 33/150
+2024-05-24 23:48:56,625 -   Epoch Train Time: 9.086
+2024-05-24 23:48:56,625 -   Epoch Train Loss: 0.41692369
+2024-05-24 23:48:56,625 -   Epoch Train MulticlassAccuracy: 85.7655
+2024-05-24 23:48:56,625 -   Epoch Train MulticlassPrecision: 85.7556
+2024-05-24 23:48:56,625 -   Epoch Train MulticlassRecall: 85.7655
+2024-05-24 23:48:58,282 -   Validation Time: 1.654
+2024-05-24 23:48:58,282 -   Validation Loss: 1.30067353
+2024-05-24 23:48:58,282 -   Validation MulticlassAccuracy: 62.0775
+2024-05-24 23:48:58,282 -   Validation MulticlassPrecision: 69.6118
+2024-05-24 23:48:58,282 -   Validation MulticlassRecall: 62.0775
+2024-05-24 23:49:08,826 - Epoch 34/150
+2024-05-24 23:49:08,826 -   Epoch Train Time: 9.153
+2024-05-24 23:49:08,826 -   Epoch Train Loss: 0.41615346
+2024-05-24 23:49:08,826 -   Epoch Train MulticlassAccuracy: 85.9826
+2024-05-24 23:49:08,826 -   Epoch Train MulticlassPrecision: 85.9715
+2024-05-24 23:49:08,826 -   Epoch Train MulticlassRecall: 85.9826
+2024-05-24 23:49:10,325 -   Validation Time: 1.495
+2024-05-24 23:49:10,325 -   Validation Loss: 1.00248735
+2024-05-24 23:49:10,325 -   Validation MulticlassAccuracy: 69.8291
+2024-05-24 23:49:10,325 -   Validation MulticlassPrecision: 71.0014
+2024-05-24 23:49:10,325 -   Validation MulticlassRecall: 69.8291
+2024-05-24 23:49:10,325 -   Found best model, saving model.
+2024-05-24 23:49:22,528 - Epoch 35/150
+2024-05-24 23:49:22,528 -   Epoch Train Time: 9.351
+2024-05-24 23:49:22,528 -   Epoch Train Loss: 0.38700487
+2024-05-24 23:49:22,528 -   Epoch Train MulticlassAccuracy: 86.8456
+2024-05-24 23:49:22,528 -   Epoch Train MulticlassPrecision: 86.8368
+2024-05-24 23:49:22,528 -   Epoch Train MulticlassRecall: 86.8456
+2024-05-24 23:49:24,044 -   Validation Time: 1.512
+2024-05-24 23:49:24,044 -   Validation Loss: 1.01444816
+2024-05-24 23:49:24,044 -   Validation MulticlassAccuracy: 67.8067
+2024-05-24 23:49:24,044 -   Validation MulticlassPrecision: 70.8309
+2024-05-24 23:49:24,044 -   Validation MulticlassRecall: 67.8067
+2024-05-24 23:49:34,721 - Epoch 36/150
+2024-05-24 23:49:34,721 -   Epoch Train Time: 9.324
+2024-05-24 23:49:34,721 -   Epoch Train Loss: 0.37768201
+2024-05-24 23:49:34,721 -   Epoch Train MulticlassAccuracy: 87.1786
+2024-05-24 23:49:34,721 -   Epoch Train MulticlassPrecision: 87.1694
+2024-05-24 23:49:34,721 -   Epoch Train MulticlassRecall: 87.1786
+2024-05-24 23:49:36,246 -   Validation Time: 1.522
+2024-05-24 23:49:36,246 -   Validation Loss: 1.00034416
+2024-05-24 23:49:36,246 -   Validation MulticlassAccuracy: 68.9792
+2024-05-24 23:49:36,246 -   Validation MulticlassPrecision: 70.0712
+2024-05-24 23:49:36,246 -   Validation MulticlassRecall: 68.9792
+2024-05-24 23:49:46,850 - Epoch 37/150
+2024-05-24 23:49:46,851 -   Epoch Train Time: 9.293
+2024-05-24 23:49:46,851 -   Epoch Train Loss: 0.36625415
+2024-05-24 23:49:46,851 -   Epoch Train MulticlassAccuracy: 87.7269
+2024-05-24 23:49:46,851 -   Epoch Train MulticlassPrecision: 87.7225
+2024-05-24 23:49:46,851 -   Epoch Train MulticlassRecall: 87.7269
+2024-05-24 23:49:48,316 -   Validation Time: 1.462
+2024-05-24 23:49:48,316 -   Validation Loss: 1.03720783
+2024-05-24 23:49:48,316 -   Validation MulticlassAccuracy: 69.1929
+2024-05-24 23:49:48,316 -   Validation MulticlassPrecision: 70.4349
+2024-05-24 23:49:48,316 -   Validation MulticlassRecall: 69.1929
+2024-05-24 23:49:58,862 - Epoch 38/150
+2024-05-24 23:49:58,862 -   Epoch Train Time: 9.214
+2024-05-24 23:49:58,862 -   Epoch Train Loss: 0.34962637
+2024-05-24 23:49:58,862 -   Epoch Train MulticlassAccuracy: 88.2333
+2024-05-24 23:49:58,862 -   Epoch Train MulticlassPrecision: 88.2284
+2024-05-24 23:49:58,862 -   Epoch Train MulticlassRecall: 88.2333
+2024-05-24 23:50:00,371 -   Validation Time: 1.505
+2024-05-24 23:50:00,371 -   Validation Loss: 1.05726554
+2024-05-24 23:50:00,371 -   Validation MulticlassAccuracy: 67.6231
+2024-05-24 23:50:00,371 -   Validation MulticlassPrecision: 68.6758
+2024-05-24 23:50:00,371 -   Validation MulticlassRecall: 67.6231
+2024-05-24 23:50:10,944 - Epoch 39/150
+2024-05-24 23:50:10,944 -   Epoch Train Time: 9.237
+2024-05-24 23:50:10,944 -   Epoch Train Loss: 0.34798017
+2024-05-24 23:50:10,944 -   Epoch Train MulticlassAccuracy: 88.3446
+2024-05-24 23:50:10,944 -   Epoch Train MulticlassPrecision: 88.3327
+2024-05-24 23:50:10,944 -   Epoch Train MulticlassRecall: 88.3446
+2024-05-24 23:50:12,454 -   Validation Time: 1.507
+2024-05-24 23:50:12,454 -   Validation Loss: 1.14262858
+2024-05-24 23:50:12,454 -   Validation MulticlassAccuracy: 66.8398
+2024-05-24 23:50:12,454 -   Validation MulticlassPrecision: 69.9327
+2024-05-24 23:50:12,454 -   Validation MulticlassRecall: 66.8398
+2024-05-24 23:50:23,030 - Epoch 40/150
+2024-05-24 23:50:23,030 -   Epoch Train Time: 9.278
+2024-05-24 23:50:23,030 -   Epoch Train Loss: 0.33229117
+2024-05-24 23:50:23,030 -   Epoch Train MulticlassAccuracy: 88.5349
+2024-05-24 23:50:23,030 -   Epoch Train MulticlassPrecision: 88.5247
+2024-05-24 23:50:23,030 -   Epoch Train MulticlassRecall: 88.5349
+2024-05-24 23:50:24,489 -   Validation Time: 1.456
+2024-05-24 23:50:24,489 -   Validation Loss: 0.99152434
+2024-05-24 23:50:24,489 -   Validation MulticlassAccuracy: 70.5005
+2024-05-24 23:50:24,489 -   Validation MulticlassPrecision: 72.2009
+2024-05-24 23:50:24,489 -   Validation MulticlassRecall: 70.5005
+2024-05-24 23:50:24,489 -   Found best model, saving model.
+2024-05-24 23:50:36,582 - Epoch 41/150
+2024-05-24 23:50:36,582 -   Epoch Train Time: 9.294
+2024-05-24 23:50:36,582 -   Epoch Train Loss: 0.31978609
+2024-05-24 23:50:36,582 -   Epoch Train MulticlassAccuracy: 89.1887
+2024-05-24 23:50:36,582 -   Epoch Train MulticlassPrecision: 89.1799
+2024-05-24 23:50:36,582 -   Epoch Train MulticlassRecall: 89.1887
+2024-05-24 23:50:38,051 -   Validation Time: 1.465
+2024-05-24 23:50:38,051 -   Validation Loss: 1.00614295
+2024-05-24 23:50:38,051 -   Validation MulticlassAccuracy: 70.7787
+2024-05-24 23:50:38,051 -   Validation MulticlassPrecision: 71.8084
+2024-05-24 23:50:38,051 -   Validation MulticlassRecall: 70.7787
+2024-05-24 23:50:38,051 -   Found best model, saving model.
+2024-05-24 23:50:50,091 - Epoch 42/150
+2024-05-24 23:50:50,092 -   Epoch Train Time: 9.250
+2024-05-24 23:50:50,092 -   Epoch Train Loss: 0.30748791
+2024-05-24 23:50:50,092 -   Epoch Train MulticlassAccuracy: 89.6440
+2024-05-24 23:50:50,092 -   Epoch Train MulticlassPrecision: 89.6468
+2024-05-24 23:50:50,092 -   Epoch Train MulticlassRecall: 89.6440
+2024-05-24 23:50:51,608 -   Validation Time: 1.513
+2024-05-24 23:50:51,608 -   Validation Loss: 1.05109973
+2024-05-24 23:50:51,608 -   Validation MulticlassAccuracy: 69.8495
+2024-05-24 23:50:51,608 -   Validation MulticlassPrecision: 71.8771
+2024-05-24 23:50:51,608 -   Validation MulticlassRecall: 69.8495
+2024-05-24 23:51:02,214 - Epoch 43/150
+2024-05-24 23:51:02,214 -   Epoch Train Time: 9.292
+2024-05-24 23:51:02,215 -   Epoch Train Loss: 0.30853275
+2024-05-24 23:51:02,215 -   Epoch Train MulticlassAccuracy: 89.6400
+2024-05-24 23:51:02,215 -   Epoch Train MulticlassPrecision: 89.6411
+2024-05-24 23:51:02,215 -   Epoch Train MulticlassRecall: 89.6400
+2024-05-24 23:51:03,672 -   Validation Time: 1.455
+2024-05-24 23:51:03,672 -   Validation Loss: 0.99830904
+2024-05-24 23:51:03,672 -   Validation MulticlassAccuracy: 70.1270
+2024-05-24 23:51:03,672 -   Validation MulticlassPrecision: 71.2330
+2024-05-24 23:51:03,672 -   Validation MulticlassRecall: 70.1270
+2024-05-24 23:51:14,294 - Epoch 44/150
+2024-05-24 23:51:14,294 -   Epoch Train Time: 9.264
+2024-05-24 23:51:14,294 -   Epoch Train Loss: 0.30035790
+2024-05-24 23:51:14,294 -   Epoch Train MulticlassAccuracy: 89.8706
+2024-05-24 23:51:14,294 -   Epoch Train MulticlassPrecision: 89.8625
+2024-05-24 23:51:14,294 -   Epoch Train MulticlassRecall: 89.8706
+2024-05-24 23:51:15,797 -   Validation Time: 1.500
+2024-05-24 23:51:15,797 -   Validation Loss: 0.96081326
+2024-05-24 23:51:15,797 -   Validation MulticlassAccuracy: 71.8432
+2024-05-24 23:51:15,797 -   Validation MulticlassPrecision: 73.4361
+2024-05-24 23:51:15,797 -   Validation MulticlassRecall: 71.8432
+2024-05-24 23:51:15,797 -   Found best model, saving model.
+2024-05-24 23:51:27,859 - Epoch 45/150
+2024-05-24 23:51:27,860 -   Epoch Train Time: 9.266
+2024-05-24 23:51:27,860 -   Epoch Train Loss: 0.28634810
+2024-05-24 23:51:27,860 -   Epoch Train MulticlassAccuracy: 90.2245
+2024-05-24 23:51:27,860 -   Epoch Train MulticlassPrecision: 90.2199
+2024-05-24 23:51:27,860 -   Epoch Train MulticlassRecall: 90.2245
+2024-05-24 23:51:29,333 -   Validation Time: 1.471
+2024-05-24 23:51:29,333 -   Validation Loss: 0.92232356
+2024-05-24 23:51:29,333 -   Validation MulticlassAccuracy: 72.4390
+2024-05-24 23:51:29,333 -   Validation MulticlassPrecision: 73.4395
+2024-05-24 23:51:29,333 -   Validation MulticlassRecall: 72.4390
+2024-05-24 23:51:29,333 -   Found best model, saving model.
+2024-05-24 23:51:41,430 - Epoch 46/150
+2024-05-24 23:51:41,431 -   Epoch Train Time: 9.306
+2024-05-24 23:51:41,431 -   Epoch Train Loss: 0.28383534
+2024-05-24 23:51:41,431 -   Epoch Train MulticlassAccuracy: 90.3838
+2024-05-24 23:51:41,431 -   Epoch Train MulticlassPrecision: 90.3754
+2024-05-24 23:51:41,431 -   Epoch Train MulticlassRecall: 90.3838
+2024-05-24 23:51:42,930 -   Validation Time: 1.497
+2024-05-24 23:51:42,931 -   Validation Loss: 1.03143897
+2024-05-24 23:51:42,931 -   Validation MulticlassAccuracy: 71.2809
+2024-05-24 23:51:42,931 -   Validation MulticlassPrecision: 71.9249
+2024-05-24 23:51:42,931 -   Validation MulticlassRecall: 71.2809
+2024-05-24 23:51:53,520 - Epoch 47/150
+2024-05-24 23:51:53,520 -   Epoch Train Time: 9.204
+2024-05-24 23:51:53,520 -   Epoch Train Loss: 0.27445319
+2024-05-24 23:51:53,520 -   Epoch Train MulticlassAccuracy: 90.7442
+2024-05-24 23:51:53,520 -   Epoch Train MulticlassPrecision: 90.7438
+2024-05-24 23:51:53,520 -   Epoch Train MulticlassRecall: 90.7442
+2024-05-24 23:51:55,031 -   Validation Time: 1.508
+2024-05-24 23:51:55,031 -   Validation Loss: 0.98852202
+2024-05-24 23:51:55,031 -   Validation MulticlassAccuracy: 72.1221
+2024-05-24 23:51:55,031 -   Validation MulticlassPrecision: 73.4480
+2024-05-24 23:51:55,031 -   Validation MulticlassRecall: 72.1221
+2024-05-24 23:52:05,607 - Epoch 48/150
+2024-05-24 23:52:05,607 -   Epoch Train Time: 9.259
+2024-05-24 23:52:05,607 -   Epoch Train Loss: 0.27204040
+2024-05-24 23:52:05,607 -   Epoch Train MulticlassAccuracy: 90.6651
+2024-05-24 23:52:05,607 -   Epoch Train MulticlassPrecision: 90.6644
+2024-05-24 23:52:05,607 -   Epoch Train MulticlassRecall: 90.6651
+2024-05-24 23:52:07,087 -   Validation Time: 1.478
+2024-05-24 23:52:07,088 -   Validation Loss: 1.08986084
+2024-05-24 23:52:07,088 -   Validation MulticlassAccuracy: 70.4155
+2024-05-24 23:52:07,088 -   Validation MulticlassPrecision: 72.5094
+2024-05-24 23:52:07,088 -   Validation MulticlassRecall: 70.4155
+2024-05-24 23:52:17,758 - Epoch 49/150
+2024-05-24 23:52:17,758 -   Epoch Train Time: 9.214
+2024-05-24 23:52:17,759 -   Epoch Train Loss: 0.26388462
+2024-05-24 23:52:17,759 -   Epoch Train MulticlassAccuracy: 91.2027
+2024-05-24 23:52:17,759 -   Epoch Train MulticlassPrecision: 91.2008
+2024-05-24 23:52:17,759 -   Epoch Train MulticlassRecall: 91.2027
+2024-05-24 23:52:19,240 -   Validation Time: 1.479
+2024-05-24 23:52:19,241 -   Validation Loss: 0.94619647
+2024-05-24 23:52:19,241 -   Validation MulticlassAccuracy: 72.6632
+2024-05-24 23:52:19,241 -   Validation MulticlassPrecision: 74.3528
+2024-05-24 23:52:19,241 -   Validation MulticlassRecall: 72.6632
+2024-05-24 23:52:19,241 -   Found best model, saving model.
+2024-05-24 23:52:31,683 - Epoch 50/150
+2024-05-24 23:52:31,683 -   Epoch Train Time: 9.273
+2024-05-24 23:52:31,683 -   Epoch Train Loss: 0.26038482
+2024-05-24 23:52:31,683 -   Epoch Train MulticlassAccuracy: 91.2274
+2024-05-24 23:52:31,683 -   Epoch Train MulticlassPrecision: 91.2217
+2024-05-24 23:52:31,683 -   Epoch Train MulticlassRecall: 91.2274
+2024-05-24 23:52:33,195 -   Validation Time: 1.509
+2024-05-24 23:52:33,195 -   Validation Loss: 0.85456164
+2024-05-24 23:52:33,195 -   Validation MulticlassAccuracy: 74.7765
+2024-05-24 23:52:33,195 -   Validation MulticlassPrecision: 75.0969
+2024-05-24 23:52:33,195 -   Validation MulticlassRecall: 74.7765
+2024-05-24 23:52:33,195 -   Found best model, saving model.
+2024-05-24 23:52:45,920 - Epoch 51/150
+2024-05-24 23:52:45,920 -   Epoch Train Time: 9.275
+2024-05-24 23:52:45,920 -   Epoch Train Loss: 0.25407875
+2024-05-24 23:52:45,920 -   Epoch Train MulticlassAccuracy: 91.4227
+2024-05-24 23:52:45,920 -   Epoch Train MulticlassPrecision: 91.4296
+2024-05-24 23:52:45,920 -   Epoch Train MulticlassRecall: 91.4227
+2024-05-24 23:52:47,368 -   Validation Time: 1.445
+2024-05-24 23:52:47,368 -   Validation Loss: 0.93163291
+2024-05-24 23:52:47,368 -   Validation MulticlassAccuracy: 73.4691
+2024-05-24 23:52:47,368 -   Validation MulticlassPrecision: 74.0669
+2024-05-24 23:52:47,368 -   Validation MulticlassRecall: 73.4691
+2024-05-24 23:52:57,968 - Epoch 52/150
+2024-05-24 23:52:57,968 -   Epoch Train Time: 9.204
+2024-05-24 23:52:57,968 -   Epoch Train Loss: 0.23819601
+2024-05-24 23:52:57,968 -   Epoch Train MulticlassAccuracy: 91.8547
+2024-05-24 23:52:57,968 -   Epoch Train MulticlassPrecision: 91.8527
+2024-05-24 23:52:57,968 -   Epoch Train MulticlassRecall: 91.8547
+2024-05-24 23:52:59,423 -   Validation Time: 1.451
+2024-05-24 23:52:59,423 -   Validation Loss: 0.95062597
+2024-05-24 23:52:59,423 -   Validation MulticlassAccuracy: 72.4824
+2024-05-24 23:52:59,423 -   Validation MulticlassPrecision: 73.2000
+2024-05-24 23:52:59,423 -   Validation MulticlassRecall: 72.4824
+2024-05-24 23:53:10,292 - Epoch 53/150
+2024-05-24 23:53:10,292 -   Epoch Train Time: 9.234
+2024-05-24 23:53:10,292 -   Epoch Train Loss: 0.24014232
+2024-05-24 23:53:10,293 -   Epoch Train MulticlassAccuracy: 91.9653
+2024-05-24 23:53:10,293 -   Epoch Train MulticlassPrecision: 91.9734
+2024-05-24 23:53:10,293 -   Epoch Train MulticlassRecall: 91.9653
+2024-05-24 23:53:11,739 -   Validation Time: 1.443
+2024-05-24 23:53:11,739 -   Validation Loss: 0.92341376
+2024-05-24 23:53:11,739 -   Validation MulticlassAccuracy: 73.6180
+2024-05-24 23:53:11,739 -   Validation MulticlassPrecision: 75.1867
+2024-05-24 23:53:11,739 -   Validation MulticlassRecall: 73.6180
+2024-05-24 23:53:22,461 - Epoch 54/150
+2024-05-24 23:53:22,461 -   Epoch Train Time: 9.124
+2024-05-24 23:53:22,462 -   Epoch Train Loss: 0.23537156
+2024-05-24 23:53:22,462 -   Epoch Train MulticlassAccuracy: 92.1775
+2024-05-24 23:53:22,462 -   Epoch Train MulticlassPrecision: 92.1817
+2024-05-24 23:53:22,462 -   Epoch Train MulticlassRecall: 92.1775
+2024-05-24 23:53:24,216 -   Validation Time: 1.751
+2024-05-24 23:53:24,216 -   Validation Loss: 0.91759667
+2024-05-24 23:53:24,216 -   Validation MulticlassAccuracy: 74.1146
+2024-05-24 23:53:24,216 -   Validation MulticlassPrecision: 74.7858
+2024-05-24 23:53:24,216 -   Validation MulticlassRecall: 74.1146
+2024-05-24 23:53:34,879 - Epoch 55/150
+2024-05-24 23:53:34,880 -   Epoch Train Time: 9.127
+2024-05-24 23:53:34,880 -   Epoch Train Loss: 0.23384577
+2024-05-24 23:53:34,880 -   Epoch Train MulticlassAccuracy: 92.1284
+2024-05-24 23:53:34,880 -   Epoch Train MulticlassPrecision: 92.1238
+2024-05-24 23:53:34,880 -   Epoch Train MulticlassRecall: 92.1284
+2024-05-24 23:53:36,634 -   Validation Time: 1.752
+2024-05-24 23:53:36,635 -   Validation Loss: 0.90915627
+2024-05-24 23:53:36,635 -   Validation MulticlassAccuracy: 75.0121
+2024-05-24 23:53:36,635 -   Validation MulticlassPrecision: 75.2260
+2024-05-24 23:53:36,635 -   Validation MulticlassRecall: 75.0121
+2024-05-24 23:53:36,635 -   Found best model, saving model.
+2024-05-24 23:53:49,042 - Epoch 56/150
+2024-05-24 23:53:49,042 -   Epoch Train Time: 9.091
+2024-05-24 23:53:49,042 -   Epoch Train Loss: 0.23111025
+2024-05-24 23:53:49,042 -   Epoch Train MulticlassAccuracy: 92.2903
+2024-05-24 23:53:49,042 -   Epoch Train MulticlassPrecision: 92.2897
+2024-05-24 23:53:49,042 -   Epoch Train MulticlassRecall: 92.2903
+2024-05-24 23:53:50,780 -   Validation Time: 1.736
+2024-05-24 23:53:50,781 -   Validation Loss: 1.00417664
+2024-05-24 23:53:50,781 -   Validation MulticlassAccuracy: 73.0960
+2024-05-24 23:53:50,781 -   Validation MulticlassPrecision: 75.6483
+2024-05-24 23:53:50,781 -   Validation MulticlassRecall: 73.0960
+2024-05-24 23:54:01,780 - Epoch 57/150
+2024-05-24 23:54:01,780 -   Epoch Train Time: 9.142
+2024-05-24 23:54:01,780 -   Epoch Train Loss: 0.22279050
+2024-05-24 23:54:01,780 -   Epoch Train MulticlassAccuracy: 92.4556
+2024-05-24 23:54:01,780 -   Epoch Train MulticlassPrecision: 92.4557
+2024-05-24 23:54:01,780 -   Epoch Train MulticlassRecall: 92.4556
+2024-05-24 23:54:03,464 -   Validation Time: 1.681
+2024-05-24 23:54:03,464 -   Validation Loss: 0.86377777
+2024-05-24 23:54:03,464 -   Validation MulticlassAccuracy: 74.9303
+2024-05-24 23:54:03,464 -   Validation MulticlassPrecision: 75.3366
+2024-05-24 23:54:03,464 -   Validation MulticlassRecall: 74.9303
+2024-05-24 23:54:14,301 - Epoch 58/150
+2024-05-24 23:54:14,301 -   Epoch Train Time: 9.123
+2024-05-24 23:54:14,301 -   Epoch Train Loss: 0.21523125
+2024-05-24 23:54:14,301 -   Epoch Train MulticlassAccuracy: 92.7833
+2024-05-24 23:54:14,301 -   Epoch Train MulticlassPrecision: 92.7836
+2024-05-24 23:54:14,301 -   Epoch Train MulticlassRecall: 92.7833
+2024-05-24 23:54:16,077 -   Validation Time: 1.773
+2024-05-24 23:54:16,077 -   Validation Loss: 0.88245475
+2024-05-24 23:54:16,077 -   Validation MulticlassAccuracy: 74.8837
+2024-05-24 23:54:16,077 -   Validation MulticlassPrecision: 76.1354
+2024-05-24 23:54:16,077 -   Validation MulticlassRecall: 74.8837
+2024-05-24 23:54:26,748 - Epoch 59/150
+2024-05-24 23:54:26,748 -   Epoch Train Time: 9.105
+2024-05-24 23:54:26,748 -   Epoch Train Loss: 0.22290656
+2024-05-24 23:54:26,748 -   Epoch Train MulticlassAccuracy: 92.4680
+2024-05-24 23:54:26,748 -   Epoch Train MulticlassPrecision: 92.4618
+2024-05-24 23:54:26,748 -   Epoch Train MulticlassRecall: 92.4680
+2024-05-24 23:54:28,427 -   Validation Time: 1.676
+2024-05-24 23:54:28,427 -   Validation Loss: 0.89864189
+2024-05-24 23:54:28,427 -   Validation MulticlassAccuracy: 74.7771
+2024-05-24 23:54:28,427 -   Validation MulticlassPrecision: 76.2625
+2024-05-24 23:54:28,427 -   Validation MulticlassRecall: 74.7771
+2024-05-24 23:54:39,112 - Epoch 60/150
+2024-05-24 23:54:39,112 -   Epoch Train Time: 9.145
+2024-05-24 23:54:39,112 -   Epoch Train Loss: 0.21768046
+2024-05-24 23:54:39,112 -   Epoch Train MulticlassAccuracy: 92.6106
+2024-05-24 23:54:39,112 -   Epoch Train MulticlassPrecision: 92.6100
+2024-05-24 23:54:39,112 -   Epoch Train MulticlassRecall: 92.6106
+2024-05-24 23:54:40,822 -   Validation Time: 1.707
+2024-05-24 23:54:40,822 -   Validation Loss: 0.84628605
+2024-05-24 23:54:40,822 -   Validation MulticlassAccuracy: 75.3851
+2024-05-24 23:54:40,822 -   Validation MulticlassPrecision: 76.5829
+2024-05-24 23:54:40,822 -   Validation MulticlassRecall: 75.3851
+2024-05-24 23:54:40,823 -   Found best model, saving model.
+2024-05-24 23:54:52,852 - Epoch 61/150
+2024-05-24 23:54:52,852 -   Epoch Train Time: 9.113
+2024-05-24 23:54:52,852 -   Epoch Train Loss: 0.20316651
+2024-05-24 23:54:52,852 -   Epoch Train MulticlassAccuracy: 93.2106
+2024-05-24 23:54:52,852 -   Epoch Train MulticlassPrecision: 93.2089
+2024-05-24 23:54:52,852 -   Epoch Train MulticlassRecall: 93.2106
+2024-05-24 23:54:54,523 -   Validation Time: 1.668
+2024-05-24 23:54:54,523 -   Validation Loss: 0.94091025
+2024-05-24 23:54:54,523 -   Validation MulticlassAccuracy: 73.9516
+2024-05-24 23:54:54,523 -   Validation MulticlassPrecision: 75.2916
+2024-05-24 23:54:54,523 -   Validation MulticlassRecall: 73.9516
+2024-05-24 23:55:05,287 - Epoch 62/150
+2024-05-24 23:55:05,287 -   Epoch Train Time: 9.165
+2024-05-24 23:55:05,287 -   Epoch Train Loss: 0.19717528
+2024-05-24 23:55:05,287 -   Epoch Train MulticlassAccuracy: 93.3039
+2024-05-24 23:55:05,287 -   Epoch Train MulticlassPrecision: 93.3071
+2024-05-24 23:55:05,287 -   Epoch Train MulticlassRecall: 93.3039
+2024-05-24 23:55:06,936 -   Validation Time: 1.646
+2024-05-24 23:55:06,936 -   Validation Loss: 0.83738412
+2024-05-24 23:55:06,936 -   Validation MulticlassAccuracy: 76.1846
+2024-05-24 23:55:06,937 -   Validation MulticlassPrecision: 76.6283
+2024-05-24 23:55:06,937 -   Validation MulticlassRecall: 76.1846
+2024-05-24 23:55:06,937 -   Found best model, saving model.
+2024-05-24 23:55:18,860 - Epoch 63/150
+2024-05-24 23:55:18,860 -   Epoch Train Time: 9.082
+2024-05-24 23:55:18,860 -   Epoch Train Loss: 0.19801356
+2024-05-24 23:55:18,860 -   Epoch Train MulticlassAccuracy: 93.2708
+2024-05-24 23:55:18,860 -   Epoch Train MulticlassPrecision: 93.2794
+2024-05-24 23:55:18,860 -   Epoch Train MulticlassRecall: 93.2708
+2024-05-24 23:55:20,464 -   Validation Time: 1.601
+2024-05-24 23:55:20,464 -   Validation Loss: 0.88625314
+2024-05-24 23:55:20,464 -   Validation MulticlassAccuracy: 75.6096
+2024-05-24 23:55:20,464 -   Validation MulticlassPrecision: 77.1295
+2024-05-24 23:55:20,464 -   Validation MulticlassRecall: 75.6096
+2024-05-24 23:55:31,202 - Epoch 64/150
+2024-05-24 23:55:31,202 -   Epoch Train Time: 9.129
+2024-05-24 23:55:31,202 -   Epoch Train Loss: 0.19751693
+2024-05-24 23:55:31,202 -   Epoch Train MulticlassAccuracy: 93.2954
+2024-05-24 23:55:31,202 -   Epoch Train MulticlassPrecision: 93.2939
+2024-05-24 23:55:31,202 -   Epoch Train MulticlassRecall: 93.2954
+2024-05-24 23:55:32,811 -   Validation Time: 1.606
+2024-05-24 23:55:32,811 -   Validation Loss: 0.89500996
+2024-05-24 23:55:32,811 -   Validation MulticlassAccuracy: 75.1334
+2024-05-24 23:55:32,811 -   Validation MulticlassPrecision: 75.8870
+2024-05-24 23:55:32,811 -   Validation MulticlassRecall: 75.1334
+2024-05-24 23:55:43,555 - Epoch 65/150
+2024-05-24 23:55:43,556 -   Epoch Train Time: 9.129
+2024-05-24 23:55:43,556 -   Epoch Train Loss: 0.20215217
+2024-05-24 23:55:43,556 -   Epoch Train MulticlassAccuracy: 93.1556
+2024-05-24 23:55:43,556 -   Epoch Train MulticlassPrecision: 93.1605
+2024-05-24 23:55:43,556 -   Epoch Train MulticlassRecall: 93.1556
+2024-05-24 23:55:45,157 -   Validation Time: 1.599
+2024-05-24 23:55:45,157 -   Validation Loss: 0.84066865
+2024-05-24 23:55:45,157 -   Validation MulticlassAccuracy: 75.9443
+2024-05-24 23:55:45,158 -   Validation MulticlassPrecision: 76.8034
+2024-05-24 23:55:45,158 -   Validation MulticlassRecall: 75.9443
+2024-05-24 23:55:55,585 - Epoch 66/150
+2024-05-24 23:55:55,585 -   Epoch Train Time: 9.066
+2024-05-24 23:55:55,585 -   Epoch Train Loss: 0.19318609
+2024-05-24 23:55:55,585 -   Epoch Train MulticlassAccuracy: 93.4558
+2024-05-24 23:55:55,585 -   Epoch Train MulticlassPrecision: 93.4584
+2024-05-24 23:55:55,585 -   Epoch Train MulticlassRecall: 93.4558
+2024-05-24 23:55:57,210 -   Validation Time: 1.622
+2024-05-24 23:55:57,210 -   Validation Loss: 0.92666995
+2024-05-24 23:55:57,210 -   Validation MulticlassAccuracy: 75.1310
+2024-05-24 23:55:57,210 -   Validation MulticlassPrecision: 76.4578
+2024-05-24 23:55:57,210 -   Validation MulticlassRecall: 75.1310
+2024-05-24 23:56:07,701 - Epoch 67/150
+2024-05-24 23:56:07,701 -   Epoch Train Time: 9.164
+2024-05-24 23:56:07,701 -   Epoch Train Loss: 0.19352784
+2024-05-24 23:56:07,701 -   Epoch Train MulticlassAccuracy: 93.5552
+2024-05-24 23:56:07,701 -   Epoch Train MulticlassPrecision: 93.5531
+2024-05-24 23:56:07,701 -   Epoch Train MulticlassRecall: 93.5552
+2024-05-24 23:56:09,204 -   Validation Time: 1.500
+2024-05-24 23:56:09,204 -   Validation Loss: 0.87803456
+2024-05-24 23:56:09,204 -   Validation MulticlassAccuracy: 75.2431
+2024-05-24 23:56:09,204 -   Validation MulticlassPrecision: 76.6843
+2024-05-24 23:56:09,204 -   Validation MulticlassRecall: 75.2431
+2024-05-24 23:56:19,998 - Epoch 68/150
+2024-05-24 23:56:19,998 -   Epoch Train Time: 9.457
+2024-05-24 23:56:19,998 -   Epoch Train Loss: 0.18382021
+2024-05-24 23:56:19,998 -   Epoch Train MulticlassAccuracy: 93.7328
+2024-05-24 23:56:19,998 -   Epoch Train MulticlassPrecision: 93.7363
+2024-05-24 23:56:19,998 -   Epoch Train MulticlassRecall: 93.7328
+2024-05-24 23:56:21,506 -   Validation Time: 1.505
+2024-05-24 23:56:21,506 -   Validation Loss: 0.78723891
+2024-05-24 23:56:21,506 -   Validation MulticlassAccuracy: 76.7706
+2024-05-24 23:56:21,506 -   Validation MulticlassPrecision: 76.8916
+2024-05-24 23:56:21,506 -   Validation MulticlassRecall: 76.7706
+2024-05-24 23:56:21,506 -   Found best model, saving model.
+2024-05-24 23:56:33,763 - Epoch 69/150
+2024-05-24 23:56:33,763 -   Epoch Train Time: 9.370
+2024-05-24 23:56:33,763 -   Epoch Train Loss: 0.18653810
+2024-05-24 23:56:33,763 -   Epoch Train MulticlassAccuracy: 93.7259
+2024-05-24 23:56:33,763 -   Epoch Train MulticlassPrecision: 93.7268
+2024-05-24 23:56:33,763 -   Epoch Train MulticlassRecall: 93.7259
+2024-05-24 23:56:35,290 -   Validation Time: 1.525
+2024-05-24 23:56:35,291 -   Validation Loss: 0.98930234
+2024-05-24 23:56:35,291 -   Validation MulticlassAccuracy: 73.7924
+2024-05-24 23:56:35,291 -   Validation MulticlassPrecision: 75.8077
+2024-05-24 23:56:35,291 -   Validation MulticlassRecall: 73.7924
+2024-05-24 23:56:45,888 - Epoch 70/150
+2024-05-24 23:56:45,888 -   Epoch Train Time: 9.254
+2024-05-24 23:56:45,888 -   Epoch Train Loss: 0.19281760
+2024-05-24 23:56:45,888 -   Epoch Train MulticlassAccuracy: 93.4485
+2024-05-24 23:56:45,888 -   Epoch Train MulticlassPrecision: 93.4520
+2024-05-24 23:56:45,888 -   Epoch Train MulticlassRecall: 93.4485
+2024-05-24 23:56:47,401 -   Validation Time: 1.510
+2024-05-24 23:56:47,401 -   Validation Loss: 0.86100422
+2024-05-24 23:56:47,401 -   Validation MulticlassAccuracy: 76.2082
+2024-05-24 23:56:47,401 -   Validation MulticlassPrecision: 77.4015
+2024-05-24 23:56:47,401 -   Validation MulticlassRecall: 76.2082
+2024-05-24 23:56:58,019 - Epoch 71/150
+2024-05-24 23:56:58,019 -   Epoch Train Time: 9.299
+2024-05-24 23:56:58,019 -   Epoch Train Loss: 0.18346200
+2024-05-24 23:56:58,019 -   Epoch Train MulticlassAccuracy: 93.7734
+2024-05-24 23:56:58,019 -   Epoch Train MulticlassPrecision: 93.7754
+2024-05-24 23:56:58,019 -   Epoch Train MulticlassRecall: 93.7734
+2024-05-24 23:56:59,512 -   Validation Time: 1.490
+2024-05-24 23:56:59,512 -   Validation Loss: 0.79618646
+2024-05-24 23:56:59,512 -   Validation MulticlassAccuracy: 76.7802
+2024-05-24 23:56:59,512 -   Validation MulticlassPrecision: 76.9123
+2024-05-24 23:56:59,512 -   Validation MulticlassRecall: 76.7802
+2024-05-24 23:56:59,512 -   Found best model, saving model.
+2024-05-24 23:57:11,585 - Epoch 72/150
+2024-05-24 23:57:11,586 -   Epoch Train Time: 9.294
+2024-05-24 23:57:11,586 -   Epoch Train Loss: 0.17527994
+2024-05-24 23:57:11,586 -   Epoch Train MulticlassAccuracy: 94.1760
+2024-05-24 23:57:11,586 -   Epoch Train MulticlassPrecision: 94.1796
+2024-05-24 23:57:11,586 -   Epoch Train MulticlassRecall: 94.1760
+2024-05-24 23:57:13,082 -   Validation Time: 1.493
+2024-05-24 23:57:13,082 -   Validation Loss: 0.83194524
+2024-05-24 23:57:13,082 -   Validation MulticlassAccuracy: 76.4712
+2024-05-24 23:57:13,082 -   Validation MulticlassPrecision: 76.8788
+2024-05-24 23:57:13,082 -   Validation MulticlassRecall: 76.4712
+2024-05-24 23:57:23,697 - Epoch 73/150
+2024-05-24 23:57:23,697 -   Epoch Train Time: 9.270
+2024-05-24 23:57:23,697 -   Epoch Train Loss: 0.17540766
+2024-05-24 23:57:23,697 -   Epoch Train MulticlassAccuracy: 93.8805
+2024-05-24 23:57:23,697 -   Epoch Train MulticlassPrecision: 93.8853
+2024-05-24 23:57:23,697 -   Epoch Train MulticlassRecall: 93.8805
+2024-05-24 23:57:25,145 -   Validation Time: 1.445
+2024-05-24 23:57:25,145 -   Validation Loss: 0.87172918
+2024-05-24 23:57:25,145 -   Validation MulticlassAccuracy: 76.5732
+2024-05-24 23:57:25,145 -   Validation MulticlassPrecision: 76.9518
+2024-05-24 23:57:25,145 -   Validation MulticlassRecall: 76.5732
+2024-05-24 23:57:35,747 - Epoch 74/150
+2024-05-24 23:57:35,747 -   Epoch Train Time: 9.284
+2024-05-24 23:57:35,747 -   Epoch Train Loss: 0.17637255
+2024-05-24 23:57:35,747 -   Epoch Train MulticlassAccuracy: 93.9919
+2024-05-24 23:57:35,747 -   Epoch Train MulticlassPrecision: 93.9931
+2024-05-24 23:57:35,747 -   Epoch Train MulticlassRecall: 93.9919
+2024-05-24 23:57:37,262 -   Validation Time: 1.512
+2024-05-24 23:57:37,262 -   Validation Loss: 0.81967689
+2024-05-24 23:57:37,262 -   Validation MulticlassAccuracy: 76.8452
+2024-05-24 23:57:37,262 -   Validation MulticlassPrecision: 77.3810
+2024-05-24 23:57:37,262 -   Validation MulticlassRecall: 76.8452
+2024-05-24 23:57:37,262 -   Found best model, saving model.
+2024-05-24 23:57:49,304 - Epoch 75/150
+2024-05-24 23:57:49,304 -   Epoch Train Time: 9.245
+2024-05-24 23:57:49,304 -   Epoch Train Loss: 0.17219368
+2024-05-24 23:57:49,304 -   Epoch Train MulticlassAccuracy: 94.0903
+2024-05-24 23:57:49,304 -   Epoch Train MulticlassPrecision: 94.0945
+2024-05-24 23:57:49,304 -   Epoch Train MulticlassRecall: 94.0903
+2024-05-24 23:57:50,808 -   Validation Time: 1.501
+2024-05-24 23:57:50,808 -   Validation Loss: 0.87443846
+2024-05-24 23:57:50,808 -   Validation MulticlassAccuracy: 76.9647
+2024-05-24 23:57:50,808 -   Validation MulticlassPrecision: 77.0760
+2024-05-24 23:57:50,808 -   Validation MulticlassRecall: 76.9647
+2024-05-24 23:57:50,808 -   Found best model, saving model.
+2024-05-24 23:58:02,879 - Epoch 76/150
+2024-05-24 23:58:02,879 -   Epoch Train Time: 9.256
+2024-05-24 23:58:02,879 -   Epoch Train Loss: 0.16920993
+2024-05-24 23:58:02,879 -   Epoch Train MulticlassAccuracy: 94.3298
+2024-05-24 23:58:02,879 -   Epoch Train MulticlassPrecision: 94.3309
+2024-05-24 23:58:02,879 -   Epoch Train MulticlassRecall: 94.3298
+2024-05-24 23:58:04,389 -   Validation Time: 1.507
+2024-05-24 23:58:04,389 -   Validation Loss: 0.84280957
+2024-05-24 23:58:04,389 -   Validation MulticlassAccuracy: 77.6288
+2024-05-24 23:58:04,390 -   Validation MulticlassPrecision: 78.0799
+2024-05-24 23:58:04,390 -   Validation MulticlassRecall: 77.6288
+2024-05-24 23:58:04,390 -   Found best model, saving model.
+2024-05-24 23:58:16,555 - Epoch 77/150
+2024-05-24 23:58:16,555 -   Epoch Train Time: 9.273
+2024-05-24 23:58:16,555 -   Epoch Train Loss: 0.16274769
+2024-05-24 23:58:16,555 -   Epoch Train MulticlassAccuracy: 94.3468
+2024-05-24 23:58:16,555 -   Epoch Train MulticlassPrecision: 94.3494
+2024-05-24 23:58:16,555 -   Epoch Train MulticlassRecall: 94.3468
+2024-05-24 23:58:18,035 -   Validation Time: 1.477
+2024-05-24 23:58:18,036 -   Validation Loss: 0.83696658
+2024-05-24 23:58:18,036 -   Validation MulticlassAccuracy: 76.7994
+2024-05-24 23:58:18,036 -   Validation MulticlassPrecision: 77.0178
+2024-05-24 23:58:18,036 -   Validation MulticlassRecall: 76.7994
+2024-05-24 23:58:28,640 - Epoch 78/150
+2024-05-24 23:58:28,640 -   Epoch Train Time: 9.261
+2024-05-24 23:58:28,640 -   Epoch Train Loss: 0.16867321
+2024-05-24 23:58:28,640 -   Epoch Train MulticlassAccuracy: 94.2858
+2024-05-24 23:58:28,640 -   Epoch Train MulticlassPrecision: 94.2861
+2024-05-24 23:58:28,640 -   Epoch Train MulticlassRecall: 94.2858
+2024-05-24 23:58:30,109 -   Validation Time: 1.466
+2024-05-24 23:58:30,109 -   Validation Loss: 0.86556923
+2024-05-24 23:58:30,109 -   Validation MulticlassAccuracy: 76.7469
+2024-05-24 23:58:30,109 -   Validation MulticlassPrecision: 77.2250
+2024-05-24 23:58:30,109 -   Validation MulticlassRecall: 76.7469
+2024-05-24 23:58:40,733 - Epoch 79/150
+2024-05-24 23:58:40,733 -   Epoch Train Time: 9.258
+2024-05-24 23:58:40,733 -   Epoch Train Loss: 0.16891589
+2024-05-24 23:58:40,733 -   Epoch Train MulticlassAccuracy: 94.2880
+2024-05-24 23:58:40,733 -   Epoch Train MulticlassPrecision: 94.2932
+2024-05-24 23:58:40,733 -   Epoch Train MulticlassRecall: 94.2880
+2024-05-24 23:58:42,255 -   Validation Time: 1.520
+2024-05-24 23:58:42,255 -   Validation Loss: 0.78624906
+2024-05-24 23:58:42,255 -   Validation MulticlassAccuracy: 77.9210
+2024-05-24 23:58:42,256 -   Validation MulticlassPrecision: 78.2798
+2024-05-24 23:58:42,256 -   Validation MulticlassRecall: 77.9210
+2024-05-24 23:58:42,256 -   Found best model, saving model.
+2024-05-24 23:58:54,246 - Epoch 80/150
+2024-05-24 23:58:54,246 -   Epoch Train Time: 9.241
+2024-05-24 23:58:54,246 -   Epoch Train Loss: 0.16053242
+2024-05-24 23:58:54,246 -   Epoch Train MulticlassAccuracy: 94.4986
+2024-05-24 23:58:54,246 -   Epoch Train MulticlassPrecision: 94.4989
+2024-05-24 23:58:54,246 -   Epoch Train MulticlassRecall: 94.4986
+2024-05-24 23:58:55,763 -   Validation Time: 1.514
+2024-05-24 23:58:55,763 -   Validation Loss: 0.81153959
+2024-05-24 23:58:55,763 -   Validation MulticlassAccuracy: 78.0024
+2024-05-24 23:58:55,763 -   Validation MulticlassPrecision: 78.0434
+2024-05-24 23:58:55,763 -   Validation MulticlassRecall: 78.0024
+2024-05-24 23:58:55,763 -   Found best model, saving model.
+2024-05-24 23:59:07,930 - Epoch 81/150
+2024-05-24 23:59:07,930 -   Epoch Train Time: 9.312
+2024-05-24 23:59:07,930 -   Epoch Train Loss: 0.15994883
+2024-05-24 23:59:07,930 -   Epoch Train MulticlassAccuracy: 94.5606
+2024-05-24 23:59:07,930 -   Epoch Train MulticlassPrecision: 94.5669
+2024-05-24 23:59:07,930 -   Epoch Train MulticlassRecall: 94.5606
+2024-05-24 23:59:09,444 -   Validation Time: 1.511
+2024-05-24 23:59:09,444 -   Validation Loss: 0.77091591
+2024-05-24 23:59:09,444 -   Validation MulticlassAccuracy: 77.5591
+2024-05-24 23:59:09,444 -   Validation MulticlassPrecision: 77.3536
+2024-05-24 23:59:09,444 -   Validation MulticlassRecall: 77.5591
+2024-05-24 23:59:19,919 - Epoch 82/150
+2024-05-24 23:59:19,919 -   Epoch Train Time: 9.191
+2024-05-24 23:59:19,919 -   Epoch Train Loss: 0.15733556
+2024-05-24 23:59:19,919 -   Epoch Train MulticlassAccuracy: 94.6787
+2024-05-24 23:59:19,919 -   Epoch Train MulticlassPrecision: 94.6794
+2024-05-24 23:59:19,919 -   Epoch Train MulticlassRecall: 94.6787
+2024-05-24 23:59:21,400 -   Validation Time: 1.478
+2024-05-24 23:59:21,400 -   Validation Loss: 0.84536727
+2024-05-24 23:59:21,400 -   Validation MulticlassAccuracy: 76.5331
+2024-05-24 23:59:21,400 -   Validation MulticlassPrecision: 77.6825
+2024-05-24 23:59:21,400 -   Validation MulticlassRecall: 76.5331
+2024-05-24 23:59:31,921 - Epoch 83/150
+2024-05-24 23:59:31,921 -   Epoch Train Time: 9.196
+2024-05-24 23:59:31,921 -   Epoch Train Loss: 0.15474714
+2024-05-24 23:59:31,921 -   Epoch Train MulticlassAccuracy: 94.8841
+2024-05-24 23:59:31,922 -   Epoch Train MulticlassPrecision: 94.8852
+2024-05-24 23:59:31,922 -   Epoch Train MulticlassRecall: 94.8841
+2024-05-24 23:59:33,420 -   Validation Time: 1.494
+2024-05-24 23:59:33,420 -   Validation Loss: 0.77614369
+2024-05-24 23:59:33,420 -   Validation MulticlassAccuracy: 78.0726
+2024-05-24 23:59:33,420 -   Validation MulticlassPrecision: 78.0790
+2024-05-24 23:59:33,420 -   Validation MulticlassRecall: 78.0726
+2024-05-24 23:59:33,420 -   Found best model, saving model.
+2024-05-24 23:59:45,492 - Epoch 84/150
+2024-05-24 23:59:45,492 -   Epoch Train Time: 9.212
+2024-05-24 23:59:45,492 -   Epoch Train Loss: 0.15514438
+2024-05-24 23:59:45,492 -   Epoch Train MulticlassAccuracy: 94.8265
+2024-05-24 23:59:45,492 -   Epoch Train MulticlassPrecision: 94.8278
+2024-05-24 23:59:45,492 -   Epoch Train MulticlassRecall: 94.8265
+2024-05-24 23:59:47,025 -   Validation Time: 1.530
+2024-05-24 23:59:47,025 -   Validation Loss: 0.76347647
+2024-05-24 23:59:47,026 -   Validation MulticlassAccuracy: 77.8861
+2024-05-24 23:59:47,026 -   Validation MulticlassPrecision: 78.3216
+2024-05-24 23:59:47,026 -   Validation MulticlassRecall: 77.8861
+2024-05-24 23:59:57,612 - Epoch 85/150
+2024-05-24 23:59:57,612 -   Epoch Train Time: 9.277
+2024-05-24 23:59:57,612 -   Epoch Train Loss: 0.14778411
+2024-05-24 23:59:57,612 -   Epoch Train MulticlassAccuracy: 94.9565
+2024-05-24 23:59:57,612 -   Epoch Train MulticlassPrecision: 94.9622
+2024-05-24 23:59:57,612 -   Epoch Train MulticlassRecall: 94.9565
+2024-05-24 23:59:59,135 -   Validation Time: 1.520
+2024-05-24 23:59:59,136 -   Validation Loss: 0.81814396
+2024-05-24 23:59:59,136 -   Validation MulticlassAccuracy: 77.3432
+2024-05-24 23:59:59,136 -   Validation MulticlassPrecision: 77.5986
+2024-05-24 23:59:59,136 -   Validation MulticlassRecall: 77.3432
+2024-05-25 00:00:09,750 - Epoch 86/150
+2024-05-25 00:00:09,750 -   Epoch Train Time: 9.242
+2024-05-25 00:00:09,750 -   Epoch Train Loss: 0.15484610
+2024-05-25 00:00:09,750 -   Epoch Train MulticlassAccuracy: 94.8212
+2024-05-25 00:00:09,750 -   Epoch Train MulticlassPrecision: 94.8234
+2024-05-25 00:00:09,750 -   Epoch Train MulticlassRecall: 94.8212
+2024-05-25 00:00:11,237 -   Validation Time: 1.485
+2024-05-25 00:00:11,237 -   Validation Loss: 0.77222567
+2024-05-25 00:00:11,237 -   Validation MulticlassAccuracy: 78.5190
+2024-05-25 00:00:11,237 -   Validation MulticlassPrecision: 78.5536
+2024-05-25 00:00:11,237 -   Validation MulticlassRecall: 78.5190
+2024-05-25 00:00:11,237 -   Found best model, saving model.
+2024-05-25 00:00:23,114 - Epoch 87/150
+2024-05-25 00:00:23,114 -   Epoch Train Time: 9.106
+2024-05-25 00:00:23,114 -   Epoch Train Loss: 0.14393236
+2024-05-25 00:00:23,114 -   Epoch Train MulticlassAccuracy: 95.0565
+2024-05-25 00:00:23,114 -   Epoch Train MulticlassPrecision: 95.0557
+2024-05-25 00:00:23,114 -   Epoch Train MulticlassRecall: 95.0565
+2024-05-25 00:00:24,892 -   Validation Time: 1.775
+2024-05-25 00:00:24,892 -   Validation Loss: 0.77593587
+2024-05-25 00:00:24,892 -   Validation MulticlassAccuracy: 78.1292
+2024-05-25 00:00:24,892 -   Validation MulticlassPrecision: 78.2516
+2024-05-25 00:00:24,892 -   Validation MulticlassRecall: 78.1292
+2024-05-25 00:00:35,377 - Epoch 88/150
+2024-05-25 00:00:35,377 -   Epoch Train Time: 9.140
+2024-05-25 00:00:35,377 -   Epoch Train Loss: 0.14519817
+2024-05-25 00:00:35,377 -   Epoch Train MulticlassAccuracy: 95.2032
+2024-05-25 00:00:35,377 -   Epoch Train MulticlassPrecision: 95.2025
+2024-05-25 00:00:35,377 -   Epoch Train MulticlassRecall: 95.2032
+2024-05-25 00:00:37,125 -   Validation Time: 1.745
+2024-05-25 00:00:37,125 -   Validation Loss: 0.80155122
+2024-05-25 00:00:37,125 -   Validation MulticlassAccuracy: 77.2463
+2024-05-25 00:00:37,125 -   Validation MulticlassPrecision: 77.2244
+2024-05-25 00:00:37,125 -   Validation MulticlassRecall: 77.2463
+2024-05-25 00:00:47,685 - Epoch 89/150
+2024-05-25 00:00:47,685 -   Epoch Train Time: 9.120
+2024-05-25 00:00:47,685 -   Epoch Train Loss: 0.14329626
+2024-05-25 00:00:47,685 -   Epoch Train MulticlassAccuracy: 95.0857
+2024-05-25 00:00:47,685 -   Epoch Train MulticlassPrecision: 95.0865
+2024-05-25 00:00:47,685 -   Epoch Train MulticlassRecall: 95.0857
+2024-05-25 00:00:49,401 -   Validation Time: 1.712
+2024-05-25 00:00:49,401 -   Validation Loss: 0.78563778
+2024-05-25 00:00:49,401 -   Validation MulticlassAccuracy: 78.3609
+2024-05-25 00:00:49,401 -   Validation MulticlassPrecision: 78.6931
+2024-05-25 00:00:49,401 -   Validation MulticlassRecall: 78.3609
+2024-05-25 00:00:59,870 - Epoch 90/150
+2024-05-25 00:00:59,870 -   Epoch Train Time: 9.146
+2024-05-25 00:00:59,870 -   Epoch Train Loss: 0.13823382
+2024-05-25 00:00:59,870 -   Epoch Train MulticlassAccuracy: 95.3167
+2024-05-25 00:00:59,870 -   Epoch Train MulticlassPrecision: 95.3193
+2024-05-25 00:00:59,870 -   Epoch Train MulticlassRecall: 95.3167
+2024-05-25 00:01:01,601 -   Validation Time: 1.728
+2024-05-25 00:01:01,601 -   Validation Loss: 0.86122848
+2024-05-25 00:01:01,601 -   Validation MulticlassAccuracy: 77.0045
+2024-05-25 00:01:01,601 -   Validation MulticlassPrecision: 77.4401
+2024-05-25 00:01:01,601 -   Validation MulticlassRecall: 77.0045
+2024-05-25 00:01:12,017 - Epoch 91/150
+2024-05-25 00:01:12,018 -   Epoch Train Time: 9.104
+2024-05-25 00:01:12,018 -   Epoch Train Loss: 0.14251297
+2024-05-25 00:01:12,018 -   Epoch Train MulticlassAccuracy: 95.1591
+2024-05-25 00:01:12,018 -   Epoch Train MulticlassPrecision: 95.1597
+2024-05-25 00:01:12,018 -   Epoch Train MulticlassRecall: 95.1591
+2024-05-25 00:01:13,745 -   Validation Time: 1.723
+2024-05-25 00:01:13,745 -   Validation Loss: 0.75695384
+2024-05-25 00:01:13,745 -   Validation MulticlassAccuracy: 78.7116
+2024-05-25 00:01:13,745 -   Validation MulticlassPrecision: 79.0144
+2024-05-25 00:01:13,745 -   Validation MulticlassRecall: 78.7116
+2024-05-25 00:01:13,745 -   Found best model, saving model.
+2024-05-25 00:01:25,623 - Epoch 92/150
+2024-05-25 00:01:25,623 -   Epoch Train Time: 9.101
+2024-05-25 00:01:25,623 -   Epoch Train Loss: 0.13551684
+2024-05-25 00:01:25,623 -   Epoch Train MulticlassAccuracy: 95.4704
+2024-05-25 00:01:25,624 -   Epoch Train MulticlassPrecision: 95.4701
+2024-05-25 00:01:25,624 -   Epoch Train MulticlassRecall: 95.4704
+2024-05-25 00:01:27,334 -   Validation Time: 1.708
+2024-05-25 00:01:27,334 -   Validation Loss: 0.77337545
+2024-05-25 00:01:27,334 -   Validation MulticlassAccuracy: 78.5447
+2024-05-25 00:01:27,334 -   Validation MulticlassPrecision: 78.6917
+2024-05-25 00:01:27,334 -   Validation MulticlassRecall: 78.5447
+2024-05-25 00:01:38,348 - Epoch 93/150
+2024-05-25 00:01:38,348 -   Epoch Train Time: 9.189
+2024-05-25 00:01:38,349 -   Epoch Train Loss: 0.13841432
+2024-05-25 00:01:38,349 -   Epoch Train MulticlassAccuracy: 95.2004
+2024-05-25 00:01:38,349 -   Epoch Train MulticlassPrecision: 95.2061
+2024-05-25 00:01:38,349 -   Epoch Train MulticlassRecall: 95.2004
+2024-05-25 00:01:40,056 -   Validation Time: 1.704
+2024-05-25 00:01:40,056 -   Validation Loss: 0.78537315
+2024-05-25 00:01:40,056 -   Validation MulticlassAccuracy: 78.4626
+2024-05-25 00:01:40,056 -   Validation MulticlassPrecision: 78.4673
+2024-05-25 00:01:40,056 -   Validation MulticlassRecall: 78.4626
+2024-05-25 00:01:50,605 - Epoch 94/150
+2024-05-25 00:01:50,605 -   Epoch Train Time: 9.097
+2024-05-25 00:01:50,605 -   Epoch Train Loss: 0.13610247
+2024-05-25 00:01:50,605 -   Epoch Train MulticlassAccuracy: 95.3640
+2024-05-25 00:01:50,605 -   Epoch Train MulticlassPrecision: 95.3650
+2024-05-25 00:01:50,605 -   Epoch Train MulticlassRecall: 95.3640
+2024-05-25 00:01:52,325 -   Validation Time: 1.717
+2024-05-25 00:01:52,325 -   Validation Loss: 0.79189801
+2024-05-25 00:01:52,325 -   Validation MulticlassAccuracy: 77.8341
+2024-05-25 00:01:52,325 -   Validation MulticlassPrecision: 78.0490
+2024-05-25 00:01:52,325 -   Validation MulticlassRecall: 77.8341
+2024-05-25 00:02:03,029 - Epoch 95/150
+2024-05-25 00:02:03,029 -   Epoch Train Time: 9.136
+2024-05-25 00:02:03,029 -   Epoch Train Loss: 0.13633255
+2024-05-25 00:02:03,029 -   Epoch Train MulticlassAccuracy: 95.3983
+2024-05-25 00:02:03,029 -   Epoch Train MulticlassPrecision: 95.4068
+2024-05-25 00:02:03,029 -   Epoch Train MulticlassRecall: 95.3983
+2024-05-25 00:02:04,689 -   Validation Time: 1.658
+2024-05-25 00:02:04,690 -   Validation Loss: 0.77763907
+2024-05-25 00:02:04,690 -   Validation MulticlassAccuracy: 78.6017
+2024-05-25 00:02:04,690 -   Validation MulticlassPrecision: 79.0990
+2024-05-25 00:02:04,690 -   Validation MulticlassRecall: 78.6017
+2024-05-25 00:02:15,347 - Epoch 96/150
+2024-05-25 00:02:15,347 -   Epoch Train Time: 9.100
+2024-05-25 00:02:15,347 -   Epoch Train Loss: 0.13063539
+2024-05-25 00:02:15,347 -   Epoch Train MulticlassAccuracy: 95.6086
+2024-05-25 00:02:15,347 -   Epoch Train MulticlassPrecision: 95.6113
+2024-05-25 00:02:15,347 -   Epoch Train MulticlassRecall: 95.6086
+2024-05-25 00:02:17,010 -   Validation Time: 1.660
+2024-05-25 00:02:17,010 -   Validation Loss: 0.78924996
+2024-05-25 00:02:17,010 -   Validation MulticlassAccuracy: 78.1875
+2024-05-25 00:02:17,010 -   Validation MulticlassPrecision: 78.3435
+2024-05-25 00:02:17,010 -   Validation MulticlassRecall: 78.1875
+2024-05-25 00:02:27,725 - Epoch 97/150
+2024-05-25 00:02:27,725 -   Epoch Train Time: 9.139
+2024-05-25 00:02:27,725 -   Epoch Train Loss: 0.13289748
+2024-05-25 00:02:27,725 -   Epoch Train MulticlassAccuracy: 95.4961
+2024-05-25 00:02:27,725 -   Epoch Train MulticlassPrecision: 95.5004
+2024-05-25 00:02:27,725 -   Epoch Train MulticlassRecall: 95.4961
+2024-05-25 00:02:29,350 -   Validation Time: 1.623
+2024-05-25 00:02:29,350 -   Validation Loss: 0.76195958
+2024-05-25 00:02:29,350 -   Validation MulticlassAccuracy: 79.0821
+2024-05-25 00:02:29,350 -   Validation MulticlassPrecision: 79.6429
+2024-05-25 00:02:29,350 -   Validation MulticlassRecall: 79.0821
+2024-05-25 00:02:29,350 -   Found best model, saving model.
+2024-05-25 00:02:41,287 - Epoch 98/150
+2024-05-25 00:02:41,288 -   Epoch Train Time: 9.112
+2024-05-25 00:02:41,288 -   Epoch Train Loss: 0.12493271
+2024-05-25 00:02:41,288 -   Epoch Train MulticlassAccuracy: 95.7641
+2024-05-25 00:02:41,288 -   Epoch Train MulticlassPrecision: 95.7657
+2024-05-25 00:02:41,288 -   Epoch Train MulticlassRecall: 95.7641
+2024-05-25 00:02:42,925 -   Validation Time: 1.635
+2024-05-25 00:02:42,925 -   Validation Loss: 0.76890708
+2024-05-25 00:02:42,925 -   Validation MulticlassAccuracy: 79.1743
+2024-05-25 00:02:42,925 -   Validation MulticlassPrecision: 79.2747
+2024-05-25 00:02:42,925 -   Validation MulticlassRecall: 79.1743
+2024-05-25 00:02:42,925 -   Found best model, saving model.
+2024-05-25 00:02:54,845 - Epoch 99/150
+2024-05-25 00:02:54,845 -   Epoch Train Time: 9.098
+2024-05-25 00:02:54,845 -   Epoch Train Loss: 0.12444462
+2024-05-25 00:02:54,845 -   Epoch Train MulticlassAccuracy: 95.7137
+2024-05-25 00:02:54,845 -   Epoch Train MulticlassPrecision: 95.7135
+2024-05-25 00:02:54,845 -   Epoch Train MulticlassRecall: 95.7137
+2024-05-25 00:02:56,458 -   Validation Time: 1.610
+2024-05-25 00:02:56,458 -   Validation Loss: 0.77360807
+2024-05-25 00:02:56,458 -   Validation MulticlassAccuracy: 78.9528
+2024-05-25 00:02:56,458 -   Validation MulticlassPrecision: 79.1212
+2024-05-25 00:02:56,458 -   Validation MulticlassRecall: 78.9528
+2024-05-25 00:03:06,876 - Epoch 100/150
+2024-05-25 00:03:06,876 -   Epoch Train Time: 9.087
+2024-05-25 00:03:06,876 -   Epoch Train Loss: 0.12654718
+2024-05-25 00:03:06,876 -   Epoch Train MulticlassAccuracy: 95.7739
+2024-05-25 00:03:06,876 -   Epoch Train MulticlassPrecision: 95.7761
+2024-05-25 00:03:06,876 -   Epoch Train MulticlassRecall: 95.7739
+2024-05-25 00:03:08,515 -   Validation Time: 1.636
+2024-05-25 00:03:08,515 -   Validation Loss: 0.77604580
+2024-05-25 00:03:08,515 -   Validation MulticlassAccuracy: 79.2040
+2024-05-25 00:03:08,515 -   Validation MulticlassPrecision: 79.4245
+2024-05-25 00:03:08,515 -   Validation MulticlassRecall: 79.2040
+2024-05-25 00:03:08,515 -   Found best model, saving model.
+2024-05-25 00:03:20,363 - Epoch 101/150
+2024-05-25 00:03:20,363 -   Epoch Train Time: 9.047
+2024-05-25 00:03:20,363 -   Epoch Train Loss: 0.12832494
+2024-05-25 00:03:20,363 -   Epoch Train MulticlassAccuracy: 95.5962
+2024-05-25 00:03:20,363 -   Epoch Train MulticlassPrecision: 95.5973
+2024-05-25 00:03:20,363 -   Epoch Train MulticlassRecall: 95.5962
+2024-05-25 00:03:21,882 -   Validation Time: 1.516
+2024-05-25 00:03:21,883 -   Validation Loss: 0.75000803
+2024-05-25 00:03:21,883 -   Validation MulticlassAccuracy: 79.2808
+2024-05-25 00:03:21,883 -   Validation MulticlassPrecision: 79.1889
+2024-05-25 00:03:21,883 -   Validation MulticlassRecall: 79.2808
+2024-05-25 00:03:21,883 -   Found best model, saving model.
+2024-05-25 00:03:33,991 - Epoch 102/150
+2024-05-25 00:03:33,991 -   Epoch Train Time: 9.300
+2024-05-25 00:03:33,991 -   Epoch Train Loss: 0.12445217
+2024-05-25 00:03:33,991 -   Epoch Train MulticlassAccuracy: 95.7963
+2024-05-25 00:03:33,991 -   Epoch Train MulticlassPrecision: 95.7983
+2024-05-25 00:03:33,991 -   Epoch Train MulticlassRecall: 95.7963
+2024-05-25 00:03:35,508 -   Validation Time: 1.514
+2024-05-25 00:03:35,508 -   Validation Loss: 0.76676536
+2024-05-25 00:03:35,508 -   Validation MulticlassAccuracy: 79.5167
+2024-05-25 00:03:35,508 -   Validation MulticlassPrecision: 79.4719
+2024-05-25 00:03:35,508 -   Validation MulticlassRecall: 79.5167
+2024-05-25 00:03:35,508 -   Found best model, saving model.
+2024-05-25 00:03:47,578 - Epoch 103/150
+2024-05-25 00:03:47,578 -   Epoch Train Time: 9.279
+2024-05-25 00:03:47,578 -   Epoch Train Loss: 0.12486148
+2024-05-25 00:03:47,578 -   Epoch Train MulticlassAccuracy: 95.7965
+2024-05-25 00:03:47,578 -   Epoch Train MulticlassPrecision: 95.7969
+2024-05-25 00:03:47,578 -   Epoch Train MulticlassRecall: 95.7965
+2024-05-25 00:03:49,081 -   Validation Time: 1.500
+2024-05-25 00:03:49,081 -   Validation Loss: 0.73608627
+2024-05-25 00:03:49,081 -   Validation MulticlassAccuracy: 79.8281
+2024-05-25 00:03:49,081 -   Validation MulticlassPrecision: 79.7893
+2024-05-25 00:03:49,081 -   Validation MulticlassRecall: 79.8281
+2024-05-25 00:03:49,081 -   Found best model, saving model.
+2024-05-25 00:04:01,204 - Epoch 104/150
+2024-05-25 00:04:01,204 -   Epoch Train Time: 9.344
+2024-05-25 00:04:01,204 -   Epoch Train Loss: 0.12565554
+2024-05-25 00:04:01,204 -   Epoch Train MulticlassAccuracy: 95.7616
+2024-05-25 00:04:01,205 -   Epoch Train MulticlassPrecision: 95.7661
+2024-05-25 00:04:01,205 -   Epoch Train MulticlassRecall: 95.7616
+2024-05-25 00:04:02,685 -   Validation Time: 1.477
+2024-05-25 00:04:02,685 -   Validation Loss: 0.74795848
+2024-05-25 00:04:02,685 -   Validation MulticlassAccuracy: 79.0473
+2024-05-25 00:04:02,685 -   Validation MulticlassPrecision: 79.5174
+2024-05-25 00:04:02,685 -   Validation MulticlassRecall: 79.0473
+2024-05-25 00:04:13,193 - Epoch 105/150
+2024-05-25 00:04:13,193 -   Epoch Train Time: 9.174
+2024-05-25 00:04:13,193 -   Epoch Train Loss: 0.12268832
+2024-05-25 00:04:13,193 -   Epoch Train MulticlassAccuracy: 95.8785
+2024-05-25 00:04:13,193 -   Epoch Train MulticlassPrecision: 95.8796
+2024-05-25 00:04:13,193 -   Epoch Train MulticlassRecall: 95.8785
+2024-05-25 00:04:14,664 -   Validation Time: 1.468
+2024-05-25 00:04:14,664 -   Validation Loss: 0.73746393
+2024-05-25 00:04:14,664 -   Validation MulticlassAccuracy: 79.5137
+2024-05-25 00:04:14,664 -   Validation MulticlassPrecision: 79.5674
+2024-05-25 00:04:14,664 -   Validation MulticlassRecall: 79.5137
+2024-05-25 00:04:25,275 - Epoch 106/150
+2024-05-25 00:04:25,276 -   Epoch Train Time: 9.267
+2024-05-25 00:04:25,276 -   Epoch Train Loss: 0.11888600
+2024-05-25 00:04:25,276 -   Epoch Train MulticlassAccuracy: 95.9187
+2024-05-25 00:04:25,276 -   Epoch Train MulticlassPrecision: 95.9207
+2024-05-25 00:04:25,276 -   Epoch Train MulticlassRecall: 95.9187
+2024-05-25 00:04:26,795 -   Validation Time: 1.516
+2024-05-25 00:04:26,795 -   Validation Loss: 0.77999638
+2024-05-25 00:04:26,795 -   Validation MulticlassAccuracy: 79.4573
+2024-05-25 00:04:26,795 -   Validation MulticlassPrecision: 79.4665
+2024-05-25 00:04:26,795 -   Validation MulticlassRecall: 79.4573
+2024-05-25 00:04:37,411 - Epoch 107/150
+2024-05-25 00:04:37,411 -   Epoch Train Time: 9.278
+2024-05-25 00:04:37,411 -   Epoch Train Loss: 0.11576375
+2024-05-25 00:04:37,411 -   Epoch Train MulticlassAccuracy: 96.1100
+2024-05-25 00:04:37,411 -   Epoch Train MulticlassPrecision: 96.1103
+2024-05-25 00:04:37,411 -   Epoch Train MulticlassRecall: 96.1100
+2024-05-25 00:04:38,881 -   Validation Time: 1.468
+2024-05-25 00:04:38,881 -   Validation Loss: 0.71501356
+2024-05-25 00:04:38,882 -   Validation MulticlassAccuracy: 80.1431
+2024-05-25 00:04:38,882 -   Validation MulticlassPrecision: 80.0295
+2024-05-25 00:04:38,882 -   Validation MulticlassRecall: 80.1431
+2024-05-25 00:04:38,882 -   Found best model, saving model.
+2024-05-25 00:04:51,009 - Epoch 108/150
+2024-05-25 00:04:51,009 -   Epoch Train Time: 9.361
+2024-05-25 00:04:51,009 -   Epoch Train Loss: 0.11296619
+2024-05-25 00:04:51,009 -   Epoch Train MulticlassAccuracy: 96.2315
+2024-05-25 00:04:51,009 -   Epoch Train MulticlassPrecision: 96.2337
+2024-05-25 00:04:51,009 -   Epoch Train MulticlassRecall: 96.2315
+2024-05-25 00:04:52,509 -   Validation Time: 1.497
+2024-05-25 00:04:52,509 -   Validation Loss: 0.71826876
+2024-05-25 00:04:52,509 -   Validation MulticlassAccuracy: 79.8206
+2024-05-25 00:04:52,509 -   Validation MulticlassPrecision: 79.7853
+2024-05-25 00:04:52,509 -   Validation MulticlassRecall: 79.8206
+2024-05-25 00:05:03,103 - Epoch 109/150
+2024-05-25 00:05:03,103 -   Epoch Train Time: 9.270
+2024-05-25 00:05:03,103 -   Epoch Train Loss: 0.11320257
+2024-05-25 00:05:03,103 -   Epoch Train MulticlassAccuracy: 96.0993
+2024-05-25 00:05:03,103 -   Epoch Train MulticlassPrecision: 96.0991
+2024-05-25 00:05:03,103 -   Epoch Train MulticlassRecall: 96.0993
+2024-05-25 00:05:04,603 -   Validation Time: 1.497
+2024-05-25 00:05:04,603 -   Validation Loss: 0.71844972
+2024-05-25 00:05:04,603 -   Validation MulticlassAccuracy: 79.9303
+2024-05-25 00:05:04,603 -   Validation MulticlassPrecision: 80.0312
+2024-05-25 00:05:04,603 -   Validation MulticlassRecall: 79.9303
+2024-05-25 00:05:15,276 - Epoch 110/150
+2024-05-25 00:05:15,276 -   Epoch Train Time: 9.250
+2024-05-25 00:05:15,276 -   Epoch Train Loss: 0.11544776
+2024-05-25 00:05:15,276 -   Epoch Train MulticlassAccuracy: 96.1540
+2024-05-25 00:05:15,276 -   Epoch Train MulticlassPrecision: 96.1556
+2024-05-25 00:05:15,276 -   Epoch Train MulticlassRecall: 96.1540
+2024-05-25 00:05:16,791 -   Validation Time: 1.512
+2024-05-25 00:05:16,792 -   Validation Loss: 0.71555527
+2024-05-25 00:05:16,792 -   Validation MulticlassAccuracy: 79.9546
+2024-05-25 00:05:16,792 -   Validation MulticlassPrecision: 79.7544
+2024-05-25 00:05:16,792 -   Validation MulticlassRecall: 79.9546
+2024-05-25 00:05:27,393 - Epoch 111/150
+2024-05-25 00:05:27,393 -   Epoch Train Time: 9.268
+2024-05-25 00:05:27,393 -   Epoch Train Loss: 0.11170384
+2024-05-25 00:05:27,393 -   Epoch Train MulticlassAccuracy: 96.3047
+2024-05-25 00:05:27,393 -   Epoch Train MulticlassPrecision: 96.3074
+2024-05-25 00:05:27,393 -   Epoch Train MulticlassRecall: 96.3047
+2024-05-25 00:05:28,934 -   Validation Time: 1.538
+2024-05-25 00:05:28,935 -   Validation Loss: 0.71509216
+2024-05-25 00:05:28,935 -   Validation MulticlassAccuracy: 80.2922
+2024-05-25 00:05:28,935 -   Validation MulticlassPrecision: 80.2935
+2024-05-25 00:05:28,935 -   Validation MulticlassRecall: 80.2922
+2024-05-25 00:05:28,935 -   Found best model, saving model.
+2024-05-25 00:05:40,999 - Epoch 112/150
+2024-05-25 00:05:40,999 -   Epoch Train Time: 9.279
+2024-05-25 00:05:40,999 -   Epoch Train Loss: 0.11415103
+2024-05-25 00:05:40,999 -   Epoch Train MulticlassAccuracy: 96.1992
+2024-05-25 00:05:40,999 -   Epoch Train MulticlassPrecision: 96.2014
+2024-05-25 00:05:40,999 -   Epoch Train MulticlassRecall: 96.1992
+2024-05-25 00:05:42,508 -   Validation Time: 1.507
+2024-05-25 00:05:42,508 -   Validation Loss: 0.70172451
+2024-05-25 00:05:42,508 -   Validation MulticlassAccuracy: 79.9828
+2024-05-25 00:05:42,508 -   Validation MulticlassPrecision: 79.9215
+2024-05-25 00:05:42,508 -   Validation MulticlassRecall: 79.9828
+2024-05-25 00:05:53,035 - Epoch 113/150
+2024-05-25 00:05:53,035 -   Epoch Train Time: 9.243
+2024-05-25 00:05:53,035 -   Epoch Train Loss: 0.10889705
+2024-05-25 00:05:53,035 -   Epoch Train MulticlassAccuracy: 96.2670
+2024-05-25 00:05:53,035 -   Epoch Train MulticlassPrecision: 96.2682
+2024-05-25 00:05:53,035 -   Epoch Train MulticlassRecall: 96.2670
+2024-05-25 00:05:54,513 -   Validation Time: 1.476
+2024-05-25 00:05:54,514 -   Validation Loss: 0.73210979
+2024-05-25 00:05:54,514 -   Validation MulticlassAccuracy: 79.9496
+2024-05-25 00:05:54,514 -   Validation MulticlassPrecision: 79.9943
+2024-05-25 00:05:54,514 -   Validation MulticlassRecall: 79.9496
+2024-05-25 00:06:05,123 - Epoch 114/150
+2024-05-25 00:06:05,123 -   Epoch Train Time: 9.239
+2024-05-25 00:06:05,123 -   Epoch Train Loss: 0.10720941
+2024-05-25 00:06:05,123 -   Epoch Train MulticlassAccuracy: 96.3720
+2024-05-25 00:06:05,123 -   Epoch Train MulticlassPrecision: 96.3740
+2024-05-25 00:06:05,123 -   Epoch Train MulticlassRecall: 96.3720
+2024-05-25 00:06:06,640 -   Validation Time: 1.514
+2024-05-25 00:06:06,640 -   Validation Loss: 0.73965628
+2024-05-25 00:06:06,640 -   Validation MulticlassAccuracy: 79.5749
+2024-05-25 00:06:06,640 -   Validation MulticlassPrecision: 79.6277
+2024-05-25 00:06:06,640 -   Validation MulticlassRecall: 79.5749
+2024-05-25 00:06:17,254 - Epoch 115/150
+2024-05-25 00:06:17,254 -   Epoch Train Time: 9.258
+2024-05-25 00:06:17,255 -   Epoch Train Loss: 0.10608681
+2024-05-25 00:06:17,255 -   Epoch Train MulticlassAccuracy: 96.4919
+2024-05-25 00:06:17,255 -   Epoch Train MulticlassPrecision: 96.4917
+2024-05-25 00:06:17,255 -   Epoch Train MulticlassRecall: 96.4919
+2024-05-25 00:06:18,769 -   Validation Time: 1.512
+2024-05-25 00:06:18,769 -   Validation Loss: 0.73262480
+2024-05-25 00:06:18,769 -   Validation MulticlassAccuracy: 79.3072
+2024-05-25 00:06:18,769 -   Validation MulticlassPrecision: 79.2276
+2024-05-25 00:06:18,769 -   Validation MulticlassRecall: 79.3072
+2024-05-25 00:06:29,285 - Epoch 116/150
+2024-05-25 00:06:29,285 -   Epoch Train Time: 9.198
+2024-05-25 00:06:29,285 -   Epoch Train Loss: 0.10915719
+2024-05-25 00:06:29,285 -   Epoch Train MulticlassAccuracy: 96.3764
+2024-05-25 00:06:29,285 -   Epoch Train MulticlassPrecision: 96.3775
+2024-05-25 00:06:29,285 -   Epoch Train MulticlassRecall: 96.3764
+2024-05-25 00:06:30,741 -   Validation Time: 1.453
+2024-05-25 00:06:30,741 -   Validation Loss: 0.73685224
+2024-05-25 00:06:30,741 -   Validation MulticlassAccuracy: 79.4305
+2024-05-25 00:06:30,741 -   Validation MulticlassPrecision: 79.5492
+2024-05-25 00:06:30,741 -   Validation MulticlassRecall: 79.4305
+2024-05-25 00:06:41,329 - Epoch 117/150
+2024-05-25 00:06:41,329 -   Epoch Train Time: 9.224
+2024-05-25 00:06:41,329 -   Epoch Train Loss: 0.10416522
+2024-05-25 00:06:41,329 -   Epoch Train MulticlassAccuracy: 96.5545
+2024-05-25 00:06:41,329 -   Epoch Train MulticlassPrecision: 96.5549
+2024-05-25 00:06:41,329 -   Epoch Train MulticlassRecall: 96.5545
+2024-05-25 00:06:42,780 -   Validation Time: 1.448
+2024-05-25 00:06:42,780 -   Validation Loss: 0.72265264
+2024-05-25 00:06:42,780 -   Validation MulticlassAccuracy: 79.7333
+2024-05-25 00:06:42,780 -   Validation MulticlassPrecision: 79.8087
+2024-05-25 00:06:42,780 -   Validation MulticlassRecall: 79.7333
+2024-05-25 00:06:53,388 - Epoch 118/150
+2024-05-25 00:06:53,388 -   Epoch Train Time: 9.241
+2024-05-25 00:06:53,388 -   Epoch Train Loss: 0.10879552
+2024-05-25 00:06:53,388 -   Epoch Train MulticlassAccuracy: 96.2965
+2024-05-25 00:06:53,388 -   Epoch Train MulticlassPrecision: 96.2972
+2024-05-25 00:06:53,388 -   Epoch Train MulticlassRecall: 96.2965
+2024-05-25 00:06:54,915 -   Validation Time: 1.524
+2024-05-25 00:06:54,915 -   Validation Loss: 0.74411049
+2024-05-25 00:06:54,915 -   Validation MulticlassAccuracy: 79.5232
+2024-05-25 00:06:54,915 -   Validation MulticlassPrecision: 79.5875
+2024-05-25 00:06:54,915 -   Validation MulticlassRecall: 79.5232
+2024-05-25 00:07:05,521 - Epoch 119/150
+2024-05-25 00:07:05,522 -   Epoch Train Time: 9.245
+2024-05-25 00:07:05,522 -   Epoch Train Loss: 0.10122035
+2024-05-25 00:07:05,522 -   Epoch Train MulticlassAccuracy: 96.6371
+2024-05-25 00:07:05,522 -   Epoch Train MulticlassPrecision: 96.6366
+2024-05-25 00:07:05,522 -   Epoch Train MulticlassRecall: 96.6371
+2024-05-25 00:07:07,030 -   Validation Time: 1.505
+2024-05-25 00:07:07,030 -   Validation Loss: 0.72907859
+2024-05-25 00:07:07,030 -   Validation MulticlassAccuracy: 79.6695
+2024-05-25 00:07:07,030 -   Validation MulticlassPrecision: 79.6447
+2024-05-25 00:07:07,030 -   Validation MulticlassRecall: 79.6695
+2024-05-25 00:07:17,685 - Epoch 120/150
+2024-05-25 00:07:17,685 -   Epoch Train Time: 9.286
+2024-05-25 00:07:17,685 -   Epoch Train Loss: 0.10504821
+2024-05-25 00:07:17,685 -   Epoch Train MulticlassAccuracy: 96.5541
+2024-05-25 00:07:17,685 -   Epoch Train MulticlassPrecision: 96.5582
+2024-05-25 00:07:17,685 -   Epoch Train MulticlassRecall: 96.5541
+2024-05-25 00:07:19,170 -   Validation Time: 1.482
+2024-05-25 00:07:19,170 -   Validation Loss: 0.70773037
+2024-05-25 00:07:19,170 -   Validation MulticlassAccuracy: 79.7136
+2024-05-25 00:07:19,170 -   Validation MulticlassPrecision: 79.7655
+2024-05-25 00:07:19,170 -   Validation MulticlassRecall: 79.7136
+2024-05-25 00:07:29,616 - Epoch 121/150
+2024-05-25 00:07:29,616 -   Epoch Train Time: 9.088
+2024-05-25 00:07:29,616 -   Epoch Train Loss: 0.10388093
+2024-05-25 00:07:29,616 -   Epoch Train MulticlassAccuracy: 96.4961
+2024-05-25 00:07:29,617 -   Epoch Train MulticlassPrecision: 96.4979
+2024-05-25 00:07:29,617 -   Epoch Train MulticlassRecall: 96.4961
+2024-05-25 00:07:31,353 -   Validation Time: 1.734
+2024-05-25 00:07:31,353 -   Validation Loss: 0.73477733
+2024-05-25 00:07:31,353 -   Validation MulticlassAccuracy: 80.1675
+2024-05-25 00:07:31,353 -   Validation MulticlassPrecision: 80.2303
+2024-05-25 00:07:31,353 -   Validation MulticlassRecall: 80.1675
+2024-05-25 00:07:41,902 - Epoch 122/150
+2024-05-25 00:07:41,902 -   Epoch Train Time: 9.195
+2024-05-25 00:07:41,902 -   Epoch Train Loss: 0.09866647
+2024-05-25 00:07:41,902 -   Epoch Train MulticlassAccuracy: 96.6696
+2024-05-25 00:07:41,902 -   Epoch Train MulticlassPrecision: 96.6718
+2024-05-25 00:07:41,902 -   Epoch Train MulticlassRecall: 96.6696
+2024-05-25 00:07:43,676 -   Validation Time: 1.770
+2024-05-25 00:07:43,676 -   Validation Loss: 0.73198701
+2024-05-25 00:07:43,676 -   Validation MulticlassAccuracy: 80.0821
+2024-05-25 00:07:43,676 -   Validation MulticlassPrecision: 80.0431
+2024-05-25 00:07:43,676 -   Validation MulticlassRecall: 80.0821
+2024-05-25 00:07:54,158 - Epoch 123/150
+2024-05-25 00:07:54,158 -   Epoch Train Time: 9.139
+2024-05-25 00:07:54,158 -   Epoch Train Loss: 0.10109051
+2024-05-25 00:07:54,158 -   Epoch Train MulticlassAccuracy: 96.6415
+2024-05-25 00:07:54,158 -   Epoch Train MulticlassPrecision: 96.6420
+2024-05-25 00:07:54,158 -   Epoch Train MulticlassRecall: 96.6415
+2024-05-25 00:07:55,874 -   Validation Time: 1.713
+2024-05-25 00:07:55,874 -   Validation Loss: 0.72153026
+2024-05-25 00:07:55,874 -   Validation MulticlassAccuracy: 79.9556
+2024-05-25 00:07:55,874 -   Validation MulticlassPrecision: 79.8566
+2024-05-25 00:07:55,874 -   Validation MulticlassRecall: 79.9556
+2024-05-25 00:08:06,420 - Epoch 124/150
+2024-05-25 00:08:06,420 -   Epoch Train Time: 9.128
+2024-05-25 00:08:06,420 -   Epoch Train Loss: 0.09835797
+2024-05-25 00:08:06,420 -   Epoch Train MulticlassAccuracy: 96.6944
+2024-05-25 00:08:06,420 -   Epoch Train MulticlassPrecision: 96.6973
+2024-05-25 00:08:06,420 -   Epoch Train MulticlassRecall: 96.6944
+2024-05-25 00:08:08,106 -   Validation Time: 1.683
+2024-05-25 00:08:08,106 -   Validation Loss: 0.69817312
+2024-05-25 00:08:08,106 -   Validation MulticlassAccuracy: 80.3482
+2024-05-25 00:08:08,106 -   Validation MulticlassPrecision: 80.1759
+2024-05-25 00:08:08,106 -   Validation MulticlassRecall: 80.3482
+2024-05-25 00:08:08,106 -   Found best model, saving model.
+2024-05-25 00:08:19,996 - Epoch 125/150
+2024-05-25 00:08:19,996 -   Epoch Train Time: 9.101
+2024-05-25 00:08:19,996 -   Epoch Train Loss: 0.09682115
+2024-05-25 00:08:19,996 -   Epoch Train MulticlassAccuracy: 96.7562
+2024-05-25 00:08:19,996 -   Epoch Train MulticlassPrecision: 96.7557
+2024-05-25 00:08:19,997 -   Epoch Train MulticlassRecall: 96.7562
+2024-05-25 00:08:21,708 -   Validation Time: 1.708
+2024-05-25 00:08:21,708 -   Validation Loss: 0.72342793
+2024-05-25 00:08:21,708 -   Validation MulticlassAccuracy: 79.9251
+2024-05-25 00:08:21,708 -   Validation MulticlassPrecision: 79.9167
+2024-05-25 00:08:21,708 -   Validation MulticlassRecall: 79.9251
+2024-05-25 00:08:32,105 - Epoch 126/150
+2024-05-25 00:08:32,105 -   Epoch Train Time: 9.060
+2024-05-25 00:08:32,106 -   Epoch Train Loss: 0.09829476
+2024-05-25 00:08:32,106 -   Epoch Train MulticlassAccuracy: 96.6290
+2024-05-25 00:08:32,106 -   Epoch Train MulticlassPrecision: 96.6305
+2024-05-25 00:08:32,106 -   Epoch Train MulticlassRecall: 96.6290
+2024-05-25 00:08:33,827 -   Validation Time: 1.719
+2024-05-25 00:08:33,827 -   Validation Loss: 0.69481105
+2024-05-25 00:08:33,827 -   Validation MulticlassAccuracy: 80.6635
+2024-05-25 00:08:33,827 -   Validation MulticlassPrecision: 80.5893
+2024-05-25 00:08:33,827 -   Validation MulticlassRecall: 80.6635
+2024-05-25 00:08:33,827 -   Found best model, saving model.
+2024-05-25 00:08:45,741 - Epoch 127/150
+2024-05-25 00:08:45,741 -   Epoch Train Time: 9.121
+2024-05-25 00:08:45,741 -   Epoch Train Loss: 0.09900604
+2024-05-25 00:08:45,741 -   Epoch Train MulticlassAccuracy: 96.7094
+2024-05-25 00:08:45,741 -   Epoch Train MulticlassPrecision: 96.7103
+2024-05-25 00:08:45,741 -   Epoch Train MulticlassRecall: 96.7094
+2024-05-25 00:08:47,425 -   Validation Time: 1.682
+2024-05-25 00:08:47,426 -   Validation Loss: 0.68985478
+2024-05-25 00:08:47,426 -   Validation MulticlassAccuracy: 80.3690
+2024-05-25 00:08:47,426 -   Validation MulticlassPrecision: 80.4061
+2024-05-25 00:08:47,426 -   Validation MulticlassRecall: 80.3690
+2024-05-25 00:08:57,854 - Epoch 128/150
+2024-05-25 00:08:57,854 -   Epoch Train Time: 9.099
+2024-05-25 00:08:57,854 -   Epoch Train Loss: 0.09460733
+2024-05-25 00:08:57,854 -   Epoch Train MulticlassAccuracy: 96.8564
+2024-05-25 00:08:57,854 -   Epoch Train MulticlassPrecision: 96.8586
+2024-05-25 00:08:57,854 -   Epoch Train MulticlassRecall: 96.8564
+2024-05-25 00:08:59,566 -   Validation Time: 1.709
+2024-05-25 00:08:59,567 -   Validation Loss: 0.71022965
+2024-05-25 00:08:59,567 -   Validation MulticlassAccuracy: 80.2381
+2024-05-25 00:08:59,567 -   Validation MulticlassPrecision: 80.1479
+2024-05-25 00:08:59,567 -   Validation MulticlassRecall: 80.2381
+2024-05-25 00:09:10,088 - Epoch 129/150
+2024-05-25 00:09:10,088 -   Epoch Train Time: 9.142
+2024-05-25 00:09:10,088 -   Epoch Train Loss: 0.09561611
+2024-05-25 00:09:10,088 -   Epoch Train MulticlassAccuracy: 96.8140
+2024-05-25 00:09:10,088 -   Epoch Train MulticlassPrecision: 96.8156
+2024-05-25 00:09:10,088 -   Epoch Train MulticlassRecall: 96.8140
+2024-05-25 00:09:11,711 -   Validation Time: 1.618
+2024-05-25 00:09:11,711 -   Validation Loss: 0.70090412
+2024-05-25 00:09:11,711 -   Validation MulticlassAccuracy: 80.3077
+2024-05-25 00:09:11,711 -   Validation MulticlassPrecision: 80.2320
+2024-05-25 00:09:11,711 -   Validation MulticlassRecall: 80.3077
+2024-05-25 00:09:22,176 - Epoch 130/150
+2024-05-25 00:09:22,176 -   Epoch Train Time: 9.148
+2024-05-25 00:09:22,176 -   Epoch Train Loss: 0.09805573
+2024-05-25 00:09:22,176 -   Epoch Train MulticlassAccuracy: 96.7166
+2024-05-25 00:09:22,176 -   Epoch Train MulticlassPrecision: 96.7206
+2024-05-25 00:09:22,176 -   Epoch Train MulticlassRecall: 96.7166
+2024-05-25 00:09:23,796 -   Validation Time: 1.616
+2024-05-25 00:09:23,796 -   Validation Loss: 0.69463315
+2024-05-25 00:09:23,796 -   Validation MulticlassAccuracy: 80.4112
+2024-05-25 00:09:23,796 -   Validation MulticlassPrecision: 80.3388
+2024-05-25 00:09:23,796 -   Validation MulticlassRecall: 80.4112
+2024-05-25 00:09:34,145 - Epoch 131/150
+2024-05-25 00:09:34,145 -   Epoch Train Time: 9.050
+2024-05-25 00:09:34,145 -   Epoch Train Loss: 0.09363329
+2024-05-25 00:09:34,145 -   Epoch Train MulticlassAccuracy: 96.8090
+2024-05-25 00:09:34,145 -   Epoch Train MulticlassPrecision: 96.8089
+2024-05-25 00:09:34,145 -   Epoch Train MulticlassRecall: 96.8090
+2024-05-25 00:09:35,786 -   Validation Time: 1.638
+2024-05-25 00:09:35,786 -   Validation Loss: 0.71093926
+2024-05-25 00:09:35,786 -   Validation MulticlassAccuracy: 80.5603
+2024-05-25 00:09:35,786 -   Validation MulticlassPrecision: 80.4921
+2024-05-25 00:09:35,787 -   Validation MulticlassRecall: 80.5603
+2024-05-25 00:09:46,270 - Epoch 132/150
+2024-05-25 00:09:46,270 -   Epoch Train Time: 9.109
+2024-05-25 00:09:46,270 -   Epoch Train Loss: 0.09805067
+2024-05-25 00:09:46,270 -   Epoch Train MulticlassAccuracy: 96.7219
+2024-05-25 00:09:46,270 -   Epoch Train MulticlassPrecision: 96.7234
+2024-05-25 00:09:46,270 -   Epoch Train MulticlassRecall: 96.7219
+2024-05-25 00:09:47,878 -   Validation Time: 1.605
+2024-05-25 00:09:47,878 -   Validation Loss: 0.71802548
+2024-05-25 00:09:47,878 -   Validation MulticlassAccuracy: 80.5965
+2024-05-25 00:09:47,878 -   Validation MulticlassPrecision: 80.4879
+2024-05-25 00:09:47,878 -   Validation MulticlassRecall: 80.5965
+2024-05-25 00:09:58,344 - Epoch 133/150
+2024-05-25 00:09:58,344 -   Epoch Train Time: 9.105
+2024-05-25 00:09:58,344 -   Epoch Train Loss: 0.09531119
+2024-05-25 00:09:58,344 -   Epoch Train MulticlassAccuracy: 96.8744
+2024-05-25 00:09:58,344 -   Epoch Train MulticlassPrecision: 96.8761
+2024-05-25 00:09:58,344 -   Epoch Train MulticlassRecall: 96.8744
+2024-05-25 00:10:00,025 -   Validation Time: 1.678
+2024-05-25 00:10:00,025 -   Validation Loss: 0.70327256
+2024-05-25 00:10:00,026 -   Validation MulticlassAccuracy: 80.3259
+2024-05-25 00:10:00,026 -   Validation MulticlassPrecision: 80.2775
+2024-05-25 00:10:00,026 -   Validation MulticlassRecall: 80.3259
+2024-05-25 00:10:10,514 - Epoch 134/150
+2024-05-25 00:10:10,514 -   Epoch Train Time: 9.169
+2024-05-25 00:10:10,514 -   Epoch Train Loss: 0.09592163
+2024-05-25 00:10:10,515 -   Epoch Train MulticlassAccuracy: 96.7246
+2024-05-25 00:10:10,515 -   Epoch Train MulticlassPrecision: 96.7298
+2024-05-25 00:10:10,515 -   Epoch Train MulticlassRecall: 96.7246
+2024-05-25 00:10:12,007 -   Validation Time: 1.490
+2024-05-25 00:10:12,007 -   Validation Loss: 0.71684190
+2024-05-25 00:10:12,007 -   Validation MulticlassAccuracy: 80.1250
+2024-05-25 00:10:12,007 -   Validation MulticlassPrecision: 80.0640
+2024-05-25 00:10:12,008 -   Validation MulticlassRecall: 80.1250
+2024-05-25 00:10:22,690 - Epoch 135/150
+2024-05-25 00:10:22,690 -   Epoch Train Time: 9.378
+2024-05-25 00:10:22,690 -   Epoch Train Loss: 0.09412631
+2024-05-25 00:10:22,690 -   Epoch Train MulticlassAccuracy: 96.8811
+2024-05-25 00:10:22,690 -   Epoch Train MulticlassPrecision: 96.8846
+2024-05-25 00:10:22,690 -   Epoch Train MulticlassRecall: 96.8811
+2024-05-25 00:10:24,157 -   Validation Time: 1.464
+2024-05-25 00:10:24,157 -   Validation Loss: 0.70086550
+2024-05-25 00:10:24,157 -   Validation MulticlassAccuracy: 80.3370
+2024-05-25 00:10:24,157 -   Validation MulticlassPrecision: 80.3014
+2024-05-25 00:10:24,157 -   Validation MulticlassRecall: 80.3370
+2024-05-25 00:10:34,914 - Epoch 136/150
+2024-05-25 00:10:34,914 -   Epoch Train Time: 9.397
+2024-05-25 00:10:34,914 -   Epoch Train Loss: 0.09201984
+2024-05-25 00:10:34,914 -   Epoch Train MulticlassAccuracy: 96.9189
+2024-05-25 00:10:34,914 -   Epoch Train MulticlassPrecision: 96.9217
+2024-05-25 00:10:34,914 -   Epoch Train MulticlassRecall: 96.9189
+2024-05-25 00:10:36,444 -   Validation Time: 1.527
+2024-05-25 00:10:36,444 -   Validation Loss: 0.70927510
+2024-05-25 00:10:36,444 -   Validation MulticlassAccuracy: 80.5862
+2024-05-25 00:10:36,444 -   Validation MulticlassPrecision: 80.5717
+2024-05-25 00:10:36,444 -   Validation MulticlassRecall: 80.5862
+2024-05-25 00:10:47,079 - Epoch 137/150
+2024-05-25 00:10:47,079 -   Epoch Train Time: 9.289
+2024-05-25 00:10:47,079 -   Epoch Train Loss: 0.08883162
+2024-05-25 00:10:47,079 -   Epoch Train MulticlassAccuracy: 97.0118
+2024-05-25 00:10:47,079 -   Epoch Train MulticlassPrecision: 97.0116
+2024-05-25 00:10:47,079 -   Epoch Train MulticlassRecall: 97.0118
+2024-05-25 00:10:48,517 -   Validation Time: 1.435
+2024-05-25 00:10:48,517 -   Validation Loss: 0.71262663
+2024-05-25 00:10:48,517 -   Validation MulticlassAccuracy: 80.6806
+2024-05-25 00:10:48,517 -   Validation MulticlassPrecision: 80.6085
+2024-05-25 00:10:48,517 -   Validation MulticlassRecall: 80.6806
+2024-05-25 00:10:48,517 -   Found best model, saving model.
+2024-05-25 00:11:00,568 - Epoch 138/150
+2024-05-25 00:11:00,568 -   Epoch Train Time: 9.262
+2024-05-25 00:11:00,568 -   Epoch Train Loss: 0.09131766
+2024-05-25 00:11:00,568 -   Epoch Train MulticlassAccuracy: 96.9222
+2024-05-25 00:11:00,568 -   Epoch Train MulticlassPrecision: 96.9243
+2024-05-25 00:11:00,568 -   Epoch Train MulticlassRecall: 96.9222
+2024-05-25 00:11:02,044 -   Validation Time: 1.472
+2024-05-25 00:11:02,044 -   Validation Loss: 0.69835216
+2024-05-25 00:11:02,044 -   Validation MulticlassAccuracy: 79.9849
+2024-05-25 00:11:02,044 -   Validation MulticlassPrecision: 79.8753
+2024-05-25 00:11:02,044 -   Validation MulticlassRecall: 79.9849
+2024-05-25 00:11:12,649 - Epoch 139/150
+2024-05-25 00:11:12,650 -   Epoch Train Time: 9.274
+2024-05-25 00:11:12,650 -   Epoch Train Loss: 0.09128305
+2024-05-25 00:11:12,650 -   Epoch Train MulticlassAccuracy: 96.9022
+2024-05-25 00:11:12,650 -   Epoch Train MulticlassPrecision: 96.9031
+2024-05-25 00:11:12,650 -   Epoch Train MulticlassRecall: 96.9022
+2024-05-25 00:11:14,147 -   Validation Time: 1.494
+2024-05-25 00:11:14,147 -   Validation Loss: 0.69616370
+2024-05-25 00:11:14,147 -   Validation MulticlassAccuracy: 80.5127
+2024-05-25 00:11:14,147 -   Validation MulticlassPrecision: 80.5363
+2024-05-25 00:11:14,147 -   Validation MulticlassRecall: 80.5127
+2024-05-25 00:11:24,734 - Epoch 140/150
+2024-05-25 00:11:24,734 -   Epoch Train Time: 9.251
+2024-05-25 00:11:24,734 -   Epoch Train Loss: 0.09035320
+2024-05-25 00:11:24,734 -   Epoch Train MulticlassAccuracy: 97.0239
+2024-05-25 00:11:24,734 -   Epoch Train MulticlassPrecision: 97.0286
+2024-05-25 00:11:24,734 -   Epoch Train MulticlassRecall: 97.0239
+2024-05-25 00:11:26,203 -   Validation Time: 1.465
+2024-05-25 00:11:26,203 -   Validation Loss: 0.72244262
+2024-05-25 00:11:26,203 -   Validation MulticlassAccuracy: 80.0680
+2024-05-25 00:11:26,203 -   Validation MulticlassPrecision: 80.0163
+2024-05-25 00:11:26,203 -   Validation MulticlassRecall: 80.0680
+2024-05-25 00:11:36,806 - Epoch 141/150
+2024-05-25 00:11:36,806 -   Epoch Train Time: 9.283
+2024-05-25 00:11:36,806 -   Epoch Train Loss: 0.09683128
+2024-05-25 00:11:36,806 -   Epoch Train MulticlassAccuracy: 96.8440
+2024-05-25 00:11:36,806 -   Epoch Train MulticlassPrecision: 96.8464
+2024-05-25 00:11:36,806 -   Epoch Train MulticlassRecall: 96.8440
+2024-05-25 00:11:38,291 -   Validation Time: 1.482
+2024-05-25 00:11:38,291 -   Validation Loss: 0.72635146
+2024-05-25 00:11:38,291 -   Validation MulticlassAccuracy: 80.3374
+2024-05-25 00:11:38,291 -   Validation MulticlassPrecision: 80.2669
+2024-05-25 00:11:38,291 -   Validation MulticlassRecall: 80.3374
+2024-05-25 00:11:48,885 - Epoch 142/150
+2024-05-25 00:11:48,885 -   Epoch Train Time: 9.281
+2024-05-25 00:11:48,885 -   Epoch Train Loss: 0.09358257
+2024-05-25 00:11:48,885 -   Epoch Train MulticlassAccuracy: 96.9942
+2024-05-25 00:11:48,885 -   Epoch Train MulticlassPrecision: 96.9970
+2024-05-25 00:11:48,885 -   Epoch Train MulticlassRecall: 96.9942
+2024-05-25 00:11:50,376 -   Validation Time: 1.488
+2024-05-25 00:11:50,376 -   Validation Loss: 0.68582767
+2024-05-25 00:11:50,376 -   Validation MulticlassAccuracy: 80.3474
+2024-05-25 00:11:50,376 -   Validation MulticlassPrecision: 80.2891
+2024-05-25 00:11:50,376 -   Validation MulticlassRecall: 80.3474
+2024-05-25 00:12:01,005 - Epoch 143/150
+2024-05-25 00:12:01,005 -   Epoch Train Time: 9.273
+2024-05-25 00:12:01,005 -   Epoch Train Loss: 0.09258618
+2024-05-25 00:12:01,005 -   Epoch Train MulticlassAccuracy: 96.9201
+2024-05-25 00:12:01,005 -   Epoch Train MulticlassPrecision: 96.9194
+2024-05-25 00:12:01,005 -   Epoch Train MulticlassRecall: 96.9201
+2024-05-25 00:12:02,536 -   Validation Time: 1.527
+2024-05-25 00:12:02,536 -   Validation Loss: 0.70761935
+2024-05-25 00:12:02,536 -   Validation MulticlassAccuracy: 79.9961
+2024-05-25 00:12:02,536 -   Validation MulticlassPrecision: 79.9376
+2024-05-25 00:12:02,536 -   Validation MulticlassRecall: 79.9961
+2024-05-25 00:12:13,173 - Epoch 144/150
+2024-05-25 00:12:13,173 -   Epoch Train Time: 9.276
+2024-05-25 00:12:13,173 -   Epoch Train Loss: 0.09282056
+2024-05-25 00:12:13,173 -   Epoch Train MulticlassAccuracy: 96.8938
+2024-05-25 00:12:13,173 -   Epoch Train MulticlassPrecision: 96.8957
+2024-05-25 00:12:13,173 -   Epoch Train MulticlassRecall: 96.8938
+2024-05-25 00:12:14,678 -   Validation Time: 1.502
+2024-05-25 00:12:14,678 -   Validation Loss: 0.71615843
+2024-05-25 00:12:14,678 -   Validation MulticlassAccuracy: 80.5534
+2024-05-25 00:12:14,678 -   Validation MulticlassPrecision: 80.5075
+2024-05-25 00:12:14,678 -   Validation MulticlassRecall: 80.5534
+2024-05-25 00:12:25,212 - Epoch 145/150
+2024-05-25 00:12:25,212 -   Epoch Train Time: 9.227
+2024-05-25 00:12:25,213 -   Epoch Train Loss: 0.09439592
+2024-05-25 00:12:25,213 -   Epoch Train MulticlassAccuracy: 96.8091
+2024-05-25 00:12:25,213 -   Epoch Train MulticlassPrecision: 96.8094
+2024-05-25 00:12:25,213 -   Epoch Train MulticlassRecall: 96.8091
+2024-05-25 00:12:26,718 -   Validation Time: 1.502
+2024-05-25 00:12:26,718 -   Validation Loss: 0.69163912
+2024-05-25 00:12:26,718 -   Validation MulticlassAccuracy: 80.4315
+2024-05-25 00:12:26,718 -   Validation MulticlassPrecision: 80.3714
+2024-05-25 00:12:26,718 -   Validation MulticlassRecall: 80.4315
+2024-05-25 00:12:37,395 - Epoch 146/150
+2024-05-25 00:12:37,395 -   Epoch Train Time: 9.311
+2024-05-25 00:12:37,395 -   Epoch Train Loss: 0.09300573
+2024-05-25 00:12:37,395 -   Epoch Train MulticlassAccuracy: 96.9363
+2024-05-25 00:12:37,395 -   Epoch Train MulticlassPrecision: 96.9366
+2024-05-25 00:12:37,395 -   Epoch Train MulticlassRecall: 96.9363
+2024-05-25 00:12:38,901 -   Validation Time: 1.502
+2024-05-25 00:12:38,901 -   Validation Loss: 0.71534506
+2024-05-25 00:12:38,901 -   Validation MulticlassAccuracy: 80.6102
+2024-05-25 00:12:38,901 -   Validation MulticlassPrecision: 80.5825
+2024-05-25 00:12:38,901 -   Validation MulticlassRecall: 80.6102
+2024-05-25 00:12:49,553 - Epoch 147/150
+2024-05-25 00:12:49,553 -   Epoch Train Time: 9.293
+2024-05-25 00:12:49,553 -   Epoch Train Loss: 0.08761341
+2024-05-25 00:12:49,553 -   Epoch Train MulticlassAccuracy: 97.0789
+2024-05-25 00:12:49,553 -   Epoch Train MulticlassPrecision: 97.0826
+2024-05-25 00:12:49,553 -   Epoch Train MulticlassRecall: 97.0789
+2024-05-25 00:12:51,058 -   Validation Time: 1.502
+2024-05-25 00:12:51,058 -   Validation Loss: 0.73512493
+2024-05-25 00:12:51,058 -   Validation MulticlassAccuracy: 80.0649
+2024-05-25 00:12:51,058 -   Validation MulticlassPrecision: 80.0153
+2024-05-25 00:12:51,058 -   Validation MulticlassRecall: 80.0649
+2024-05-25 00:13:01,666 - Epoch 148/150
+2024-05-25 00:13:01,666 -   Epoch Train Time: 9.233
+2024-05-25 00:13:01,666 -   Epoch Train Loss: 0.09075465
+2024-05-25 00:13:01,666 -   Epoch Train MulticlassAccuracy: 97.0547
+2024-05-25 00:13:01,666 -   Epoch Train MulticlassPrecision: 97.0550
+2024-05-25 00:13:01,666 -   Epoch Train MulticlassRecall: 97.0547
+2024-05-25 00:13:03,171 -   Validation Time: 1.502
+2024-05-25 00:13:03,171 -   Validation Loss: 0.69873302
+2024-05-25 00:13:03,171 -   Validation MulticlassAccuracy: 79.9297
+2024-05-25 00:13:03,171 -   Validation MulticlassPrecision: 79.9033
+2024-05-25 00:13:03,171 -   Validation MulticlassRecall: 79.9297
+2024-05-25 00:13:13,735 - Epoch 149/150
+2024-05-25 00:13:13,735 -   Epoch Train Time: 9.218
+2024-05-25 00:13:13,735 -   Epoch Train Loss: 0.08646171
+2024-05-25 00:13:13,735 -   Epoch Train MulticlassAccuracy: 97.0791
+2024-05-25 00:13:13,735 -   Epoch Train MulticlassPrecision: 97.0805
+2024-05-25 00:13:13,735 -   Epoch Train MulticlassRecall: 97.0791
+2024-05-25 00:13:15,238 -   Validation Time: 1.500
+2024-05-25 00:13:15,238 -   Validation Loss: 0.70051658
+2024-05-25 00:13:15,238 -   Validation MulticlassAccuracy: 80.4436
+2024-05-25 00:13:15,238 -   Validation MulticlassPrecision: 80.3887
+2024-05-25 00:13:15,238 -   Validation MulticlassRecall: 80.4436
+2024-05-25 00:13:25,891 - Epoch 150/150
+2024-05-25 00:13:25,891 -   Epoch Train Time: 9.269
+2024-05-25 00:13:25,891 -   Epoch Train Loss: 0.09452263
+2024-05-25 00:13:25,891 -   Epoch Train MulticlassAccuracy: 96.9458
+2024-05-25 00:13:25,891 -   Epoch Train MulticlassPrecision: 96.9475
+2024-05-25 00:13:25,891 -   Epoch Train MulticlassRecall: 96.9458
+2024-05-25 00:13:27,437 -   Validation Time: 1.542
+2024-05-25 00:13:27,437 -   Validation Loss: 0.71091251
+2024-05-25 00:13:27,437 -   Validation MulticlassAccuracy: 80.5340
+2024-05-25 00:13:27,437 -   Validation MulticlassPrecision: 80.4684
+2024-05-25 00:13:27,437 -   Validation MulticlassRecall: 80.5340
+2024-05-25 00:13:28,773 - Training time: 1898.874
+2024-05-25 00:13:28,775 - Finished training.
+2024-05-25 00:13:28,775 - Testing: True
+2024-05-25 00:13:28,775 - Starting testing on transformed test set...
+2024-05-25 00:13:30,424 -   Test Time: 1.646
+2024-05-25 00:13:30,424 -   Test Loss: 0.70609984
+2024-05-25 00:13:30,424 -   Test MulticlassAccuracy: 79.8900
+2024-05-25 00:13:30,424 -   Test MulticlassPrecision: 79.8187
+2024-05-25 00:13:30,424 -   Test MulticlassRecall: 79.8900
+2024-05-25 00:13:30,424 - Finished testing.
+2024-05-25 00:13:30,551 - Starting testing on original test set...
+2024-05-25 00:13:32,064 -   Test Time: 1.510
+2024-05-25 00:13:32,064 -   Test Loss: 0.72848603
+2024-05-25 00:13:32,064 -   Test MulticlassAccuracy: 80.0100
+2024-05-25 00:13:32,064 -   Test MulticlassPrecision: 80.3882
+2024-05-25 00:13:32,064 -   Test MulticlassRecall: 80.0100
+2024-05-25 00:13:32,064 - Finished testing.
+2024-05-25 00:13:32,195 - Finished run.
+2024-05-25 00:13:32,195 - Closing experiment.

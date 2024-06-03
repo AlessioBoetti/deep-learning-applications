@@ -73,7 +73,7 @@ def setup_seed(seed, logger):
         torch.cuda.manual_seed_all(seed)  # For Multi-GPU, exception safe (https://github.com/pytorch/pytorch/issues/108341)
         # https://pytorch.org/docs/stable/generated/torch.use_deterministic_algorithms.html#torch.use_deterministic_algorithms
         torch.use_deterministic_algorithms(True, warn_only=True)
-        torch.backends.cudnn.benchmark = False
+        torch.backends.cudnn.benchmark = True
         torch.backends.cudnn.deterministic = True
         logger.info('Seed set to %d.' % seed)
 

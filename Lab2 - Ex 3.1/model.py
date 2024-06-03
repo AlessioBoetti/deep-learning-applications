@@ -6,6 +6,7 @@ import torch.optim as optim
 import torch.nn as nn
 import torch.nn.functional as F
 from transformers import AutoModel
+from peft import LoraConfig, TaskType, get_peft_model
 
 
 class Lion(optim.Optimizer):
@@ -89,6 +90,8 @@ class BaseModel(nn.Module):
                     nn.init.xavier_uniform_(module.weight)
                 else:
                     raise NotImplementedError
+            elif mode in ['kaiming']:
+                nn.init.kaiming_uniform_(module.weight, a=math.sqrt(5))
             else:
                 if dist == 'normal':
                     torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
@@ -464,25 +467,67 @@ class GPTLanguageModel(BaseModel):
         return idx
 
 
-class DistilRoBERTaBase(BaseModel):
-    def __init__(self, n_classes):
+class BERT(BaseModel):
+    def __init__(self, model_name, output_size, init_mode, init_dist, cache_dir, torch_dtype=torch.bfloat16, device_map='auto', freeze_model_base: bool = False, peft: str = None):
         super().__init__()
-        self.model = AutoModel.from_pretrained('distilroberta-base', return_dict=True)
+        self.model = AutoModel.from_pretrained(model_name, return_dict=True, cache_dir=cache_dir, torch_dtype=torch_dtype, device_map=device_map)
         self.hidden = nn.Linear(self.model.config.hidden_size, self.model.config.hidden_size)
-        self.classifier = nn.Linear(self.model.config.hidden_size, n_classes)
-        self._init_weights([self.hidden, self.classifier])
+        self.classifier = nn.Linear(self.model.config.hidden_size, output_size)
+        self._init_weights([self.hidden, self.classifier], init_mode, init_dist)
+
+        if freeze_model_base:
+            self.model.requires_grad_(False)
+            
+        if peft:
+            # From https://huggingface.co/docs/peft/quicktour
+            if peft == 'LoRA':
+                peft_config = LoraConfig(
+                    task_type=TaskType.FEATURE_EXTRACTION, 
+                    inference_mode=False, 
+                    r=8, 
+                    lora_alpha=32, 
+                    lora_dropout=0.1,
+                    use_rslora=True
+                )
+                self.model = get_peft_model(self.model, peft_config)
+                self.model.print_trainable_parameters()
+
+            # elif peft == 'ReFT'
+                # # From https://www.youtube.com/watch?v=iy9Z4DyHxvE
+                # reft_config = pyreft.ReftConfig(
+                #     representations={
+                #         'layer':4,
+                #         'component':'block_output', 
+                #         'low_rank_dimension':4,
+                #         'intervention':pyreft.LoreftIntervention(
+                #             embed_dim=model.config.hidden_size, low_rank_dimension=4
+                #         ) 
+                #     }
+                # )
+                # reft_model = pyreft.get_reft_model(model, reft_config)
+                # reft_model.set_device(device)
+                # data_module = pyreft.make_last_position_supervised_data_module(
+                #     tokenizer, 
+                #     model, 
+                #     [prompt_template(x) for x in X], 
+                #     y 
+                # ) 
+            else:
+                raise NotImplementedError()
 
 
     def forward(self, input_ids, attention_mask):
         output = self.model(input_ids=input_ids, attention_mask=attention_mask)
         output = torch.mean(output.last_hidden_state, 1)
         output = F.relu(self.hidden(output))
-        return self.classifier(output)
+        output = self.classifier(output)
+        output = F.softmax(output)
+        return output
 
 
 if __name__ == "__main__":
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    model = DistilRoBERTaBase(n_class=10).to(device)
+    model = BERT('distilroberta-base', output_size=10, init_mode='xavier', dist='normal', cache_dir='./hf').to(device)
     input_ids = torch.randint(0, 1000, (32, 128)).to(device)
     attention_mask = torch.randint(0, 2, (32, 128)).to(device)
     print(model(input_ids, attention_mask).shape)

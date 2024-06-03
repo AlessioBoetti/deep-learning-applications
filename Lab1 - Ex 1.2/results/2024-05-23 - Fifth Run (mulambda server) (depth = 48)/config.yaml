@@ -1,8 +1,8 @@
 #### Weight & Biases settings
 
 wandb:
-  name: "2024-05-13 - First run"
-  resume: True
+  name: "2024-05-23 - Fifth Run (mulambda server) (depth = 48)"
+  resume: False
   job_type: "Train-Test"
   group: "Exercise 1.2"
   project: "University - DLA - Lab 1"
@@ -28,7 +28,7 @@ config:
 
   model_type: "CNN"
   model:
-    depth: 9
+    depth: 48
     output_size: 10
     want_shortcut: False
     activation: "ReLU"
@@ -46,8 +46,8 @@ config:
     use_sampler: True
   
   dataloader:
-    num_workers: 4
-    batch_size: 512
+    num_workers: 8
+    batch_size: 256
     pin_memory: True
     persistent_workers: True
 

@@ -1,7 +1,7 @@
 #### Weight & Biases settings
 
 wandb:
-  name: "2024-05-23 - Ninth Run (mulambda server) (depth = 48, shortcut)"
+  name: "2024-05-23 - Second Run (mulambda server)"
   resume: False
   job_type: "Train-Test"
   group: "Exercise 1.2"
@@ -11,7 +11,6 @@ wandb:
   - "ResNet"
   - "Base"
   - "Clipping"
-  - "Shortcut"
   notes: "First attempt at training a basic CNN and ResNet on CIFAR10 dataset."
 
 
@@ -27,11 +26,11 @@ config:
   results_dir: "results"
   log_file: "log.txt"
 
-  model_type: "ResNet"
+  model_type: "CNN"
   model:
-    depth: 48
+    depth: 9
     output_size: 10
-    want_shortcut: True
+    want_shortcut: False
     activation: "ReLU"
     fc_activation: "ReLU"
     pool_type: "maxpool"
@@ -47,7 +46,7 @@ config:
     use_sampler: True
   
   dataloader:
-    num_workers: 8
+    num_workers: 2
     batch_size: 256
     pin_memory: True
     persistent_workers: True

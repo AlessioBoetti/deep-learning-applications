@@ -1,21 +1,22 @@
 import os
 import argparse
 import logging
-import yaml
 import random
 from datetime import timedelta
+from typing import Union, List
+
+import yaml
 import numpy as np
 from dotenv import load_dotenv, find_dotenv
-from typing import Union, List
+import wandb
+from tqdm import tqdm
 
 import torch
 import torch.nn as nn
 import torch.optim as optim
-import wandb
-from tqdm import tqdm
 
 from dataloaders import MNIST_Dataset, CIFAR10_Dataset, NLP_Dataset
-from model import DistilRoBERTaBase, Lion
+from model import BERT, Lion
 from utils import *
 from xai import *
 
@@ -120,7 +121,18 @@ def print_logs(logger, cfg, args = None, init: bool = False, pretrain: bool = Fa
 
 def load_dataset(
         data_dir: str,
-        dataset_name: str, 
+        dataset_type: str,
+        dataset_name: str,
+        filename: str = None,
+        train_set_name: str = None,
+        test_set_name: str = None,
+        val_set_name: str = None,
+        model_name: str = None,
+        cache_dir: str = None, 
+        padding_side: str = None, 
+        trunc_side: str = None,
+        max_token_len: int = None,
+        device: str = None,
         val_size: float = None,
         val_shuffle: bool = True,
         val_shuffle_seed: int = 1,
@@ -135,29 +147,51 @@ def load_dataset(
         use_sampler: bool = True,
     ):
 
-    dataset_kw = dict(
-        root=data_dir,
-        val_size=val_size,
-        val_shuffle=val_shuffle,
-        val_shuffle_seed=val_shuffle_seed,
-        problem=problem, 
-        normal_class=normal_class, 
-        multiclass=multiclass, 
-        img_size=img_size,
-        normalize=normalize,
-        gcn=gcn, 
-        gcn_minmax=gcn_minmax,
-        augment=augment,
-        use_sampler=use_sampler
-    )
-
-    if dataset_name.lower() == 'mnist':
-        dataset = MNIST_Dataset(**dataset_kw)
-    if dataset_name.lower() == 'cifar10':
-        dataset = CIFAR10_Dataset(**dataset_kw)
-    # if dataset_name.lower() == 'mvtec':
-    #     dataset = MVTEC_Dataset(**dataset_kw)
-    if dataset_name.lower().replace(' ', '') == 'textclassification':
+    dataset_type = dataset_type.lower().replace(' ', '')
+    dataset_name = dataset_name.lower().replace(' ', '')        
+    
+    if dataset_type == 'vision':
+        dataset_kw = dict(
+            root=data_dir,
+            val_size=val_size,
+            val_shuffle=val_shuffle,
+            val_shuffle_seed=val_shuffle_seed,
+            problem=problem, 
+            normal_class=normal_class, 
+            multiclass=multiclass, 
+            img_size=img_size,
+            normalize=normalize,
+            gcn=gcn, 
+            gcn_minmax=gcn_minmax,
+            augment=augment,
+            use_sampler=use_sampler
+        )
+        if dataset_name == 'mnist':
+            dataset = MNIST_Dataset(**dataset_kw)
+        if dataset_name == 'cifar10':
+            dataset = CIFAR10_Dataset(**dataset_kw)
+        # if dataset_name == 'mvtec':
+        #     dataset = MVTEC_Dataset(**dataset_kw)
+    if dataset_type == 'textclassification':
+        dataset_kw = dict(
+            dataset_type=dataset_type,
+            dataset_name=dataset_name,
+            filename=filename,
+            data_dir=data_dir,
+            train_set_name=train_set_name,
+            test_set_name=test_set_name,
+            val_set_name=val_set_name,
+            val_size=val_size,
+            model_name=model_name,
+            cache_dir=cache_dir, 
+            padding_side=padding_side, 
+            trunc_side=trunc_side,
+            max_token_len=max_token_len,
+            device=device,
+            val_shuffle=val_shuffle,
+            val_shuffle_seed=val_shuffle_seed,
+            use_sampler=use_sampler,
+        )
         dataset = NLP_Dataset(**dataset_kw)
     return dataset
 
@@ -171,7 +205,7 @@ def setup_optimizer(model, cfg):
     return opt
 
 
-def select_loss_fn(criterion: str):
+def setup_loss(criterion: str):
     criterion = criterion.lower().strip().replace(' ', '').replace('-', '')
     if criterion == 'crossentropyloss':
         return nn.CrossEntropyLoss()
@@ -191,23 +225,26 @@ def evaluate(loader, model, criterion, metrics, device, logger, validation: bool
     model.eval()
     running_loss = 0.0
     val_batches = len(loader)
-    idx_label_scores = []
+    # idx_label_scores = []
     start_time = time.time()
 
     with torch.no_grad():
         for batch in loader:
-            inputs, labels, idx = batch
-            inputs = inputs.to(device, non_blocking=True)
+            input_ids, attention_masks, labels = batch
+
+            input_ids = input_ids.to(device, non_blocking=True)
+            attention_masks = attention_masks.to(device, non_blocking=True)
             labels = labels.to(device, non_blocking=True)
-            outputs = model(inputs)
+
+            outputs = model(input_ids, attention_masks)
             loss = criterion(outputs, labels)
             running_loss += loss.item()
             metrics(outputs, labels)
 
-            if not validation:
-                idx_label_scores += list(zip(idx.cpu().data.numpy().tolist(),
-                                        labels.cpu().data.numpy().tolist(),
-                                        outputs.cpu().data.numpy().tolist()))
+            # if not validation:
+            #     idx_label_scores += list(zip(idx.cpu().data.numpy().tolist(),
+            #                             labels.cpu().data.numpy().tolist(),
+            #                             outputs.cpu().data.numpy().tolist()))
     
     total_time = time.time() - start_time
     loss_norm = running_loss / val_batches
@@ -220,7 +257,7 @@ def evaluate(loader, model, criterion, metrics, device, logger, validation: bool
     for metric, value in metric_dict.items():
         logger.info('  {} {}: {:.4f}'.format(log_str, metric, value)) 
     
-    return loss_norm, metric_dict, total_time, val_batches, idx_label_scores
+    return loss_norm, metric_dict, total_time, val_batches  # , idx_label_scores
 
 
 def train(
@@ -229,7 +266,8 @@ def train(
         start, 
         n_epochs, 
         criterion, 
-        optimizer, 
+        optimizer,
+        clip_grads, 
         scheduler, 
         scaler,  
         metrics, 
@@ -260,16 +298,20 @@ def train(
 
         for batch in tqdm(loader, desc=f"Epoch {epoch + 1}"):
             # https://discuss.pytorch.org/t/should-we-set-non-blocking-to-true/38234/4
-            inputs, labels, idx = batch
-            inputs = inputs.to(device, non_blocking=True)
+            input_ids, attention_masks, labels = batch
+            input_ids = input_ids.to(device, non_blocking=True)
+            attention_masks = attention_masks.to(device, non_blocking=True)
             labels = labels.to(device, non_blocking=True)
             
-            optimizer.zero_grad(set_to_none=True)  # https://pytorch.org/docs/stable/generated/torch.optim.Optimizer.zero_grad.html
+            optimizer.zero_grad()  # https://pytorch.org/docs/stable/generated/torch.optim.Optimizer.zero_grad.html
             with torch.cuda.amp.autocast():
                 # https://pytorch.org/docs/stable/amp.html
-                outputs = model(inputs)
+                outputs = model(input_ids, attention_masks)
                 loss = criterion(outputs, labels)
             
+            if clip_grads:
+                nn.utils.clip_grad_norm_(model.parameters(), clip_grads)
+
             scaler.scale(loss).backward()
             scaler.step(optimizer)
             scaler.update()
@@ -306,8 +348,25 @@ def train(
             'train_loss': epoch_loss_norm,
             'train_accuracy': epoch_metrics['MulticlassAccuracy'],
             'train_precision': epoch_metrics['MulticlassPrecision'],
-            'train_recall': epoch_metrics['MulticlassRecall']
+            'train_recall': epoch_metrics['MulticlassRecall'],
+            'learning_rate': scheduler.get_last_lr(),
+            'epoch_train_time': epoch_time
         }
+
+        # New metrics to add to wandb logger (from https://towardsdatascience.com/efficient-pytorch-supercharging-training-pipeline-19a26265adae):
+        # Learning rate & other optimizer parameters that may change (Momentum, weight decay, etc.)
+        # Time spent in data preprocessing and inside the model
+        # Losses across train & validation (for every batch and averaged per-epoch)
+        # Metrics across train & validation
+        # Hyperparameters of the training session of final metric values
+        # Confusion matrices, Precision-Recall curve, AUC (If applicable)
+        # Visualization of the model predictions (If applicable)
+
+        # It's super-important to look at the predictions of the model visually. 
+        # Sometimes training data is noisy; sometimes, the model is over-fitting to artifacts of an image. 
+        # By visualizing the best and worst batch (based on loss or your metric of interest), 
+        # you can get valuable insight into cases where your models perform well and poorly.
+        # Advice 5 — Visualize best and worst batch every epoch. It may give you invaluable insights
 
         checkpoint = {
             'start': epoch + 1,
@@ -316,7 +375,7 @@ def train(
         }
 
         if val_loader and (epoch % eval_interval == 0 or epoch == n_epochs - 1):
-            val_loss_norm, val_metrics, val_time, val_n_batches, _ = evaluate(val_loader, model, criterion, metrics, device, logger, validation=True)
+            val_loss_norm, val_metrics, val_time, val_n_batches = evaluate(val_loader, model, criterion, metrics, device, logger, validation=True)
 
             wb_log.update({
                 'val_loss': val_loss_norm,
@@ -326,12 +385,12 @@ def train(
             })
 
             if patience:
-                # Save best model
+                # Save best checkpoint
                 if patience(val_metrics['MulticlassAccuracy']):
-                    logger.info('  Found best model, saving model.')
+                    logger.info('  Found best checkpoint, saving checkpoint.')
                     best_results = {'best_epoch': epoch + 1}
                     best_results.update({f'best_{key}': value for key, value in wb_log.items()})                                        
-                    save_model(checkpoint, out_path, 'model')
+                    save_model(checkpoint, out_path, 'best_checkpoint')
                 
                 checkpoint.update({
                     'max_accuracy': getattr(patience, 'baseline'), 
@@ -355,18 +414,20 @@ def train(
     train_time = time.time() - train_start_time
     logger.info('Training time: %.3f' % train_time)
 
-    train_results = {
+    results = {
         'total_batches': total_batches,
         'total_epochs': n_epochs,
         'train_time': train_time,
         'h-m-s_train_time': str(timedelta(seconds=train_time)),
     }
-    train_results.update({f'last_epoch_{key}': value for key, value in wb_log.items()})
-    train_results['early_stopping'] = True if patience else False
+    results.update({f'last_epoch_{key}': value for key, value in wb_log.items()})
+    results['early_stopping'] = True if patience else False
     if patience:
-        train_results.update(best_results)
+        results.update(best_results)
+    
+    os.rename(f'{out_path}/best_checkpoint.pth.tar', f'{out_path}/model.pth.tar')
 
-    return model, train_results
+    return model, results
 
 
 def main(args, cfg, wb, run_name):
@@ -377,6 +438,7 @@ def main(args, cfg, wb, run_name):
 
     device = 'cpu' if not torch.cuda.is_available() else cfg['device']
     cfg['device'] = device
+    model_cfg, train_cfg = cfg['model'], cfg['training']
 
     if wandb.run.resumed:
         logger.info('Resuming experiment.')
@@ -385,16 +447,23 @@ def main(args, cfg, wb, run_name):
 
     # Loading dataset...
     data_dir = args.data_dir if args.data_dir else cfg['data_dir']
-    logger.info('Loading dataset from "%s".' % cfg['data_dir'])
-    dataset = load_dataset(data_dir, val_shuffle_seed=cfg['seed'], **cfg['dataset'])
+    logger.info('Loading dataset from "%s".' % data_dir)
+    dataset = load_dataset(
+        data_dir, 
+        model_name=model_cfg['model_name'],
+        cache_dir=cfg['hf_cache_dir'],
+        device=device,
+        val_shuffle_seed=cfg['seed'], 
+        **cfg['dataset']
+    )
     dataloader_kw = dict(seed=cfg['seed'], device='cpu', **cfg['dataloader'])  # https://stackoverflow.com/questions/68621210/runtimeerror-expected-a-cuda-device-type-for-generator-but-found-cpu
     logger.info('Dataset loaded.')
 
 
     # Initializing model...
-    model_cfg, train_cfg = cfg['model'], cfg['training']
-    logger.info('Initializing %s model.' % cfg['model_type'])
-    model = DistilRoBERTaBase(
+    logger.info('Initializing {} model, version: {}.'.format(cfg['model_type'], model_cfg['model_name']))
+    model = BERT(
+        cache_dir=cfg['hf_cache_dir'],
         **model_cfg,
     ).to(device)
     logger.info('Model initialized.')
@@ -407,7 +476,7 @@ def main(args, cfg, wb, run_name):
     optimizer = setup_optimizer(model, cfg)
     logger.info('Optimizer initialized.')
     scaler = torch.cuda.amp.GradScaler()
-    criterion = select_loss_fn(cfg['criterion'])
+    criterion = setup_loss(cfg['criterion'])
     metric_collection = get_metrics(cfg['model'], wb, device)
 
 
@@ -417,7 +486,10 @@ def main(args, cfg, wb, run_name):
     if args.load_model:
         model_path = args.load_model
     elif wandb.run.resumed:
-        model_path = cfg['out_path'] + '/checkpoint.pth.tar'
+        if 'checkpoint.pth.tar' in os.listdir(cfg['out_path']):
+            model_path = cfg['out_path'] + '/checkpoint.pth.tar'
+        else:
+            logger.info('Resuming run, but no checkpoint found.')
     elif 'model.pth.tar' in os.listdir(cfg['out_path']):
         model_path = cfg['out_path'] + '/model.pth.tar'
         cfg['train'] = False
@@ -436,8 +508,7 @@ def main(args, cfg, wb, run_name):
         logger.info('Starting model from scratch.')
         start, best = 0, None
         patience = EarlyStopping('max', train_cfg['patience']) if train_cfg['patience'] else None
-    
-    save_config('config.yaml', cfg['out_path'])  
+        save_config('config.yaml', cfg['out_path'])  
 
     # Pretraining model...
     logger.info('Pretraining: %s' % cfg['pretrain'])
@@ -485,9 +556,6 @@ def main(args, cfg, wb, run_name):
 
         wb.watch(model, criterion=criterion, log="all", log_graph=True)
         
-        if cfg['clip_grads']:
-            nn.utils.clip_grad_norm_(model.parameters(), cfg['clip_grads'])
-
         logger.info('Starting training...')
         model, train_results = train(
             train_loader, 
@@ -496,6 +564,7 @@ def main(args, cfg, wb, run_name):
             train_cfg['n_epochs'], 
             criterion, 
             optimizer, 
+            cfg['clip_grads'],
             scheduler, 
             scaler, 
             metric_collection, 
@@ -518,10 +587,10 @@ def main(args, cfg, wb, run_name):
     # Testing model...
     logger.info('Testing: %s' % cfg['test'])
     if cfg['test']:
-        _, _, transformed_test_loader, org_test_loader = dataset.loaders(train=False, **dataloader_kw)
+        _, _, test_loader, _ = dataset.loaders(train=False, **dataloader_kw)
 
-        logger.info('Starting testing on transformed test set...')
-        test_loss_norm, test_metrics, test_time, test_n_batches, idx_label_scores = evaluate(transformed_test_loader, model, criterion, metric_collection, device, logger, validation=False)
+        logger.info('Starting testing on test set...')
+        test_loss_norm, test_metrics, test_time, test_n_batches = evaluate(test_loader, model, criterion, metric_collection, device, logger, validation=False)
         logger.info('Finished testing.')
 
         test_results = {
@@ -532,22 +601,22 @@ def main(args, cfg, wb, run_name):
             'test_recall': test_metrics['MulticlassRecall'],
             'test_scores': idx_label_scores,
         }
-        save_results(cfg['out_path'], test_results, 'transformed_test')
+        save_results(cfg['out_path'], test_results, 'test')
 
-        logger.info('Starting testing on original test set...')
-        test_loss_norm, test_metrics, test_time, test_n_batches, idx_label_scores = evaluate(org_test_loader, model, criterion, metric_collection, device, logger, validation=False)
-        logger.info('Finished testing.')
+        # logger.info('Starting testing on original test set...')
+        # test_loss_norm, test_metrics, test_time, test_n_batches = evaluate(org_test_loader, model, criterion, metric_collection, device, logger, validation=False)
+        # logger.info('Finished testing.')
 
-        test_results = {
-            'test_time': test_time,
-            'test_loss': test_loss_norm,
-            'test_accuracy': test_metrics['MulticlassAccuracy'],
-            'test_precision': test_metrics['MulticlassPrecision'],
-            'test_recall': test_metrics['MulticlassRecall'],
-            'test_scores': idx_label_scores,
-        }
+        # test_results = {
+        #     'test_time': test_time,
+        #     'test_loss': test_loss_norm,
+        #     'test_accuracy': test_metrics['MulticlassAccuracy'],
+        #     'test_precision': test_metrics['MulticlassPrecision'],
+        #     'test_recall': test_metrics['MulticlassRecall'],
+        #     'test_scores': idx_label_scores,
+        # }
 
-        save_results(cfg['out_path'], test_results, 'original_test')
+        # save_results(cfg['out_path'], test_results, 'original_test')
 
 
     # plot_results()

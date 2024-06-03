@@ -393,9 +393,14 @@ class QADataset(Dataset):
 
 
 class TextClassificationDataset(Dataset):
-    def __init__(self, dataset_name, split, model_name, data_dir, max_token_len=128, filename=None):
-        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+    def __init__(self, dataset_name, split, data_dir, model_name, cache_dir, padding_side, trunc_side, device, max_token_len=128, filename=None):
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name, cache_dir=cache_dir)
+        # self.tokenizer.pad_token = self.tokenizer.eos_token
+        self.tokenizer.padding_side = padding_side
+        self.tokenizer.truncation_side = trunc_side
         self.max_token_len = max_token_len
+        self.device = device
+
         self.text, self.label = [], []
         self.load_dataset(dataset_name, split, data_dir, filename)
 
@@ -409,7 +414,8 @@ class TextClassificationDataset(Dataset):
             else:
                 raise NotImplementedError('Dataset filename is a not implemented file type.')
         else:
-            dataset = load_dataset(dataset_name, split=split, cache_dir=data_dir)
+            df = load_dataset(dataset_name, split=split, cache_dir=data_dir)
+            df = df.to_pandas()
         
         df = df.fillna('')
         df = df.astype(str)
@@ -436,60 +442,63 @@ class TextClassificationDataset(Dataset):
             padding='max_length',
             max_length=self.max_token_len,
             return_attention_mask=True
-        )
+        ).to(self.device)
         return tokens.input_ids.flatten(), tokens.attention_mask.flatten(), label
     
 
 class NLP_Dataset(BaseDataset):
     def __init__(self, 
-        dataset_type,
-        dataset_name,
-        model_name,
-        data_dir,
+        dataset_type: str,
+        dataset_name: str,
+        data_dir: str,
+        train_set_name: str,
+        test_set_name: str,
+        model_name: str,
+        cache_dir: str, 
+        padding_side, 
+        trunc_side,
         max_token_len: int,
-        split: str = None,
+        device: str,
         filename: str = None,
-        val: bool = False,
+        val_set_name: bool = False,
         val_size: float = None,
         val_shuffle: bool = True,
         val_shuffle_seed: int = 1,
-        problem: str = None, 
-        normal_class: int = None, 
-        multiclass: bool = None, 
-        img_size: int = None,
-        normalize: bool = False,
-        gcn: str = None,   # 'l1' oppure 'l2' 
-        gcn_minmax: bool = False,
-        augment: bool = False,
         use_sampler: bool = True,
     ):   
         super().__init__()
+        dataset_kw = dict(
+            dataset_name=dataset_name,
+            filename=filename,
+            data_dir=data_dir,
+            model_name=model_name,
+            cache_dir=cache_dir, 
+            padding_side=padding_side, 
+            trunc_side=trunc_side, 
+            max_token_len=max_token_len,
+            device=device, 
+        )
         if dataset_type.lower().replace(' ', '') == 'textclassification':
-            self.train_set = TextClassificationDataset(
-                dataset_name,
-                split, 
-                model_name, 
-                data_dir, 
-                max_token_len, 
-                filename
-            )
-
-            self.test_set = None
-        
-        if val:
-            self.val_set = None
-            # TODO: Transform the following code
-            # n_train = len(self.train_set)
-            # indices = list(range(n_train))
-            # split = int(np.floor(val_size * n_train))
-            # if val_shuffle:
-            #     np.random.seed(val_shuffle_seed)
-            #     np.random.shuffle(indices)
-            # train_idx, val_idx = indices[split:], indices[:split]
-            
-            # if use_sampler:
-            #     self.train_sampler = SubsetRandomSampler(train_idx)
-            #     self.val_sampler = SubsetRandomSampler(val_idx)     # Shuffling val set is not necessary
-            # else:
-            #     self.train_set = Subset(self.train_set, train_idx)
-            #     self.val_set = Subset(self.val_set, val_idx)
+            self.train_set = TextClassificationDataset(split=train_set_name, **dataset_kw)
+            self.test_set = TextClassificationDataset(split=test_set_name, **dataset_kw)
+            if val_set_name:
+                self.val_set = TextClassificationDataset(split=val_set_name, **dataset_kw)
+            elif val_size:
+                self.val_set = TextClassificationDataset(split=train_set_name, **dataset_kw)                
+                
+                n_train = len(self.train_set)
+                indices = list(range(n_train))
+                split = int(np.floor(val_size * n_train))
+                if val_shuffle:
+                    np.random.seed(val_shuffle_seed)
+                    np.random.shuffle(indices)
+                train_idx, val_idx = indices[split:], indices[:split]
+                
+                if use_sampler:
+                    self.train_sampler = SubsetRandomSampler(train_idx)
+                    self.val_sampler = SubsetRandomSampler(val_idx)     # Shuffling val set is not necessary
+                else:
+                    self.train_set = Subset(self.train_set, train_idx)
+                    self.val_set = Subset(self.val_set, val_idx)
+        else:
+            raise NotImplementedError(f'Dataset type {dataset_type} not implemented.')
