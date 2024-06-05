@@ -1,3 +1,4 @@
+import os
 import random
 import numpy as np
 import pandas as pd
@@ -399,23 +400,28 @@ class TextClassificationDataset(Dataset):
         self.tokenizer.padding_side = padding_side
         self.tokenizer.truncation_side = trunc_side
         self.max_token_len = max_token_len
-        self.device = device
+        # self.device = device
 
         self.text, self.label = [], []
         self.load_dataset(dataset_name, split, data_dir, filename)
 
     def load_dataset(self, dataset_name, split, data_dir, filename=None):
-        if filename:
-            hf_ds_kw = dict(repo_id=dataset_name, filename=filename, repo_type='dataset', local_dir=data_dir, local_dir_use_symlinks=False)
-            if filename.endswith('.parquet'):
-                df = pd.read_parquet(hf_hub_download(**hf_ds_kw))
-            elif filename.endswith('.csv'):
-                df = pd.read_csv(hf_hub_download(**hf_ds_kw))
-            else:
-                raise NotImplementedError('Dataset filename is a not implemented file type.')
+        csv_file = f'{dataset_name}_{split}.csv'
+        if csv_file in os.listdir(data_dir):
+            df = pd.read_csv(f'{data_dir}/{csv_file}')
         else:
-            df = load_dataset(dataset_name, split=split, cache_dir=data_dir)
-            df = df.to_pandas()
+            if filename:
+                hf_ds_kw = dict(repo_id=dataset_name, filename=filename, repo_type='dataset', local_dir=data_dir, local_dir_use_symlinks=False)
+                if filename.endswith('.parquet'):
+                    df = pd.read_parquet(hf_hub_download(**hf_ds_kw))
+                elif filename.endswith('.csv'):
+                    df = pd.read_csv(hf_hub_download(**hf_ds_kw))
+                else:
+                    raise NotImplementedError('Dataset filename is a not implemented file type.')
+            else:
+                df = load_dataset(dataset_name, split=split, cache_dir=data_dir)
+                df = df.to_pandas()
+                df.to_csv(f'{data_dir}/{dataset_name}_{split}.csv', index=False)
         
         df = df.fillna('')
         df = df.astype(str)
@@ -442,7 +448,7 @@ class TextClassificationDataset(Dataset):
             padding='max_length',
             max_length=self.max_token_len,
             return_attention_mask=True
-        ).to(self.device)
+        ) # .to(self.device)
         return tokens.input_ids.flatten(), tokens.attention_mask.flatten(), label
     
 

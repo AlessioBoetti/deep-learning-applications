@@ -2,7 +2,8 @@
 
 wandb:
   name: "2024-06-03 - Second run"
-  resume: True
+  resume: "must"
+  id: "29eilegw"
   job_type: "Fine-Tuning"
   group: "Exercise 3.1"
   project: "University - DLA - Lab 2"
@@ -37,7 +38,7 @@ config:
     init_dist: "normal"
     device_map: 'auto'
     freeze_model_base: False
-    peft: "LoRA"
+    peft: null  # "LoRA"
 
   criterion: "CrossEntropyLoss"
 
@@ -78,9 +79,9 @@ config:
 
   training:
     n_epochs: 500
-    eval_interval: 5
-    checkpoint_every: 10
-    patience: 30
+    eval_interval: 1
+    checkpoint_every: 5
+    patience: 20
 
   clip_grads: False
 

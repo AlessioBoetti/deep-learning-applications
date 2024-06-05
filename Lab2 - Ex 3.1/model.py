@@ -470,7 +470,7 @@ class GPTLanguageModel(BaseModel):
 class BERT(BaseModel):
     def __init__(self, model_name, output_size, init_mode, init_dist, cache_dir, torch_dtype=torch.bfloat16, device_map='auto', freeze_model_base: bool = False, peft: str = None):
         super().__init__()
-        self.model = AutoModel.from_pretrained(model_name, return_dict=True, cache_dir=cache_dir, torch_dtype=torch_dtype, device_map=device_map)
+        self.model = AutoModel.from_pretrained(model_name, return_dict=True, cache_dir=cache_dir, device_map=device_map)  # torch_dtype=torch_dtype
         self.hidden = nn.Linear(self.model.config.hidden_size, self.model.config.hidden_size)
         self.classifier = nn.Linear(self.model.config.hidden_size, output_size)
         self._init_weights([self.hidden, self.classifier], init_mode, init_dist)
