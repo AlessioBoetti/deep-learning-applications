@@ -81,12 +81,13 @@ config:
     n_epochs: 500
     eval_interval: 1
     checkpoint_every: 5
+    clip_grads: False
     patience: 20
 
-  clip_grads: False
 
   # Goals
   problem: None
+  adversarial: False
   xai: False
   explain_gradients: False
   explain_cam: False

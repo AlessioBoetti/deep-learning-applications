@@ -1,18 +1,31 @@
 import os
-import time
 from typing import List
 import json
 import shutil
 import matplotlib.pyplot as plt
 
 import torch
+import torch.optim as optim
+import torch.nn as nn
 import torchmetrics
+
+from model import Lion
 
 
 def create_dirs_if_not_exist(dirs: List[str]):
     for d in dirs:
         if not os.path.exists(d):
             os.makedirs(d)
+
+
+def setup_folders(args, cfg, run_name):
+    # Remember: dir is the folder, path is the... path
+    cfg['out_path'] = os.path.join(cfg['results_dir'], run_name)
+    create_dirs_if_not_exist([cfg['out_path']])
+    if cfg['xai']:
+        cfg['xai_path'] = os.path.join(cfg['out_path'], 'xai')
+        create_dirs_if_not_exist([cfg['xai_path']])
+    return cfg
 
 
 def load_config(config_filepath):
@@ -23,6 +36,27 @@ def load_config(config_filepath):
 
 def save_config(src, dst):
     shutil.copy(src, os.path.join(dst, src))
+
+
+def setup_optimizer(model, cfg):
+    if cfg['optimizer_name'] == 'Lion':
+        opt = Lion(model.parameters(), **cfg['optimizer'])
+    else:
+        opt_class = getattr(optim, cfg['optimizer_name'])  # Select torch.nn.optim class based on optimizer_name
+        opt = opt_class(model.parameters(), **cfg['optimizer'])
+    return opt
+
+
+def setup_loss(criterion: str):
+    criterion_class = getattr(nn, criterion)
+    criterion = criterion_class()
+    return criterion
+
+
+def setup_scheduler(optimizer, cfg, train_loader, epochs):
+    scheduler_class = getattr(optim.lr_scheduler, cfg['scheduler_name'])
+    scheduler = scheduler_class(optimizer, **cfg['scheduler'], steps_per_epoch=len(train_loader), epochs=epochs)
+    return scheduler
 
 
 def load_model(model_path, model, optimizer = None):
@@ -77,6 +111,63 @@ def save_plot(train_l, train_a, test_l, test_a):
     plt.title('Train vs Valid Losses')
     plt.savefig('result/losses')
     plt.close()
+
+
+def print_logs(logger, cfg, args = None, init: bool = False, pretrain: bool = False, pretest: bool = False, train: bool = False, test: bool = False):
+    if init:
+        if args.load_config is not None:
+            logger.info('Loaded configuration from "%s".' % args.load_config)
+        logger.info('Log filepath: %s.' % cfg['log_filepath'])
+        logger.info('Data dir: %s.' % cfg['data_dir'])
+        logger.info('Dataset: %s' % cfg['dataset']['dataset_name'])
+        if cfg['problem'].lower() == 'od':
+            logger.info('Normal class: %d' % cfg['dataset']['normal_class'])
+            logger.info('Multiclass: %s' % cfg['dataset']['multiclass'])
+        logger.info('Number of dataloader workers: %d' % cfg['dataloader']['num_workers'])
+        logger.info('Network: %s' % cfg['model_type'])
+        logger.info('Computation device: %s' % cfg['device'])
+
+    elif pretrain:
+        logger.info('Pretraining optimizer: %s' % cfg['pretrainer_optimizer_name'])
+        logger.info('Pretraining learning rate: %g' % cfg['pretrain_optimizer']['lr'])
+        logger.info('Pretraining epochs: %d' % cfg['pretraining']['n_epochs'])
+        if 'lr_milestone' in cfg['pretrain_optimizer']:
+            logger.info('Pretraining learning rate scheduler milestones: %s' % (cfg['pretrain_optimizer']['lr_milestone']))
+        logger.info('Pretraining batch size: %d' % cfg['dataloader']['pretrainer_batch_size'])
+        logger.info('Pretraining weight decay: %g' % cfg['pretrain_optimizer']['weight_decay'])
+    
+    elif pretest:
+        pass
+    
+    elif train:
+        logger.info('Training optimizer: %s' % cfg['optimizer_name'])
+        logger.info('Training learning rate: %g' % cfg['optimizer']['lr'])
+        logger.info('Training epochs: %d' % cfg['training']['n_epochs'])
+        if 'lr_milestone' in cfg['optimizer']:
+            logger.info('Training learning rate scheduler milestones: %s' % (cfg['optimizer']['lr_milestone']))
+        logger.info('Training batch size: %d' % cfg['dataloader']['batch_size'])
+        logger.info('Training weight decay: %g' % cfg['optimizer']['weight_decay'])
+    
+    elif test:
+        pass
+    
+    return
+
+
+def epoch_logger(logger, epoch, n_epochs, time, loss, metrics):
+    logger.info('Epoch {}/{}'.format(epoch + 1, n_epochs))
+    logger.info('  Epoch Train Time: {:.3f}'.format(time))
+    logger.info('  Epoch Train Loss: {:.8f}'.format(loss))
+    for metric, value in metrics.items():
+        logger.info('  Epoch Train {}: {:.4f}'.format(metric, value))
+
+
+def evaluate_logger(logger, total_time, loss_norm, metric_dict, validation):
+    log_str = 'Validation' if validation else 'Test'
+    logger.info('  {} Time: {:.3f}'.format(log_str, total_time))
+    logger.info('  {} Loss: {:.8f}'.format(log_str, loss_norm))
+    for metric, value in metric_dict.items():
+        logger.info('  {} {}: {:.4f}'.format(log_str, metric, value))
 
 
 class EarlyStopping:
