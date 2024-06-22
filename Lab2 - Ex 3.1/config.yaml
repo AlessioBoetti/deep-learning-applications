@@ -25,7 +25,7 @@ config:
   device: "cuda:0"
 
   # Paths and dirs
-  data_dir: "data"
+  data_dir: "../data"
   results_dir: "results"
   log_file: "log.txt"
   hf_cache_dir: "./hf"
@@ -38,7 +38,12 @@ config:
     init_dist: "normal"
     device_map: 'auto'
     freeze_model_base: False
-    peft: null  # "LoRA"
+    peft:
+      method: null  # LoRA
+      r: 8
+      alpha: 32
+      dropout: 0.1
+      rslora: True
 
   criterion: "CrossEntropyLoss"
 
@@ -81,12 +86,13 @@ config:
     n_epochs: 500
     eval_interval: 1
     checkpoint_every: 5
+    clip_grads: False
     patience: 20
 
-  clip_grads: False
 
   # Goals
   problem: None
+  adversarial: False
   xai: False
   explain_gradients: False
   explain_cam: False

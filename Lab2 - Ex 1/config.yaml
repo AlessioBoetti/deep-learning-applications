@@ -26,6 +26,7 @@ config:
   data: "divina_commedia.txt"
   results_dir: "results"
   log_file: "log.txt"
+  # hf_cache_dir: "./hf"
 
   model_type: "NanoGPT"
   model:
@@ -60,15 +61,16 @@ config:
     eval_interval: 250  # 500
     eval_iters: 100  # 200
     checkpoint_every: 100
+    clip_grads: False
     patience: 50
   
   generation:
     max_new_tokens: 1000
 
-  clip_grads: False
 
   # Goals
   problem: None
+  adversarial: False
   xai: False
   explain_gradients: False
   explain_cam: False

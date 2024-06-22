@@ -1,20 +1,17 @@
 #### Weight & Biases settings
 
 wandb:
-  name: "2024-06-05 - Second run"
+  name: "2024-06-05 - Outlier Detection"
   resume: False  # "must"
   # id: "29eilegw"
   job_type: "Fine-Tuning"
-  group: "Exercise 3.2"
-  project: "University - DLA - Lab 2"
+  group: "Exercise 1.1"
+  project: "University - DLA - Lab 4"
   tags: 
-  - "DistilRoBERTa"
-  - "BERT"
-  - "NLP"
-  - "Base"
-  - "PEFT"
-  - "LoRA"
-  notes: "Fine-tuning DistilRoBERTa on an NLP dataset."
+  - "ResNet"
+  - "Shortcut"
+  - "OOD"
+  notes: "Outlier Detection."
 
 
 #### Experiment settings
@@ -25,35 +22,28 @@ config:
   device: "cuda:0"
 
   # Paths and dirs
-  data_dir: "data"
+  data_dir: "../data"
   results_dir: "results"
   log_file: "log.txt"
   hf_cache_dir: "./hf"
 
-  model_type: "BERT"
+  model_type: "ResNet"
   model:
-    model_name: "distilroberta-base"
+    depth: 48
     output_size: 10
-    init_mode: "xavier"
-    init_dist: "normal"
-    device_map: 'auto'
-    freeze_model_base: False
-    peft: null  # "LoRA"
+    want_shortcut: True
+    activation: "ReLU"
+    fc_activation: "ReLU"
+    pool_type: "maxpool"
 
   criterion: "CrossEntropyLoss"
 
   dataset:
-    dataset_type: "QA"
-    dataset_name: "rajpurkar/squad"  # "tasksource/mmlu"
-    filename: null
-    train_set_name: "train"
-    test_set_name: "test"
-    val_set_name: null
+    dataset_name: "CIFAR10"
     val_size: 0.2
-    padding_side: 'right'
-    trunc_side: 'right'
-    max_token_len: 128
     val_shuffle: True
+    normalize: True
+    augment: True
     use_sampler: True
   
   dataloader:
@@ -78,16 +68,20 @@ config:
   test: True
 
   training:
-    n_epochs: 500
+    n_epochs: 150
     eval_interval: 1
-    checkpoint_every: 5
-    clip_grads: False
+    checkpoint_every: 1
+    clip_grads: True
     patience: 20
 
 
   # Goals
   problem: None
-  adversarial: False
+  adversarial:
+    ...
+  adversarial_add: True
+  ood_dataset:
+    ...
   xai: False
   explain_gradients: False
   explain_cam: False

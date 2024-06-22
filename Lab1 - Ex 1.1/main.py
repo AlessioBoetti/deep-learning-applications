@@ -1,23 +1,28 @@
+import sys
+sys.path.insert(1, '../src')
 import os
 import argparse
 import logging
-import yaml
+import time
 import random
 from datetime import timedelta
+from typing import Union, List
+import gc
+
+import yaml
 import numpy as np
 from dotenv import load_dotenv, find_dotenv
-from typing import Union, List
-
-import torch
-import torch.nn as nn
-import torch.optim as optim
 import wandb
 from tqdm import tqdm
 
-from dataloaders import MNIST_Dataset, CIFAR10_Dataset
-from model import MultiLayerPerceptron, Lion
+import torch
+import torch.nn as nn
+# import torch.optim as optim
+
+from model import MultiLayerPerceptron
 from utils import *
 from xai import *
+from adversarial import *
 
 
 def parse_args():
@@ -31,19 +36,9 @@ def parse_args():
     return args
 
 
-def setup_folders(args, cfg, run_name):
-    # Remember: dir is the folder, path is the... path
-    cfg['out_path'] = os.path.join(cfg['results_dir'], run_name)
-    create_dirs_if_not_exist([cfg['out_path']])
-    if cfg['xai']:
-        cfg['xai_path'] = os.path.join(cfg['out_path'], 'xai')
-        create_dirs_if_not_exist([cfg['xai_path']])
-    return cfg
-
-
 def setup_logging(logging, cfg):
     # logging.basicConfig(level=logging.INFO)
-    logger = logging.getLogger()
+    logger = logging.getLogger(__name__)
     logger.setLevel(logging.INFO)
 
     log_filepath = os.path.join(cfg['out_path'], cfg['log_file'])
@@ -68,6 +63,8 @@ def setup_seed(seed, logger):
         random.seed(seed)
         np.random.seed(seed)
         torch.manual_seed(seed)
+        torch.cuda.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed)  # For Multi-GPU, exception safe (https://github.com/pytorch/pytorch/issues/108341)
         # https://pytorch.org/docs/stable/generated/torch.use_deterministic_algorithms.html#torch.use_deterministic_algorithms
         torch.use_deterministic_algorithms(True, warn_only=True)
         torch.backends.cudnn.benchmark = False
@@ -75,112 +72,36 @@ def setup_seed(seed, logger):
         logger.info('Seed set to %d.' % seed)
 
 
-def print_logs(logger, cfg, args = None, init: bool = False, pretrain: bool = False, pretest: bool = False, train: bool = False, test: bool = False):
-    if init:
-        if args.load_config is not None:
-            logger.info('Loaded configuration from "%s".' % args.load_config)
-        logger.info('Log filepath: %s.' % cfg['log_filepath'])
-        logger.info('Data dir: %s.' % cfg['data_dir'])
-        logger.info('Dataset: %s' % cfg['dataset']['dataset_name'])
-        if cfg['problem'].lower() == 'od':
-            logger.info('Normal class: %d' % cfg['dataset']['normal_class'])
-            logger.info('Multiclass: %s' % cfg['dataset']['multiclass'])
-        logger.info('Number of dataloader workers: %d' % cfg['dataloader']['num_workers'])
-        logger.info('Network: %s' % cfg['model_type'])
-        logger.info('Computation device: %s' % cfg['device'])
+def evaluate(loader, model, criterion, metrics, device, logger, validation: bool):
+    model.eval()
+    running_loss = 0.0
+    val_batches = len(loader)
+    idx_label_scores = []
+    start_time = time.time()
 
-    elif pretrain:
-        logger.info('Pretraining optimizer: %s' % cfg['pretrain_optimizer_name'])
-        logger.info('Pretraining learning rate: %g' % cfg['pretrain_optimizer']['lr'])
-        logger.info('Pretraining epochs: %d' % cfg['pretraining']['n_epochs'])
-        if 'lr_milestone' in cfg['pretrain_optimizer']:
-            logger.info('Pretraining learning rate scheduler milestones: %s' % (cfg['pretrain_optimizer']['lr_milestone']))
-        logger.info('Pretraining batch size: %d' % cfg['dataloader']['pretrainer_batch_size'])
-        logger.info('Pretraining weight decay: %g' % cfg['pretrain_optimizer']['weight_decay'])
+    with torch.no_grad():
+        for batch in loader:
+            inputs, labels, idx = batch
+            inputs = inputs.to(device, non_blocking=True)
+            labels = labels.to(device, non_blocking=True)
+            outputs = model(inputs)
+            loss = criterion(outputs, labels)
+            running_loss += loss.item()
+            metrics(outputs, labels)
+
+            if not validation:
+                idx_label_scores += list(zip(idx.cpu().data.numpy().tolist(),
+                                        labels.cpu().data.numpy().tolist(),
+                                        outputs.cpu().data.numpy().tolist()))
     
-    elif pretest:
-        pass
+    total_time = time.time() - start_time
+    loss_norm = running_loss / val_batches
+    metric_dict = {metric: float(metrics[metric].compute().cpu().data.numpy() * 100) for metric in metrics.keys()}
+    metrics.reset()
+
+    evaluate_logger(logger, total_time, loss_norm, metric_dict, validation)
     
-    elif train:
-        logger.info('Training optimizer: %s' % cfg['optimizer_name'])
-        logger.info('Training learning rate: %g' % cfg['optimizer']['lr'])
-        logger.info('Training epochs: %d' % cfg['training']['n_epochs'])
-        if 'lr_milestone' in cfg['optimizer']:
-            logger.info('Training learning rate scheduler milestones: %s' % (cfg['optimizer']['lr_milestone']))
-        logger.info('Training batch size: %d' % cfg['dataloader']['batch_size'])
-        logger.info('Training weight decay: %g' % cfg['optimizer']['weight_decay'])
-    
-    elif test:
-        pass
-    
-    return
-
-
-def load_dataset(
-        data_dir: str,
-        dataset_name: str, 
-        val_size: float = None,
-        val_shuffle: bool = True,
-        val_shuffle_seed: int = 1,
-        problem: str = None, 
-        normal_class: Union[int, List[int]] = None, 
-        multiclass: bool = None, 
-        img_size: int = None,
-        normalize: bool = False,
-        gcn: bool = False,
-        gcn_minmax: bool = False,
-        augment: bool = False,
-        use_sampler: bool = True,
-    ):
-
-    dataset_kw = dict(
-        root=data_dir,
-        val_size=val_size,
-        val_shuffle=val_shuffle,
-        val_shuffle_seed=val_shuffle_seed,
-        problem=problem, 
-        normal_class=normal_class, 
-        multiclass=multiclass, 
-        img_size=img_size,
-        normalize=normalize,
-        gcn=gcn, 
-        gcn_minmax=gcn_minmax,
-        augment=augment,
-        use_sampler=use_sampler
-    )
-
-    if dataset_name.lower() == 'mnist':
-        dataset = MNIST_Dataset(**dataset_kw)
-    if dataset_name.lower() == 'cifar10':
-        dataset = CIFAR10_Dataset(**dataset_kw)
-    # if dataset_name.lower() == 'mvtec':
-    #     dataset = MVTEC_Dataset(**dataset_kw)
-    return dataset
-
-
-def setup_optimizer(model, cfg):
-    if cfg['optimizer_name'] == 'Lion':
-        opt = Lion(model.parameters(), **cfg['optimizer'])
-    else:
-        opt_class = getattr(optim, cfg['optimizer_name'])  # Select torch.nn.optim class based on optimizer_name
-        opt = opt_class(model.parameters(), **cfg['optimizer'])
-    return opt
-
-
-def select_loss_fn(criterion: str):
-    criterion = criterion.lower().strip().replace(' ', '').replace('-', '')
-    if criterion == 'crossentropyloss':
-        return nn.CrossEntropyLoss()
-    elif criterion == 'bcewithlogitsloss':
-        return nn.BCEWithLogitsLoss()
-    else:
-        raise NotImplementedError
-
-
-def setup_scheduler(optimizer, cfg, train_loader, epochs):
-    scheduler_class = getattr(optim.lr_scheduler, cfg['scheduler_name'])
-    scheduler = scheduler_class(optimizer, **cfg['scheduler'], steps_per_epoch=len(train_loader), epochs=epochs)
-    return scheduler
+    return loss_norm, metric_dict, total_time, val_batches, idx_label_scores
 
 
 def train(
@@ -190,6 +111,7 @@ def train(
         n_epochs, 
         criterion, 
         optimizer, 
+        clip_grads,
         scheduler, 
         scaler,  
         metrics, 
@@ -199,12 +121,14 @@ def train(
         out_path,
         update_scheduler_on_batch: bool, 
         update_scheduler_on_epoch: bool,
-        patience = None,
         val_loader = None, 
         eval_interval: int = 1,
         checkpoint_every: int = 5,
+        patience = None,
         best: dict = None,
-        lr_milestones: List[int] = None, 
+        lr_milestones: List[int] = None,
+        adversarial = None,
+        adversarial_add: bool = True,
     ): 
 
     train_start_time = time.time()
@@ -218,17 +142,30 @@ def train(
         loss_epoch = 0.0
         epoch_start_time = time.time()
 
-        for batch in tqdm(loader, desc=f"Epoch {epoch + 1}"):
+        for batch in tqdm(loader, desc=f'Epoch {epoch + 1}'):
             # https://discuss.pytorch.org/t/should-we-set-non-blocking-to-true/38234/4
             inputs, labels, idx = batch
             inputs = inputs.to(device, non_blocking=True)
             labels = labels.to(device, non_blocking=True)
             
             optimizer.zero_grad(set_to_none=True)  # https://pytorch.org/docs/stable/generated/torch.optim.Optimizer.zero_grad.html
-            with torch.cuda.amp.autocast():
-                # https://pytorch.org/docs/stable/amp.html
-                outputs = model(inputs)
+            with torch.cuda.amp.autocast():  # https://pytorch.org/docs/stable/amp.html
+                if adversarial:
+                    delta = attack(model, inputs, labels, **adversarial)
+                    if adversarial_add:
+                        outputs_adv = model(inputs + delta)
+                    else:
+                        outputs = model(inputs + delta)
+                    optimizer.zero_grad(set_to_none=True)  # to reset gradients computed during attack
+                else:
+                    outputs = model(inputs)
                 loss = criterion(outputs, labels)
+                if adversarial_add:
+                    loss_adv = criterion(outputs_adv, labels)
+                    loss = loss + loss_adv
+            
+            if clip_grads:
+                nn.utils.clip_grad_norm_(model.parameters(), clip_grads)
             
             scaler.scale(loss).backward()
             scaler.step(optimizer)
@@ -243,8 +180,13 @@ def train(
             loss_epoch += loss.item()
             total_batches_running += 1
 
-            metrics(outputs, labels)
-
+            # From: https://lightning.ai/docs/torchmetrics/stable/classification/accuracy.html#torchmetrics.classification.MulticlassAccuracy
+            # The first argument of metrics() can be an int tensor of shape (N, ...) or float tensor of shape (N, C, ..).
+            # If preds is a floating point we apply torch.argmax along the C dimension to automatically convert probabilities/logits into an int tensor.
+            # This means that since the model returns logits (or softmax if the CrossEntropyLoss is NOT used and we are doing multiclass classification)
+            # the class with the higher output value is selected automatically by the metrics() class. Otherwise we should implement argmax ourselves.
+            metrics(outputs, labels)  
+            
         epoch_time = time.time() - epoch_start_time
         epoch_loss_norm = loss_epoch / total_batches
         epoch_metrics = {metric: float(metrics[metric].compute().cpu().data.numpy() * 100) for metric in metrics.keys()}
@@ -256,23 +198,22 @@ def train(
                 if epoch in lr_milestones:
                     logger.info('  LR scheduler: new learning rate is %g' % float(scheduler.get_lr()[0]))
         
-        logger.info('Epoch {}/{}'.format(epoch + 1, n_epochs))
-        logger.info('  Epoch Train Time: {:.3f}'.format(epoch_time))
-        logger.info('  Epoch Train Loss: {:.8f}'.format(epoch_loss_norm))
-        for metric, value in epoch_metrics.items():
-            logger.info('  Epoch Train {}: {:.4f}'.format(metric, value))
+        epoch_logger(logger, epoch, n_epochs, epoch_time, epoch_loss_norm, epoch_metrics)
 
+        # Other metrics: https://towardsdatascience.com/efficient-pytorch-supercharging-training-pipeline-19a26265adae
         wb_log = {
             'train_loss': epoch_loss_norm,
             'train_accuracy': epoch_metrics['MulticlassAccuracy'],
             'train_precision': epoch_metrics['MulticlassPrecision'],
-            'train_recall': epoch_metrics['MulticlassRecall']
+            'train_recall': epoch_metrics['MulticlassRecall'],
+            'learning_rate': scheduler.get_last_lr(),
+            'epoch_train_time': epoch_time,
         }
 
         checkpoint = {
             'start': epoch + 1,
-            "state_dict": model.state_dict(),
-            "optimizer": optimizer.state_dict()
+            'state_dict': model.state_dict(),
+            'optimizer': optimizer.state_dict(),
         }
 
         if val_loader and (epoch % eval_interval == 0 or epoch == n_epochs - 1):
@@ -282,7 +223,8 @@ def train(
                 'val_loss': val_loss_norm,
                 'val_accuracy': val_metrics['MulticlassAccuracy'],
                 'val_precision': val_metrics['MulticlassPrecision'],
-                'val_recall': val_metrics['MulticlassRecall']
+                'val_recall': val_metrics['MulticlassRecall'],
+                'val_time': val_time,
             })
 
             if patience:
@@ -291,12 +233,12 @@ def train(
                     logger.info('  Found best model, saving model.')
                     best_results = {'best_epoch': epoch + 1}
                     best_results.update({f'best_{key}': value for key, value in wb_log.items()})                                        
-                    save_model(checkpoint, out_path, 'model')
+                    save_model(checkpoint, out_path, 'best_checkpoint')
                 
                 checkpoint.update({
                     'max_accuracy': getattr(patience, 'baseline'), 
                     'count': getattr(patience, 'count'), 
-                    'best': best_results
+                    'best': best_results,
                 })
             
             model.train()
@@ -304,7 +246,7 @@ def train(
         wb.log(wb_log)            
 
         # Save checkpoint
-        if epoch % checkpoint_every == 0:
+        if epoch % checkpoint_every == 0 or epoch == n_epochs - 1:
             save_model(checkpoint, out_path, 'checkpoint')
         
         # Early stopping
@@ -312,21 +254,26 @@ def train(
             logger.info('  Early stopping. Ending training.')
             break
 
+        gc.collect()
+        torch.cuda.empty_cache()
+
     train_time = time.time() - train_start_time
     logger.info('Training time: %.3f' % train_time)
 
-    train_results = {
+    results = {
         'total_batches': total_batches,
         'total_epochs': n_epochs,
         'train_time': train_time,
         'h-m-s_train_time': str(timedelta(seconds=train_time)),
     }
-    train_results.update({f'last_epoch_{key}': value for key, value in wb_log.items()})
-    train_results['early_stopping'] = True if patience else False
+    results.update({f'last_epoch_{key}': value for key, value in wb_log.items()})
+    results['early_stopping'] = True if patience else False
     if patience:
-        train_results.update(best_results)
+        results.update(best_results)
 
-    return model, train_results
+    os.rename(f'{out_path}/best_checkpoint.pth.tar', f'{out_path}/model.pth.tar')
+
+    return model, results
 
 
 def main(args, cfg, wb, run_name):
@@ -337,23 +284,42 @@ def main(args, cfg, wb, run_name):
 
     device = 'cpu' if not torch.cuda.is_available() else cfg['device']
     cfg['device'] = device
+    model_cfg, train_cfg = cfg['model'], cfg['training']
 
+    if wandb.run.resumed:
+        logger.info('Resuming experiment.')
     print_logs(logger, cfg, args, init=True)
 
 
     # Loading dataset...
     data_dir = args.data_dir if args.data_dir else cfg['data_dir']
-    logger.info('Loading dataset from "%s".' % cfg['data_dir'])
-    dataset = load_dataset(data_dir, val_shuffle_seed=cfg['seed'], **cfg['dataset'])
+    logger.info('Loading dataset from "%s".' % data_dir)
+    dataset = load_dataset(
+        data_dir, 
+        device=device,
+        val_shuffle_seed=cfg['seed'], 
+        **cfg['dataset']
+    )
+    if cfg['problem'] is not None:
+        if cfg['problem'] == 'OOD':
+            ood_dataset = load_dataset(
+                data_dir,
+                device=device,
+                val_shuffle_seed=cfg['seed'],
+                problem=cfg['problem'],
+                **cfg['ood_dataset']
+            )
+        else:
+            raise NotImplementedError()
     dataloader_kw = dict(seed=cfg['seed'], device='cpu', **cfg['dataloader'])  # https://stackoverflow.com/questions/68621210/runtimeerror-expected-a-cuda-device-type-for-generator-but-found-cpu
     logger.info('Dataset loaded.')
     
 
     # Initializing model...
-    model_cfg, train_cfg = cfg['model'], cfg['training']
-    logger.info('Initializing %s model.' % cfg['model_type'])
+    logger.info('Initializing {} model.'.format(cfg['model_type']))
+    if 'model_name' in model_cfg.keys():
+        logger.info('Model version: {}'.format(model_cfg['model_name']))
     model = MultiLayerPerceptron(
-        flatten_input=True,
         **model_cfg,
     ).to(device)
     logger.info('Model initialized.')
@@ -361,12 +327,12 @@ def main(args, cfg, wb, run_name):
     logger.info(model)
     
 
-    # Initializing optimizer
+    # Initializing optimizer...
     logger.info('Initializing %s optimizer.' % cfg['optimizer_name'])
     optimizer = setup_optimizer(model, cfg)
     logger.info('Optimizer initialized.')
     scaler = torch.cuda.amp.GradScaler()
-    criterion = select_loss_fn(cfg['criterion'])
+    criterion = setup_loss(cfg['criterion'])
     metric_collection = get_metrics(cfg['model'], wb, device)
 
 
@@ -376,7 +342,10 @@ def main(args, cfg, wb, run_name):
     if args.load_model:
         model_path = args.load_model
     elif wandb.run.resumed:
-        model_path = cfg['out_path'] + '/checkpoint.pth.tar'
+        if 'checkpoint.pth.tar' in os.listdir(cfg['out_path']):
+            model_path = cfg['out_path'] + '/checkpoint.pth.tar'
+        else:
+            logger.info('Resuming run, but no checkpoint found.')
     elif 'model.pth.tar' in os.listdir(cfg['out_path']):
         model_path = cfg['out_path'] + '/model.pth.tar'
         cfg['train'] = False
@@ -395,57 +364,45 @@ def main(args, cfg, wb, run_name):
         logger.info('Starting model from scratch.')
         start, best = 0, None
         patience = EarlyStopping('max', train_cfg['patience']) if train_cfg['patience'] else None
-    
-    save_config('config.yaml', cfg['out_path'])    
+        save_config('config.yaml', cfg['out_path'])    
 
     # Pretraining model...
-    logger.info('Pretraining: %s' % cfg['pretrain'])
     if cfg['pretrain']:
+        logger.info('Pretraining.')
         print_logs(logger, cfg, pretrain=True)
         torch.cuda.empty_cache()
 
-        # deep_SVDD.pretrain(
-        #     dataset, 
-        #     optimizer_name=cfg.settings['ae_optimizer_name'],
-        #     lr=cfg.settings['ae_lr'],
-        #     n_epochs=cfg.settings['ae_n_epochs'],
-        #     lr_milestones=[cfg.settings['ae_lr_milestone']],
-        #     batch_size=cfg.settings['ae_batch_size'],
-        #     weight_decay=cfg.settings['ae_weight_decay'],
-        #     device=cfg.settings['device'],
-        #     n_jobs_dataloader=cfg.settings['n_jobs_dataloader'])
+        # TODO: Implement from DL PW
     
 
     # Testing pretrained model...
-    logger.info('Testing pretrained model: %s' % cfg['pretest'])
     if cfg['pretest']:
+        logger.info('Testing pretrained model.')
         print_logs(logger, cfg, pretrain=True)
 
-        # ae_idx_label_score, ae_auc = deep_SVDD.test_ae( 
-        #     dataset, 
-        #     optimizer_name=cfg.settings['ae_optimizer_name'],
-        #     lr=cfg.settings['ae_lr'],
-        #     n_epochs=cfg.settings['ae_n_epochs'],
-        #     lr_milestones=[cfg.settings['ae_lr_milestone']],
-        #     batch_size=cfg.settings['ae_batch_size'],
-        #     weight_decay=cfg.settings['ae_weight_decay'],
-        #     device=cfg.settings['device'],
-        #     n_jobs_dataloader=cfg.settings['n_jobs_dataloader'])
+        # TODO: Implement from DL PW
     
 
     # Training model...
-    logger.info('Training: %s' % cfg['train'])
     if cfg['train']:
+        logger.info('Training.')
         train_loader, val_loader, _, _ = dataset.loaders(train=True, val=True, **dataloader_kw)
         print_logs(logger, cfg, train=True)
         torch.cuda.empty_cache()
 
         scheduler = setup_scheduler(optimizer, cfg, train_loader, train_cfg['n_epochs'] - start)
 
-        wb.watch(model, criterion=criterion, log="gradients", log_graph=False)
-
-        if cfg['clip_grads']:
-            nn.utils.clip_grad_norm_(model.parameters(), cfg['clip_grads'])
+        wb.watch(model, criterion=criterion, log='all', log_graph=True)
+        
+        if cfg['adversarial']:
+            cfg['adversarial'].update(dict(
+                normalize=cfg['dataset']['normalize'],
+                dataset_name=cfg['dataset']['dataset_name'],
+                criterion=criterion, 
+                scaler=scaler, 
+                device=device, 
+                logger=logger,
+            ))
 
         logger.info('Starting training...')
         model, train_results = train(
@@ -455,6 +412,7 @@ def main(args, cfg, wb, run_name):
             train_cfg['n_epochs'], 
             criterion, 
             optimizer, 
+            train_cfg['clip_grads'],
             scheduler, 
             scaler, 
             metric_collection, 
@@ -464,23 +422,26 @@ def main(args, cfg, wb, run_name):
             cfg['out_path'],  
             update_scheduler_on_epoch=False,
             update_scheduler_on_batch=True,
-            patience=patience,
             val_loader=val_loader,
             eval_interval=train_cfg['eval_interval'],
             checkpoint_every=train_cfg['checkpoint_every'],
-            best=best)
+            patience=patience,
+            best=best,
+            adversarial=cfg['adversarial'],
+            adversarial_add=cfg['adversarial_add'],
+        )
         logger.info('Finished training.')
 
         save_results(cfg['out_path'], train_results, 'train')
 
 
     # Testing model...
-    logger.info('Testing: %s' % cfg['test'])
     if cfg['test']:
-        _, _, transformed_test_loader, org_test_loader = dataset.loaders(train=False, **dataloader_kw)
+        logger.info('Testing.')
+        _, _, test_loader, _ = dataset.loaders(train=False, **dataloader_kw)
 
-        logger.info('Starting testing on transformed test set...')
-        test_loss_norm, test_metrics, test_time, test_n_batches, idx_label_scores = evaluate(transformed_test_loader, model, criterion, metric_collection, device, logger, validation=False)
+        logger.info('Starting testing on test set...')
+        test_loss_norm, test_metrics, test_time, test_n_batches, idx_label_scores = evaluate(test_loader, model, criterion, metric_collection, device, logger, validation=False)
         logger.info('Finished testing.')
 
         test_results = {
@@ -491,25 +452,64 @@ def main(args, cfg, wb, run_name):
             'test_recall': test_metrics['MulticlassRecall'],
             'test_scores': idx_label_scores,
         }
-        save_results(cfg['out_path'], test_results, 'transformed_test')
+        save_results(cfg['out_path'], test_results, 'test')
 
-        logger.info('Starting testing on original test set...')
-        test_loss_norm, test_metrics, test_time, test_n_batches, idx_label_scores = evaluate(org_test_loader, model, criterion, metric_collection, device, logger, validation=False)
+        if cfg['problem'] == 'OOD':
+            plot_results(idx_label_scores, cfg['out_path'], 'test', classes=['0','1','2','3','4','5','6','7','8','9'], n_classes=10)
+
+
+    # Testing model on original dataset...
+    if cfg['test_original']:
+        logger.info('Testing on original dataset.')
+        _, _, _, org_test_loader = dataset.loaders(train=False, **dataloader_kw)
+
+        logger.info('Starting testing on original (not transformed) test set...')
+        org_test_loss_norm, org_test_metrics, org_test_time, org_test_n_batches, org_idx_label_scores = evaluate(org_test_loader, model, criterion, metric_collection, device, logger, validation=False)
         logger.info('Finished testing.')
 
         test_results = {
-            'test_time': test_time,
-            'test_loss': test_loss_norm,
-            'test_accuracy': test_metrics['MulticlassAccuracy'],
-            'test_precision': test_metrics['MulticlassPrecision'],
-            'test_recall': test_metrics['MulticlassRecall'],
-            'test_scores': idx_label_scores,
+            'test_time': org_test_time,
+            'test_loss': org_test_loss_norm,
+            'test_accuracy': org_test_metrics['MulticlassAccuracy'],
+            'test_precision': org_test_metrics['MulticlassPrecision'],
+            'test_recall': org_test_metrics['MulticlassRecall'],
+            'test_scores': org_idx_label_scores,
         }
-
         save_results(cfg['out_path'], test_results, 'original_test')
+        
+        if cfg['problem'] == 'OOD':
+            plot_results(org_idx_label_scores, cfg['out_path'], 'org_test')
 
 
-    # plot_results()
+    # Other testing...
+    if cfg['problem'] is not None:
+        if cfg['problem'] == 'OOD':
+            logger.info('Testing on OOD dataset.')
+            if cfg['test'] == False or cfg['test'] is None:
+                raise ValueError('Testing on OOD dataset is selected but testing on regular dataset is not. Aborting run.')
+            
+            _, _, ood_test_loader, ood_org_test_loader = ood_dataset.loaders(train=False, **dataloader_kw)
+            
+            logger.info('Starting testing on OOD test set...')
+            ood_test_loss_norm, ood_test_metrics, ood_test_time, ood_test_n_batches, ood_idx_label_scores = evaluate(ood_test_loader, model, criterion, metric_collection, device, logger, validation=False)
+            logger.info('Finished testing.')
+
+            ood_test_results = {
+                'ood_test_time': ood_test_time,
+                'ood_test_loss': ood_test_loss_norm,
+                'ood_test_accuracy': ood_test_metrics['MulticlassAccuracy'],
+                'ood_test_precision': ood_test_metrics['MulticlassPrecision'],
+                'ood_test_recall': ood_test_metrics['MulticlassRecall'],
+                'ood_test_scores': ood_idx_label_scores,
+            }
+            save_results(cfg['out_path'], ood_test_results, 'ood_test')
+            
+            plot_results(ood_idx_label_scores, cfg['out_path'], 'ood_test', classes=['t-shirt','trouser','pullover','dress','coat','sandal','shirt','sneaker','bag','ankle boot'], n_classes=10)
+            plot_results(idx_label_scores, cfg['out_path'], ood_idx_label_scores=ood_idx_label_scores)
+
+        else:
+            raise NotImplementedError()
+
 
     if cfg['explain_gradients']:
         backprop_grads = VanillaBackprop(model)
@@ -525,7 +525,8 @@ def main(args, cfg, wb, run_name):
         save_gradient_images(grayscale_grads, cfg['xai_path'], 'backprop_grads_grayscale')
 
         logger.info('Finished explaining model.')
-    
+
+
     if cfg['explain_cam']:
         logger.info('Explaining model predictions with Class Activation Mappings...')
         cam = ClassActivationMapping(model, target_layer='hook')
@@ -536,18 +537,18 @@ def main(args, cfg, wb, run_name):
         batch = next(iter_loader)
         org_batch = next(iter_org_loader)
         imgs, labels, idx = batch
-        label_list = [label.item() for label in labels]
         len_imgs = len(imgs)
 
         for i in np.arange(0, len_imgs, 4):
             img = imgs[i].unsqueeze(0)
-            label = labels[i]
+            label = labels[i].item()
             cams = cam.generate_cam(img, label)
             org_img = org_batch[0][i]
             save_class_activation_images(org_img, cams, cfg['xai_path'] + f'/gradcam_{i+1}')
         
         logger.info('Finished explaining predictions with Class Activation Mappings..')
     
+
     logger.info('Finished run.')
     logger.info('Closing experiment.')
     print('Finished run. Closing experiment.')

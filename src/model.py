@@ -1,4 +1,5 @@
 from typing import List, Tuple
+import math
 from collections import OrderedDict
 
 import torch
@@ -80,8 +81,11 @@ class BaseModel(nn.Module):
     
     
     @torch.no_grad()
-    def _init_weights(self, modules, mode: str = None, dist: str = None, mean: float = None, std: float = None):
+    def _init_weights(self, modules, mode: str = None, dist: str = None, mean: float = 0.0, std: float = 0.02):
         # From https://pytorch.org/docs/stable/notes/modules.html#modules-as-building-blocks
+        if not isinstance(modules, str):
+            modules = list(modules)
+        
         for module in modules:
             if mode in ['xavier', 'glorot']:
                 if dist == 'normal':
@@ -94,7 +98,7 @@ class BaseModel(nn.Module):
                 nn.init.kaiming_uniform_(module.weight, a=math.sqrt(5))
             else:
                 if dist == 'normal':
-                    torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
+                    torch.nn.init.normal_(module.weight, mean=mean, std=std)
                 else:
                     raise NotImplementedError
             if module.bias is not None:
@@ -176,7 +180,6 @@ class ConvolutionalBlock(BaseModel):
 
         self.want_shortcut = want_shortcut
         conv_stride = 1
-        self.pooling = None
         hook = None
 
         if downsample:
@@ -198,7 +201,9 @@ class ConvolutionalBlock(BaseModel):
                     kw = dict(kernel_size=3, stride=2, padding=1)
                 else:
                     raise NotImplementedError('Valid pool types are "convolution", "adaptivemaxpool" or "maxpool"')
-        
+        else:
+            pool_type = None
+
         self.block_layers = nn.Sequential(OrderedDict({
             'conv_1': nn.Conv2d(in_channels, in_channels, kernel_size=3, stride=conv_stride, padding=1, bias=False),
             'bn_1': nn.BatchNorm2d(in_channels),
@@ -207,7 +212,7 @@ class ConvolutionalBlock(BaseModel):
             'bn_2': nn.BatchNorm2d(out_channels),
             'act_2': self._get_activation(activation)
         }))
-        if pool_type is not None:
+        if pool_type:
             name = 'pool_hook' if hook else 'pool'
             self.block_layers.add_module(name, self._get_pooling(pool_type, kw))
         
@@ -218,7 +223,6 @@ class ConvolutionalBlock(BaseModel):
             }))
             self.activation = self._get_activation(activation)
             # self.relu = nn.ReLU()
-        
 
 
     def forward(self, x):
@@ -231,40 +235,13 @@ class ConvolutionalBlock(BaseModel):
             return out
         else:
             return self.block_layers(x)
-    
-    """ def forward(self, x):
-        if self.want_shortcut:
-            short = x
-            out = self.block_layers(x)
-            if out.shape != short.shape:
-                short = self.shortcut(short)
-            out = self.activation(short + out)  # self.relu(short + out)
-            return out
-        else:
-            print(f'Inside cnn block: {x.shape}')
-            x = self.conv1(x)
-            print(x.shape)
-            x = self.bn1(x)
-            print(x.shape)
-            x = self.act1(x)
-            print(x.shape)
-            x = self.conv2(x)
-            print(x.shape)
-            x = self.bn2(x)
-            print(x.shape)
-            x = self.act2(x)
-            print(x.shape)
-            if self.pooling:
-                x = self.pool(x)
-                print(x.shape)
-            return x """
 
 
 class ConvolutionalNeuralNetwork(BaseModel):
     def __init__(self, depth: int, output_size: int, want_shortcut: bool, pool_type: str, activation: str, fc_activation: str):
         super().__init__()
         channels = [64, 128, 256, 512]
-        if depth == 9:
+        if depth == 9:  # 9 because there are 4 ConvBlocks, each composed of 2 Conv layers, + the init_conv layer
             num_conv_block = [1, 1, 1, 1]   # contains the number of conv blocks for each stage of the network
         elif depth == 17:
             num_conv_block = [2, 2, 2, 2]
@@ -361,7 +338,7 @@ class Head(nn.Module):
         # Input of size (batch, time-step, channels)
         # Output of size (batch, time-step, head size)
         B, T, C = x.shape
-        k = self.key(x)    # (B, T, hs)
+        k = self.key(x)    # (B, T, hs) (hs is head size)
         q = self.query(x)  # (B, T, hs)
         # Compute attention scores ("affinities")
         weights = q @ k.transpose(-2,-1) * k.shape[-1]**-0.5  # (B, T, hs) @ (B, hs, T) -> (B, T, T)
@@ -449,13 +426,13 @@ class GPTLanguageModel(BaseModel):
         return logits
 
 
-    def generate(self, idx, max_new_tokens, block_size):
+    def generate(self, idx, max_new_tokens, block_size, device):
         # idx is (B, T) array of indices in the current context
         for _ in range(max_new_tokens):
             # Crop idx to the last block_size tokens
             idx_cond = idx[:, -block_size:]
             # Get the predictions
-            logits, loss = self(idx_cond)
+            logits = self(idx_cond, device)
             # Focus only on the last time step
             logits = logits[:, -1, :] # becomes (B, C)
             # Apply softmax to get probabilities
@@ -480,14 +457,14 @@ class BERT(BaseModel):
             
         if peft:
             # From https://huggingface.co/docs/peft/quicktour
-            if peft == 'LoRA':
+            if peft['method'] == 'LoRA':
                 peft_config = LoraConfig(
                     task_type=TaskType.FEATURE_EXTRACTION, 
                     inference_mode=False, 
-                    r=8, 
-                    lora_alpha=32, 
-                    lora_dropout=0.1,
-                    use_rslora=True
+                    r=peft['r'], 
+                    lora_alpha=peft['alpha'], 
+                    lora_dropout=peft['dropout'],
+                    use_rslora=peft['rslora']
                 )
                 self.model = get_peft_model(self.model, peft_config)
                 self.model.print_trainable_parameters()

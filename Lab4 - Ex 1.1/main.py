@@ -1,3 +1,5 @@
+import sys
+sys.path.insert(1, '../src')
 import os
 import argparse
 import logging
@@ -17,7 +19,6 @@ import torch
 import torch.nn as nn
 # import torch.optim as optim
 
-from dataloaders import MNIST_Dataset, CIFAR10_Dataset, FashionMNIST_Dataset, NLP_Dataset
 from model import ConvolutionalNeuralNetwork
 from utils import *
 from xai import *
@@ -69,94 +70,6 @@ def setup_seed(seed, logger):
         torch.backends.cudnn.benchmark = False
         torch.backends.cudnn.deterministic = True
         logger.info('Seed set to %d.' % seed)
-
-
-def load_dataset(
-        data_dir: str,
-        dataset_type: str,
-        dataset_name: str,
-        problem: str = None, 
-        n_classes = None,
-        normal_class: Union[int, List[int]] = None, 
-        img_size: int = None,
-        augment: bool = False,
-        normalize: bool = False,
-        gcn: bool = False,
-        gcn_minmax: bool = False,
-        filename: str = None,
-        train_set_name: str = None,
-        test_set_name: str = None,
-        val_set_name: str = None,
-        model_name: str = None,
-        cache_dir: str = None, 
-        padding_side: str = None, 
-        trunc_side: str = None,
-        max_token_len: int = None,
-        device: str = None,
-        val_size: float = None,
-        val_mix: bool = None,
-        val_shuffle: bool = True,
-        val_shuffle_seed: int = 1,
-        use_sampler: bool = True,
-        multiclass: bool = None, 
-    ):
-
-    dataset_type = dataset_type.lower().replace(' ', '')
-    dataset_name = dataset_name.lower().replace(' ', '')        
-    
-    if dataset_type == 'vision':
-        dataset_kw = dict(
-            root=data_dir,
-            problem=problem,
-            n_classes=n_classes,
-            normal_class=normal_class,
-            img_size=img_size,
-            augment=augment,
-            normalize=normalize,
-            gcn=gcn, 
-            gcn_minmax=gcn_minmax,
-            val_size=val_size,
-            val_mix=val_mix,
-            val_shuffle=val_shuffle,
-            val_shuffle_seed=val_shuffle_seed,
-            use_sampler=use_sampler,
-            multiclass=multiclass, 
-        )
-        if dataset_name == 'mnist':
-            dataset = MNIST_Dataset(**dataset_kw)
-        if dataset_name == 'cifar10':
-            dataset = CIFAR10_Dataset(**dataset_kw)
-        if dataset_name == 'fashionmnist':
-            dataset = FashionMNIST_Dataset(**dataset_kw)
-        # if dataset_name == 'mvtec':
-        #     dataset = MVTEC_Dataset(**dataset_kw)
-    
-    elif dataset_type == 'textclassification':
-        dataset_kw = dict(
-            dataset_type=dataset_type,
-            dataset_name=dataset_name,
-            filename=filename,
-            data_dir=data_dir,
-            train_set_name=train_set_name,
-            test_set_name=test_set_name,
-            val_set_name=val_set_name,
-            val_size=val_size,
-            model_name=model_name,
-            cache_dir=cache_dir, 
-            padding_side=padding_side, 
-            trunc_side=trunc_side,
-            max_token_len=max_token_len,
-            device=device,
-            val_shuffle=val_shuffle,
-            val_shuffle_seed=val_shuffle_seed,
-            use_sampler=use_sampler,
-        )
-        dataset = NLP_Dataset(**dataset_kw)
-    
-    else:
-        raise NotImplementedError()
-
-    return dataset
 
 
 def evaluate_llm(loader, model, criterion, metrics, device, logger, validation: bool):
@@ -649,16 +562,7 @@ def main(args, cfg, wb, run_name):
         print_logs(logger, cfg, pretrain=True)
         torch.cuda.empty_cache()
 
-        # deep_SVDD.pretrain(
-        #     dataset, 
-        #     optimizer_name=cfg.settings['ae_optimizer_name'],
-        #     lr=cfg.settings['ae_lr'],
-        #     n_epochs=cfg.settings['ae_n_epochs'],
-        #     lr_milestones=[cfg.settings['ae_lr_milestone']],
-        #     batch_size=cfg.settings['ae_batch_size'],
-        #     weight_decay=cfg.settings['ae_weight_decay'],
-        #     device=cfg.settings['device'],
-        #     n_jobs_dataloader=cfg.settings['n_jobs_dataloader'])
+        # TODO: Implement from DL PW
     
 
     # Testing pretrained model...
@@ -666,16 +570,7 @@ def main(args, cfg, wb, run_name):
         logger.info('Testing pretrained model.')
         print_logs(logger, cfg, pretrain=True)
 
-        # ae_idx_label_score, ae_auc = deep_SVDD.test_ae( 
-        #     dataset, 
-        #     optimizer_name=cfg.settings['ae_optimizer_name'],
-        #     lr=cfg.settings['ae_lr'],
-        #     n_epochs=cfg.settings['ae_n_epochs'],
-        #     lr_milestones=[cfg.settings['ae_lr_milestone']],
-        #     batch_size=cfg.settings['ae_batch_size'],
-        #     weight_decay=cfg.settings['ae_weight_decay'],
-        #     device=cfg.settings['device'],
-        #     n_jobs_dataloader=cfg.settings['n_jobs_dataloader'])
+        # TODO: Implement from DL PW
 
 
     # Training model...
@@ -749,9 +644,10 @@ def main(args, cfg, wb, run_name):
         }
         save_results(cfg['out_path'], test_results, 'test')
 
-        plot_results(idx_label_scores, cfg['out_path'], 'test', classes=['0','1','2','3','4','5','6','7','8','9'], n_classes=10)
+        if cfg['problem'] == 'OOD':
+            plot_results(idx_label_scores, cfg['out_path'], 'test', classes=['0','1','2','3','4','5','6','7','8','9'], n_classes=10)
 
-    
+
     # Testing model on original dataset...
     if cfg['test_original']:
         logger.info('Testing on original dataset.')
@@ -770,8 +666,9 @@ def main(args, cfg, wb, run_name):
             'test_scores': org_idx_label_scores,
         }
         save_results(cfg['out_path'], test_results, 'original_test')
-
-        plot_results(org_idx_label_scores, cfg['out_path'], 'org_test')
+        
+        if cfg['problem'] == 'OOD':
+            plot_results(org_idx_label_scores, cfg['out_path'], 'org_test')
     
 
     # Other testing...
@@ -830,12 +727,11 @@ def main(args, cfg, wb, run_name):
         batch = next(iter_loader)
         org_batch = next(iter_org_loader)
         imgs, labels, idx = batch
-        label_list = [label.item() for label in labels]
         len_imgs = len(imgs)
 
         for i in np.arange(0, len_imgs, 4):
             img = imgs[i].unsqueeze(0)
-            label = labels[i]
+            label = labels[i].item()
             cams = cam.generate_cam(img, label)
             org_img = org_batch[0][i]
             save_class_activation_images(org_img, cams, cfg['xai_path'] + f'/gradcam_{i+1}')

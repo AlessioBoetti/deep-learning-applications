@@ -1,5 +1,5 @@
 import os
-from typing import List
+from typing import List, Union
 import json
 import shutil
 import matplotlib.pyplot as plt
@@ -9,6 +9,7 @@ import torch.optim as optim
 import torch.nn as nn
 import torchmetrics
 
+from dataloaders import MNIST_Dataset, CIFAR10_Dataset, FashionMNIST_Dataset, NLP_Dataset
 from model import Lion
 
 
@@ -57,6 +58,94 @@ def setup_scheduler(optimizer, cfg, train_loader, epochs):
     scheduler_class = getattr(optim.lr_scheduler, cfg['scheduler_name'])
     scheduler = scheduler_class(optimizer, **cfg['scheduler'], steps_per_epoch=len(train_loader), epochs=epochs)
     return scheduler
+
+
+def load_dataset(
+        data_dir: str,
+        dataset_type: str,
+        dataset_name: str,
+        problem: str = None, 
+        n_classes = None,
+        normal_class: Union[int, List[int]] = None, 
+        img_size: int = None,
+        augment: bool = False,
+        normalize: bool = False,
+        gcn: bool = False,
+        gcn_minmax: bool = False,
+        filename: str = None,
+        train_set_name: str = None,
+        test_set_name: str = None,
+        val_set_name: str = None,
+        model_name: str = None,
+        cache_dir: str = None, 
+        padding_side: str = None, 
+        trunc_side: str = None,
+        max_token_len: int = None,
+        device: str = None,
+        val_size: float = None,
+        val_mix: bool = None,
+        val_shuffle: bool = True,
+        val_shuffle_seed: int = 1,
+        use_sampler: bool = True,
+        multiclass: bool = None, 
+    ):
+
+    dataset_type = dataset_type.lower().replace(' ', '')
+    dataset_name = dataset_name.lower().replace(' ', '')        
+    
+    if dataset_type == 'vision':
+        dataset_kw = dict(
+            root=data_dir,
+            problem=problem,
+            n_classes=n_classes,
+            normal_class=normal_class,
+            img_size=img_size,
+            augment=augment,
+            normalize=normalize,
+            gcn=gcn, 
+            gcn_minmax=gcn_minmax,
+            val_size=val_size,
+            val_mix=val_mix,
+            val_shuffle=val_shuffle,
+            val_shuffle_seed=val_shuffle_seed,
+            use_sampler=use_sampler,
+            multiclass=multiclass, 
+        )
+        if dataset_name == 'mnist':
+            dataset = MNIST_Dataset(**dataset_kw)
+        if dataset_name == 'cifar10':
+            dataset = CIFAR10_Dataset(**dataset_kw)
+        if dataset_name == 'fashionmnist':
+            dataset = FashionMNIST_Dataset(**dataset_kw)
+        # if dataset_name == 'mvtec':
+        #     dataset = MVTEC_Dataset(**dataset_kw)
+    
+    elif dataset_type == 'textclassification':
+        dataset_kw = dict(
+            dataset_type=dataset_type,
+            dataset_name=dataset_name,
+            filename=filename,
+            data_dir=data_dir,
+            train_set_name=train_set_name,
+            test_set_name=test_set_name,
+            val_set_name=val_set_name,
+            val_size=val_size,
+            model_name=model_name,
+            cache_dir=cache_dir, 
+            padding_side=padding_side, 
+            trunc_side=trunc_side,
+            max_token_len=max_token_len,
+            device=device,
+            val_shuffle=val_shuffle,
+            val_shuffle_seed=val_shuffle_seed,
+            use_sampler=use_sampler,
+        )
+        dataset = NLP_Dataset(**dataset_kw)
+    
+    else:
+        raise NotImplementedError()
+
+    return dataset
 
 
 def load_model(model_path, model, optimizer = None):

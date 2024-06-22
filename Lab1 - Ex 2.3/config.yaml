@@ -1,15 +1,18 @@
 #### Weight & Biases settings
 
 wandb:
-  name: "2024-05-12 - Test"
+  name: "2024-05-23 - GradCAM Explanations"
   resume: False
-  job_type: "Train-Test"
-  group: "Exercise 1.1"
+  job_type: "XAI"
+  group: "Exercise 2.3"
   project: "University - DLA - Lab 1"
   tags: 
-  - "MLP"
+  - "CNN"
+  - "ResNet"
   - "Base"
-  notes: "First attempt at training a basic MLP on MNIST dataset."
+  - "Clipping"
+  - "Shortcut"
+  notes: "Explaining Predictions with Class Activation Mappings."
 
 
 #### Experiment settings
@@ -25,27 +28,25 @@ config:
   log_file: "log.txt"
   # hf_cache_dir: "./hf"
 
-  model_type: "MLP"
+  model_type: "ResNet"
   model:
-    input_size: 784  # 28*28 (MNIST size)
-    n_hidden_layers: 2
-    hidden_layer_sizes: [400, 150]
-    output_size: 10  # Number of output classes
+    depth: 48
+    output_size: 10
+    want_shortcut: True
     activation: "ReLU"
-    batch_norm: True
-    dropout: 0.2  # If not using dropout, set this to null (null is the YAML equivalent for None)
-    flatten_input: True
-
+    fc_activation: "ReLU"
+    pool_type: "maxpool"
+  
   criterion: "CrossEntropyLoss"
 
   dataset:
-    dataset_name: "MNIST"
+    dataset_name: "CIFAR10"
     val_size: 0.2
     val_shuffle: True
     normalize: True
     augment: True
     use_sampler: True
-
+  
   dataloader:
     num_workers: 8
     batch_size: 256
@@ -54,30 +55,30 @@ config:
 
   optimizer_name: "AdamW"  # Lion, Adam, SGD, Adamax, Adadelta, RMSProp ecc. (https://pytorch.org/docs/stable/optim.html)
   optimizer:
-    lr: 0.001
+    lr: 0.00005
     weight_decay: 0.01
     amsgrad: True
-
+  
   scheduler_name: "OneCycleLR"  # MultiStepLR
   scheduler: 
-    max_lr: 0.01
-      
+    max_lr: 0.0001
+  
   pretrain: False
   pretest: False
-  train: True
-  test: True
+  train: False
+  test: False
 
   training:
     n_epochs: 150
     eval_interval: 1
     checkpoint_every: 1
-    clip_grads: False
-    patience: 30
+    clip_grads: True
+    patience: 20
 
 
   # Goals
   problem: None
   adversarial: False
-  xai: False
+  xai: True
   explain_gradients: False
-  explain_cam: False
+  explain_cam: True
