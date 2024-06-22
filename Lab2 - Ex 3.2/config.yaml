@@ -38,7 +38,12 @@ config:
     init_dist: "normal"
     device_map: 'auto'
     freeze_model_base: False
-    peft: null  # "LoRA"
+    peft:
+      method: null  # LoRA
+      r: 8
+      alpha: 32
+      dropout: 0.1
+      rslora: True
 
   criterion: "CrossEntropyLoss"
 
@@ -87,6 +92,7 @@ config:
 
   # Goals
   problem: None
+  adversarial: False
   xai: False
   explain_gradients: False
   explain_cam: False

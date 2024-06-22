@@ -22,7 +22,9 @@ import torch.nn as nn
 from model import ConvolutionalNeuralNetwork
 from utils import *
 from xai import *
+from ood import *
 from adversarial import *
+from plot_utils import *
 
 
 def parse_args():
@@ -644,8 +646,7 @@ def main(args, cfg, wb, run_name):
         }
         save_results(cfg['out_path'], test_results, 'test')
 
-        if cfg['problem'] == 'OOD':
-            plot_results(idx_label_scores, cfg['out_path'], 'test', classes=['0','1','2','3','4','5','6','7','8','9'], n_classes=10)
+        plot_results(idx_label_scores, cfg['out_path'], 'test', classes=['0','1','2','3','4','5','6','7','8','9'], n_classes=10)
 
 
     # Testing model on original dataset...
@@ -667,18 +668,15 @@ def main(args, cfg, wb, run_name):
         }
         save_results(cfg['out_path'], test_results, 'original_test')
         
-        if cfg['problem'] == 'OOD':
-            plot_results(org_idx_label_scores, cfg['out_path'], 'org_test')
+        plot_results(org_idx_label_scores, cfg['out_path'], 'original_test')
     
 
     # Other testing...
-    if cfg['problem'] is not None:
+    if cfg['test'] and cfg['problem'] is not None:
         if cfg['problem'] == 'OOD':
             logger.info('Testing on OOD dataset.')
-            if cfg['test'] == False or cfg['test'] is None:
-                raise ValueError('Testing on OOD dataset is selected but testing on regular dataset is not. Aborting run.')
             
-            _, _, ood_test_loader, ood_org_test_loader = ood_dataset.loaders(train=False, **dataloader_kw)
+            _, _, ood_test_loader, _ = ood_dataset.loaders(train=False, **dataloader_kw)
             
             logger.info('Starting testing on OOD test set...')
             ood_test_loss_norm, ood_test_metrics, ood_test_time, ood_test_n_batches, ood_idx_label_scores = evaluate(ood_test_loader, model, criterion, metric_collection, device, logger, validation=False)
@@ -696,6 +694,10 @@ def main(args, cfg, wb, run_name):
             
             plot_results(ood_idx_label_scores, cfg['out_path'], 'ood_test', classes=['t-shirt','trouser','pullover','dress','coat','sandal','shirt','sneaker','bag','ankle boot'], n_classes=10)
             plot_results(idx_label_scores, cfg['out_path'], ood_idx_label_scores=ood_idx_label_scores)
+
+            if cfg['cea']:
+                cea = CEA(model, MaxLogitPostprocessor, val_loader, device, cfg['cea']['percentile_top'], cfg['cea']['addition_coef'])
+                get_ood_score(model, test_loader, ood_test_loader, cea.postprocess, device)
 
         else:
             raise NotImplementedError()

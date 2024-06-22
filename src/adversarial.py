@@ -73,6 +73,13 @@ def attack(model, x, y, epsilon: float, alpha: float, normalize: bool, criterion
         References:
         - https://adversarial-ml-tutorial.org
         - https://github.com/locuslab/fast_adversarial
+
+        Other references (unused):
+        - https://adversarial-robustness-toolbox.readthedocs.io/en/latest/
+        - https://github.com/AlbertMillan/adversarial-training-pytorch/blob/master/attacks.py
+        - https://pytorch.org/tutorials/beginner/fgsm_tutorial.html
+        - https://pyimagesearch.com/2021/03/15/mixing-normal-images-and-adversarial-images-when-training-cnns/
+        - https://github.com/LetheSec/Adversarial_Training_Pytorch/tree/main
     """
 
     if fast:

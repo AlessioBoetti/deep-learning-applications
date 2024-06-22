@@ -2,7 +2,6 @@ import os
 from typing import List, Union
 import json
 import shutil
-import matplotlib.pyplot as plt
 
 import torch
 import torch.optim as optim
@@ -14,9 +13,13 @@ from model import Lion
 
 
 def create_dirs_if_not_exist(dirs: List[str]):
-    for d in dirs:
-        if not os.path.exists(d):
-            os.makedirs(d)
+    if not isinstance(dirs, List):
+        if not os.path.exists(dirs):
+            os.makedirs(dirs)
+    else:
+        for d in dirs:
+            if not os.path.exists(d):
+                os.makedirs(d)
 
 
 def setup_folders(args, cfg, run_name):
@@ -160,8 +163,8 @@ def save_model(state: dict, model_path: str, name: str):
     torch.save(state, f"{model_path}/{name}.pth.tar")
 
 
-def save_results(path, results: dict, set: str):
-    with open(f'{path}/{set}_results.json', 'w') as f:
+def save_results(path, results: dict, set: str, suffix: str = 'results'):
+    with open(f'{path}/{set}_{suffix}.json', 'w') as f:
         json.dump(results, f)
 
 
@@ -180,26 +183,6 @@ def get_metrics(cfg, wb, device):
     wb.define_metric("best_model_epoch")
     
     return metric_collection
-
-
-def save_plot(train_l, train_a, test_l, test_a):
-    plt.plot(train_a, '-')
-    plt.plot(test_a, '-')
-    plt.xlabel('epoch')
-    plt.ylabel('accuracy')
-    plt.legend(['Train', 'Valid'])
-    plt.title('Train vs Valid accuracy')
-    plt.savefig('result/accuracy')
-    plt.close()
-
-    plt.plot(train_l, '-')
-    plt.plot(test_l, '-')
-    plt.xlabel('epoch')
-    plt.ylabel('losses')
-    plt.legend(['Train', 'Valid'])
-    plt.title('Train vs Valid Losses')
-    plt.savefig('result/losses')
-    plt.close()
 
 
 def print_logs(logger, cfg, args = None, init: bool = False, pretrain: bool = False, pretest: bool = False, train: bool = False, test: bool = False):
