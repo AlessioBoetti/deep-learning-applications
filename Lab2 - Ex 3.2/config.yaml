@@ -28,7 +28,7 @@ config:
   data_dir: "../data"
   results_dir: "results"
   log_file: "log.txt"
-  hf_cache_dir: "./hf"
+  hf_cache_dir: "../hf"
 
   model_type: "BERT"
   model:

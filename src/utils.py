@@ -192,7 +192,7 @@ def print_logs(logger, cfg, args = None, init: bool = False, pretrain: bool = Fa
         logger.info('Log filepath: %s.' % cfg['log_filepath'])
         logger.info('Data dir: %s.' % cfg['data_dir'])
         logger.info('Dataset: %s' % cfg['dataset']['dataset_name'])
-        if cfg['problem'].lower() == 'od':
+        if cfg['problem'] is not None and cfg['problem'].lower() in ['od', 'ood']:
             logger.info('Normal class: %d' % cfg['dataset']['normal_class'])
             logger.info('Multiclass: %s' % cfg['dataset']['multiclass'])
         logger.info('Number of dataloader workers: %d' % cfg['dataloader']['num_workers'])

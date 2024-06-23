@@ -1,7 +1,7 @@
 #### Weight & Biases settings
 
 wandb:
-  name: "2024-05-12 - Test"
+  name: "Basic MLP"
   resume: False
   job_type: "Train-Test"
   group: "Exercise 1.1"
@@ -23,7 +23,7 @@ config:
   data_dir: "../data"
   results_dir: "results"
   log_file: "log.txt"
-  # hf_cache_dir: "./hf"
+  # hf_cache_dir: "../hf"
 
   model_type: "MLP"
   model:

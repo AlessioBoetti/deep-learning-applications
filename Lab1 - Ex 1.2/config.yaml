@@ -1,7 +1,7 @@
 #### Weight & Biases settings
 
 wandb:
-  name: "2024-05-23 - Ninth Run (mulambda server) (depth = 48, shortcut)"
+  name: "ResNet - 49 Conv Layers"
   resume: False
   job_type: "Train-Test"
   group: "Exercise 1.2"
@@ -26,7 +26,7 @@ config:
   data_dir: "../data"
   results_dir: "results"
   log_file: "log.txt"
-  # hf_cache_dir: "./hf"
+  # hf_cache_dir: "../hf"
 
   model_type: "ResNet"
   model:

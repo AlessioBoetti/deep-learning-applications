@@ -1,7 +1,7 @@
 #### Weight & Biases settings
 
 wandb:
-  name: "2024-05-25 - Second run (mulambda) (more epochs)"
+  name: "DanteGPT"
   resume: False
   job_type: "Train-Test"
   group: "Exercise 1"
@@ -11,8 +11,7 @@ wandb:
   - "LLM"
   - "NLP"
   - "Base"
-
-  notes: "First attempt at training a basic NanoGPT."
+  notes: "First attempt at training a basic NanoGPT on Dante's Divina Commedia."
 
 
 #### Experiment settings
@@ -26,7 +25,7 @@ config:
   data: "divina_commedia.txt"
   results_dir: "results"
   log_file: "log.txt"
-  # hf_cache_dir: "./hf"
+  # hf_cache_dir: "../hf"
 
   model_type: "NanoGPT"
   model:
@@ -58,9 +57,9 @@ config:
 
   training:
     n_epochs: 2500  # 5000
-    eval_interval: 250  # 500
-    eval_iters: 100  # 200
-    checkpoint_every: 100
+    eval_interval: 5  # 500
+    eval_iters: 25  # 200
+    checkpoint_every: 50
     clip_grads: False
     patience: 50
   

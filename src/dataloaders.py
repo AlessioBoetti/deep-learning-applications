@@ -130,18 +130,14 @@ class BaseDataset(object):
             transform_list.append(transforms.Resize(img_size))
             basic_transform_list.append(transforms.Resize(img_size))
         if augment:
-            try:
-                policy = transforms.AutoAugmentPolicy(augment)  # Available policies are IMAGENET, CIFAR10 and SVHN.
-            except Exception as e:
-                print(e)
-                if augment == 'CIFAR10':
-                    policy = transforms.AutoAugmentPolicy.CIFAR10
-                if augment == 'IMAGENET':
-                    policy = transforms.AutoAugmentPolicy.IMAGENET
-                if augment == 'SVHN':
-                    policy = transforms.AutoAugmentPolicy.SVHN
-                else:
-                    raise ValueError(f'AutoAugmentPolicy type not supported by torchvision.')
+            if augment == 'CIFAR10':
+                policy = transforms.AutoAugmentPolicy.CIFAR10
+            elif augment == 'IMAGENET':
+                policy = transforms.AutoAugmentPolicy.IMAGENET
+            elif augment == 'SVHN':
+                policy = transforms.AutoAugmentPolicy.SVHN
+            else:
+                raise ValueError(f'AutoAugmentPolicy type not supported by torchvision.')
             transform_list.append(transforms.AutoAugment(policy))
         transform_list.append(transforms.ToTensor())
         basic_transform_list.append(transforms.ToTensor())

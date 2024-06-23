@@ -245,7 +245,7 @@ class ConvolutionalNeuralNetwork(BaseModel):
             num_conv_block = [1, 1, 1, 1]   # contains the number of conv blocks for each stage of the network
         elif depth == 17:
             num_conv_block = [2, 2, 2, 2]
-        elif depth == 32:
+        elif depth == 33:
             num_conv_block = [4, 4, 4, 4]
         else:
             num_conv_block = [6, 6, 6, 6]
@@ -498,7 +498,7 @@ class BERT(BaseModel):
         output = torch.mean(output.last_hidden_state, 1)
         output = F.relu(self.hidden(output))
         output = self.classifier(output)
-        output = F.softmax(output)
+        output = F.softmax(output, dim=0)
         return output
 
 
