@@ -1,7 +1,7 @@
 #### Weight & Biases settings
 
 wandb:
-  name: "2024-05-23 - Fifth Run (mulambda server) (depth = 48)"
+  name: "CNN - 49 Conv Layers"
   resume: False
   job_type: "Train-Test"
   group: "Exercise 1.2"
@@ -10,7 +10,6 @@ wandb:
   - "CNN"
   - "ResNet"
   - "Base"
-  - "Clipping"
   notes: "First attempt at training a basic CNN and ResNet on CIFAR10 dataset."
 
 
@@ -20,15 +19,18 @@ config:
   # Machine
   seed: 1
   device: "cuda:0"
+  cuda_benchmark: True
 
   # Paths and dirs
-  data_dir: "data"
+  data_dir: "../data"
   results_dir: "results"
   log_file: "log.txt"
+  # hf_cache_dir: "../hf"
 
   model_type: "CNN"
   model:
-    depth: 48
+    in_channels: 3
+    depth: 49
     output_size: 10
     want_shortcut: False
     activation: "ReLU"
@@ -38,6 +40,7 @@ config:
   criterion: "CrossEntropyLoss"
 
   dataset:
+    dataset_type: "Vision"
     dataset_name: "CIFAR10"
     val_size: 0.2
     val_shuffle: True
@@ -65,17 +68,19 @@ config:
   pretest: False
   train: True
   test: True
+  test_original: True
 
   training:
     n_epochs: 150
     eval_interval: 1
     checkpoint_every: 1
+    clip_grads: False
     patience: 20
 
-  clip_grads: True
 
   # Goals
-  problem: None
+  problem: null
+  adversarial: False
   xai: False
   explain_gradients: False
   explain_cam: False

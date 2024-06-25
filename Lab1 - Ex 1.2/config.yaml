@@ -1,7 +1,7 @@
 #### Weight & Biases settings
 
 wandb:
-  name: "ResNet - 49 Conv Layers"
+  name: "CNN - 33 Conv Layers"
   resume: False
   job_type: "Train-Test"
   group: "Exercise 1.2"
@@ -10,8 +10,6 @@ wandb:
   - "CNN"
   - "ResNet"
   - "Base"
-  - "Clipping"
-  - "Shortcut"
   notes: "First attempt at training a basic CNN and ResNet on CIFAR10 dataset."
 
 
@@ -21,6 +19,7 @@ config:
   # Machine
   seed: 1
   device: "cuda:0"
+  cuda_benchmark: True
 
   # Paths and dirs
   data_dir: "../data"
@@ -28,11 +27,12 @@ config:
   log_file: "log.txt"
   # hf_cache_dir: "../hf"
 
-  model_type: "ResNet"
+  model_type: "CNN"
   model:
-    depth: 48
+    in_channels: 3
+    depth: 33
     output_size: 10
-    want_shortcut: True
+    want_shortcut: False
     activation: "ReLU"
     fc_activation: "ReLU"
     pool_type: "maxpool"
@@ -40,6 +40,7 @@ config:
   criterion: "CrossEntropyLoss"
 
   dataset:
+    dataset_type: "Vision"
     dataset_name: "CIFAR10"
     val_size: 0.2
     val_shuffle: True
@@ -67,17 +68,18 @@ config:
   pretest: False
   train: True
   test: True
+  test_original: True
 
   training:
     n_epochs: 150
     eval_interval: 1
     checkpoint_every: 1
-    clip_grads: True
+    clip_grads: False
     patience: 20
 
 
   # Goals
-  problem: None
+  problem: null
   adversarial: False
   xai: False
   explain_gradients: False
