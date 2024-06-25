@@ -58,9 +58,10 @@ def setup_logging(logging, cfg):
     return logger, cfg
 
 
-def setup_seed(seed, logger):
+def setup_seed(cfg, logger):
     # TODO: Improve randomization to make it global and permanent
     # When using CUDA, the env var in the .env file comes into play!
+    seed = cfg['seed']
     if seed != -1:
         random.seed(seed)
         np.random.seed(seed)
@@ -69,7 +70,7 @@ def setup_seed(seed, logger):
         torch.cuda.manual_seed_all(seed)  # For Multi-GPU, exception safe (https://github.com/pytorch/pytorch/issues/108341)
         # https://pytorch.org/docs/stable/generated/torch.use_deterministic_algorithms.html#torch.use_deterministic_algorithms
         torch.use_deterministic_algorithms(True, warn_only=True)
-        torch.backends.cudnn.benchmark = False
+        torch.backends.cudnn.benchmark = cfg['cuda_benchmark']
         torch.backends.cudnn.deterministic = True
         logger.info('Seed set to %d.' % seed)
 
@@ -103,20 +104,35 @@ def evaluate_llm(loader, model, criterion, metrics, device, logger, validation: 
     return loss_norm, metric_dict, total_time, val_batches
 
 
-def evaluate(loader, model, criterion, metrics, device, logger, validation: bool):
+def evaluate(loader, model, criterion, metrics, device, logger, validation: bool, adversarial = None, adversarial_add: bool = False, scaler = None):
     model.eval()
     running_loss = 0.0
     val_batches = len(loader)
     idx_label_scores = []
     start_time = time.time()
 
+    if adversarial:
+        adversarial.update(dict(criterion=criterion, scaler=scaler, device=device, logger=logger))
+
     with torch.no_grad():
         for batch in loader:
             inputs, labels, idx = batch
             inputs = inputs.to(device, non_blocking=True)
             labels = labels.to(device, non_blocking=True)
-            outputs = model(inputs)
+
+            if adversarial:
+                delta = attack(model, inputs, labels, **adversarial)
+                if adversarial_add:
+                    outputs_adv = model(inputs + delta)
+                else:
+                    outputs = model(inputs + delta)
+            else:
+                outputs = model(inputs)
             loss = criterion(outputs, labels)
+            if adversarial_add:
+                loss_adv = criterion(outputs_adv, labels)
+                loss = loss + loss_adv
+
             running_loss += loss.item()
             metrics(outputs, labels)
 
@@ -328,7 +344,7 @@ def train(
     best_results = best
     model = model.to(device)
     model.train()
-
+    
     for epoch in range(start, n_epochs):
         loss_epoch = 0.0
         epoch_start_time = time.time()
@@ -408,7 +424,7 @@ def train(
         }
 
         if val_loader and (epoch % eval_interval == 0 or epoch == n_epochs - 1):
-            val_loss_norm, val_metrics, val_time, val_n_batches, _ = evaluate(val_loader, model, criterion, metrics, device, logger, validation=True)
+            val_loss_norm, val_metrics, val_time, val_n_batches, _ = evaluate(val_loader, model, criterion, metrics, device, logger, validation=True, adversarial=adversarial, adversarial_add=adversarial_add, scaler=scaler)
 
             wb_log.update({
                 'val_loss': val_loss_norm,
@@ -471,7 +487,7 @@ def main(args, cfg, wb, run_name):
     
     cfg = setup_folders(args, cfg, run_name)
     logger, cfg = setup_logging(logging, cfg)
-    setup_seed(cfg['seed'], logger)
+    setup_seed(cfg, logger)
 
     device = 'cpu' if not torch.cuda.is_available() else cfg['device']
     cfg['device'] = device
@@ -620,7 +636,7 @@ def main(args, cfg, wb, run_name):
             patience=patience,
             best=best,
             adversarial=cfg['adversarial'],
-            adversarial_add=cfg['adversarial_add'],
+            adversarial_add=cfg['adversarial_add'] if cfg['adversarial'] else False,
         )
         logger.info('Finished training.')
 
@@ -633,7 +649,7 @@ def main(args, cfg, wb, run_name):
         _, _, test_loader, _ = dataset.loaders(train=False, **dataloader_kw)
 
         logger.info('Starting testing on test set...')
-        test_loss_norm, test_metrics, test_time, test_n_batches, idx_label_scores = evaluate(test_loader, model, criterion, metric_collection, device, logger, validation=False)
+        test_loss_norm, test_metrics, test_time, test_n_batches, idx_label_scores = evaluate(test_loader, model, criterion, metric_collection, device, logger, validation=False, adversarial=cfg['adversarial'], adversarial_add=cfg['adversarial_add'] if cfg['adversarial'] else False, scaler=scaler)
         logger.info('Finished testing.')
 
         test_results = {
@@ -655,7 +671,7 @@ def main(args, cfg, wb, run_name):
         _, _, _, org_test_loader = dataset.loaders(train=False, **dataloader_kw)
 
         logger.info('Starting testing on original (not transformed) test set...')
-        org_test_loss_norm, org_test_metrics, org_test_time, org_test_n_batches, org_idx_label_scores = evaluate(org_test_loader, model, criterion, metric_collection, device, logger, validation=False)
+        org_test_loss_norm, org_test_metrics, org_test_time, org_test_n_batches, org_idx_label_scores = evaluate(org_test_loader, model, criterion, metric_collection, device, logger, validation=False, adversarial=cfg['adversarial'], adversarial_add=cfg['adversarial_add'] if cfg['adversarial'] else False, scaler=scaler)
         logger.info('Finished testing.')
 
         test_results = {
@@ -678,8 +694,18 @@ def main(args, cfg, wb, run_name):
             
             _, _, ood_test_loader, _ = ood_dataset.loaders(train=False, **dataloader_kw)
             
+            if cfg['adversarial']:
+                cfg['adversarial'].update(dict(
+                    normalize=cfg['ood_dataset']['normalize'],
+                    dataset_name=cfg['ood_dataset']['dataset_name'],
+                    criterion=criterion, 
+                    scaler=scaler, 
+                    device=device, 
+                    logger=logger,
+                ))
+
             logger.info('Starting testing on OOD test set...')
-            ood_test_loss_norm, ood_test_metrics, ood_test_time, ood_test_n_batches, ood_idx_label_scores = evaluate(ood_test_loader, model, criterion, metric_collection, device, logger, validation=False)
+            ood_test_loss_norm, ood_test_metrics, ood_test_time, ood_test_n_batches, ood_idx_label_scores = evaluate(ood_test_loader, model, criterion, metric_collection, device, logger, validation=False, adversarial=cfg['adversarial'], adversarial_add=cfg['adversarial_add'] if cfg['adversarial'] else False)
             logger.info('Finished testing.')
 
             ood_test_results = {
@@ -729,12 +755,14 @@ def main(args, cfg, wb, run_name):
         batch = next(iter_loader)
         org_batch = next(iter_org_loader)
         imgs, labels, idx = batch
+        imgs = imgs.to(device, non_blocking=True)
+        labels = labels.to(device, non_blocking=True)
         len_imgs = len(imgs)
 
         for i in np.arange(0, len_imgs, 4):
             img = imgs[i].unsqueeze(0)
-            label = labels[i].item()
-            cams = cam.generate_cam(img, label)
+            label = labels[i]
+            cams = cam.generate_cam(img, target_class=label, device=device)
             org_img = org_batch[0][i]
             save_class_activation_images(org_img, cams, cfg['xai_path'] + f'/gradcam_{i+1}')
         

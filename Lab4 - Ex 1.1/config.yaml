@@ -1,15 +1,14 @@
 #### Weight & Biases settings
 
 wandb:
-  name: "2024-06-05 - Outlier Detection"
-  resume: False  # "must"
-  # id: "29eilegw"
-  job_type: "Fine-Tuning"
+  name: "OOD - CNN - 9 Conv Layers"
+  resume: False
+  job_type: "OOD"
   group: "Exercise 1.1"
   project: "University - DLA - Lab 4"
   tags: 
+  - "CNN"
   - "ResNet"
-  - "Shortcut"
   - "OOD"
   notes: "Outlier Detection."
 
@@ -20,6 +19,7 @@ config:
   # Machine
   seed: 1
   device: "cuda:0"
+  cuda_benchmark: True
 
   # Paths and dirs
   data_dir: "../data"
@@ -27,11 +27,12 @@ config:
   log_file: "log.txt"
   # hf_cache_dir: "../hf"
 
-  model_type: "ResNet"
+  model_type: "CNN"
   model:
-    depth: 48
+    depth: 9
+    in_channels: 1
     output_size: 10
-    want_shortcut: True
+    want_shortcut: False
     activation: "ReLU"
     fc_activation: "ReLU"
     pool_type: "maxpool"
@@ -39,11 +40,12 @@ config:
   criterion: "CrossEntropyLoss"
 
   dataset:
-    dataset_name: "CIFAR10"
+    dataset_type: "Vision"
+    dataset_name: "MNIST"
     val_size: 0.2
     val_shuffle: True
     normalize: True
-    augment: True
+    augment: False
     use_sampler: True
   
   dataloader:
@@ -66,22 +68,31 @@ config:
   pretest: False
   train: True
   test: True
+  test_original: True
 
   training:
     n_epochs: 150
     eval_interval: 1
     checkpoint_every: 1
-    clip_grads: True
+    clip_grads: False
     patience: 20
 
 
   # Goals
-  problem: None
+  problem: "OOD"
   adversarial:
-    ...
+    epsilon: 8
+    alpha: 10
+    normalize: True
+
   adversarial_add: True
   ood_dataset:
-    ...
+    dataset_name: "FashionMNIST"
+    val_size: 0.2
+    val_shuffle: True
+    normalize: True
+    augment: False
+    use_sampler: True
   xai: False
   explain_gradients: False
   explain_cam: False
