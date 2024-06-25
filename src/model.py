@@ -81,28 +81,45 @@ class BaseModel(nn.Module):
     
     
     @torch.no_grad()
-    def _init_weights(self, modules, mode: str = None, dist: str = None, mean: float = 0.0, std: float = 0.02):
+    def _init_weights(self, modules, mode: str = 'normal', dist: str = 'normal', mean: float = 0.0, std: float = 0.02):
         # From https://pytorch.org/docs/stable/notes/modules.html#modules-as-building-blocks
-        if not isinstance(modules, str):
-            modules = list(modules)
-        
-        for module in modules:
+        if isinstance(modules, List):
+            for module in modules:
+                if mode in ['xavier', 'glorot']:
+                    if dist == 'normal':
+                        nn.init.xavier_normal_(module.weight)
+                    elif dist == 'uniform':
+                        nn.init.xavier_uniform_(module.weight)
+                    else:
+                        raise NotImplementedError
+                elif mode in ['kaiming']:
+                    nn.init.kaiming_uniform_(module.weight, a=math.sqrt(5))
+                else:
+                    if dist == 'normal':
+                        torch.nn.init.normal_(module.weight, mean=mean, std=std)
+                    else:
+                        raise NotImplementedError
+                if hasattr(module, 'bias'):
+                    if module.bias is not None:
+                        torch.nn.init.zeros_(module.bias)  # oppure module.bias.fill_(0.0)
+        else:
             if mode in ['xavier', 'glorot']:
                 if dist == 'normal':
-                    nn.init.xavier_normal_(module.weight)
+                    nn.init.xavier_normal_(modules.weight)
                 elif dist == 'uniform':
-                    nn.init.xavier_uniform_(module.weight)
+                    nn.init.xavier_uniform_(modules.weight)
                 else:
                     raise NotImplementedError
             elif mode in ['kaiming']:
-                nn.init.kaiming_uniform_(module.weight, a=math.sqrt(5))
+                nn.init.kaiming_uniform_(modules.weight, a=math.sqrt(5))
             else:
                 if dist == 'normal':
-                    torch.nn.init.normal_(module.weight, mean=mean, std=std)
+                    torch.nn.init.normal_(modules.weight, mean=mean, std=std)
                 else:
                     raise NotImplementedError
-            if module.bias is not None:
-                torch.nn.init.zeros_(module.bias)  # oppure module.bias.fill_(0.0)
+            if hasattr(modules, 'bias'):
+                if modules.bias is not None:
+                    torch.nn.init.zeros_(modules.bias)  # oppure module.bias.fill_(0.0)
 
 
     def _get_activation(self, activation):
@@ -238,7 +255,7 @@ class ConvolutionalBlock(BaseModel):
 
 
 class ConvolutionalNeuralNetwork(BaseModel):
-    def __init__(self, depth: int, output_size: int, want_shortcut: bool, pool_type: str, activation: str, fc_activation: str):
+    def __init__(self, depth: int, in_channels: int, output_size: int, want_shortcut: bool, pool_type: str, activation: str, fc_activation: str):
         super().__init__()
         channels = [64, 128, 256, 512]
         if depth == 9:  # 9 because there are 4 ConvBlocks, each composed of 2 Conv layers, + the init_conv layer
@@ -251,7 +268,7 @@ class ConvolutionalNeuralNetwork(BaseModel):
             num_conv_block = [6, 6, 6, 6]
 
         self.conv_net = nn.Sequential(OrderedDict({
-            'init_conv': nn.Conv2d(in_channels=3, out_channels=64, kernel_size=3)
+            'init_conv': nn.Conv2d(in_channels=in_channels, out_channels=64, kernel_size=3)
         }))
 
         layer_counter = 0
@@ -367,6 +384,63 @@ class MultiHeadAttention(nn.Module):
         return out
 
 
+class CausalSelfAttention(nn.Module):
+    # From https://github.com/karpathy/nanoGPT
+    """ Class that implements in a parallel way the above 'Head' and 'MultiHeadAttention' classes """
+
+    def __init__(self, num_heads, head_size, n_embed, block_size, dropout):
+        super().__init__()
+        
+        assert n_embed % num_heads == 0
+
+        # key, query, value projections for all heads, but in a batch
+        self.c_attn = nn.Linear(n_embed, 3 * n_embed)
+        
+        # output projection
+        self.c_proj = nn.Linear(n_embed, n_embed)
+        
+        # regularization
+        self.attn_dropout = nn.Dropout(dropout)
+        self.resid_dropout = nn.Dropout(dropout)
+        self.num_heads = num_heads
+        self.n_embed = n_embed
+        self.dropout = dropout
+        
+        # flash attention make GPU go brrrrr but support is only in PyTorch >= 2.0
+        self.flash = hasattr(torch.nn.functional, 'scaled_dot_product_attention')
+        if not self.flash:
+            print("WARNING: using slow attention. Flash Attention requires PyTorch >= 2.0")
+            # causal mask to ensure that attention is only applied to the left in the input sequence
+            self.register_buffer("bias", torch.tril(torch.ones(block_size, block_size)).view(1, 1, block_size, block_size))
+
+
+    def forward(self, x):
+        B, T, C = x.size() # batch size, sequence length, embedding dimensionality (n_embed)
+
+        # calculate query, key, values for all heads in batch and move head forward to be the batch dim
+        q, k, v  = self.c_attn(x).split(self.n_embed, dim=2)
+        k = k.view(B, T, self.num_heads, C // self.num_heads).transpose(1, 2) # (B, nh, T, hs)
+        q = q.view(B, T, self.num_heads, C // self.num_heads).transpose(1, 2) # (B, nh, T, hs)
+        v = v.view(B, T, self.num_heads, C // self.num_heads).transpose(1, 2) # (B, nh, T, hs)
+
+        # causal self-attention; Self-attend: (B, nh, T, hs) x (B, nh, hs, T) -> (B, nh, T, T)
+        if self.flash:
+            # efficient attention using Flash Attention CUDA kernels
+            y = torch.nn.functional.scaled_dot_product_attention(q, k, v, attn_mask=None, dropout_p=self.dropout if self.training else 0, is_causal=True)
+        else:
+            # manual implementation of attention
+            att = (q @ k.transpose(-2, -1)) * (1.0 / math.sqrt(k.size(-1)))
+            att = att.masked_fill(self.bias[:,:,:T,:T] == 0, float('-inf'))
+            att = F.softmax(att, dim=-1)
+            att = self.attn_dropout(att)
+            y = att @ v # (B, nh, T, T) x (B, nh, T, hs) -> (B, nh, T, hs)
+        y = y.transpose(1, 2).contiguous().view(B, T, C) # re-assemble all head outputs side by side
+
+        # output projection
+        y = self.resid_dropout(self.c_proj(y))
+        return y
+
+
 class FeedFoward(nn.Module):
     """ A simple linear layer followed by a non-linearity """
 
@@ -374,7 +448,7 @@ class FeedFoward(nn.Module):
         super().__init__()
         self.fc = nn.Sequential(
             nn.Linear(n_embed, 4 * n_embed),
-            nn.ReLU(),
+            nn.GELU(),
             nn.Linear(4 * n_embed, n_embed),
             nn.Dropout(dropout),
         )
@@ -386,12 +460,15 @@ class FeedFoward(nn.Module):
 class TransformerBlock(nn.Module):
     """ Transformer block: communication followed by computation """
 
-    def __init__(self, n_embed, n_head, block_size, dropout):
+    def __init__(self, n_embed, n_head, block_size, dropout, parallel_heads: bool = True):
         # n_embed: embedding dimension, n_head: the number of heads we'd like
         super().__init__()
         head_size = n_embed // n_head
         self.ln1 = nn.LayerNorm(n_embed)
-        self.sa = MultiHeadAttention(n_head, head_size, n_embed, block_size, dropout)  # sa sta per self-attention
+        if parallel_heads:
+            self.sa = CausalSelfAttention(n_head, head_size, n_embed, block_size, dropout)  # sa sta per self-attention
+        else:
+            self.sa = MultiHeadAttention(n_head, head_size, n_embed, block_size, dropout)  # sa sta per self-attention
         self.ln2 = nn.LayerNorm(n_embed)
         self.ffwd = FeedFoward(n_embed, dropout)
         
@@ -404,15 +481,24 @@ class TransformerBlock(nn.Module):
 
 class GPTLanguageModel(BaseModel):
     # From https://www.youtube.com/watch?v=kCc8FmEb1nY
-    def __init__(self, vocab_size, n_embed, block_size, n_head, n_layers, dropout):
+    def __init__(self, vocab_size, n_embed, block_size, n_head, n_layers, dropout, parallel_heads: bool = True):
         super().__init__()
         # Each token directly reads off the logits for the next token from a lookup table
         self.token_embedding_table = nn.Embedding(vocab_size, n_embed)
         self.position_embedding_table = nn.Embedding(block_size, n_embed)
-        self.blocks = nn.Sequential(*[TransformerBlock(n_embed, n_head, block_size, dropout) for _ in range(n_layers)])
+        self.blocks = nn.Sequential(*[TransformerBlock(n_embed, n_head, block_size, dropout, parallel_heads) for _ in range(n_layers)])
         self.layer_norm_final = nn.LayerNorm(n_embed)
         self.lm_head = nn.Linear(n_embed, vocab_size)
         self.apply(self._init_weights)
+
+    # override    
+    def _init_weights(self, module):
+        if isinstance(module, nn.Linear):
+            torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
+            if module.bias is not None:
+                torch.nn.init.zeros_(module.bias)
+        elif isinstance(module, nn.Embedding):
+            torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
 
 
     def forward(self, idx, device):
@@ -456,41 +542,42 @@ class BERT(BaseModel):
             self.model.requires_grad_(False)
             
         if peft:
-            # From https://huggingface.co/docs/peft/quicktour
-            if peft['method'] == 'LoRA':
-                peft_config = LoraConfig(
-                    task_type=TaskType.FEATURE_EXTRACTION, 
-                    inference_mode=False, 
-                    r=peft['r'], 
-                    lora_alpha=peft['alpha'], 
-                    lora_dropout=peft['dropout'],
-                    use_rslora=peft['rslora']
-                )
-                self.model = get_peft_model(self.model, peft_config)
-                self.model.print_trainable_parameters()
+            if isinstance(peft['method'], str):
+                # From https://huggingface.co/docs/peft/quicktour
+                if peft['method'] == 'LoRA':
+                    peft_config = LoraConfig(
+                        task_type=TaskType.FEATURE_EXTRACTION, 
+                        inference_mode=False, 
+                        r=peft['r'], 
+                        lora_alpha=peft['alpha'], 
+                        lora_dropout=peft['dropout'],
+                        use_rslora=peft['rslora']
+                    )
+                    self.model = get_peft_model(self.model, peft_config)
+                    self.model.print_trainable_parameters()
 
-            # elif peft == 'ReFT'
-                # # From https://www.youtube.com/watch?v=iy9Z4DyHxvE
-                # reft_config = pyreft.ReftConfig(
-                #     representations={
-                #         'layer':4,
-                #         'component':'block_output', 
-                #         'low_rank_dimension':4,
-                #         'intervention':pyreft.LoreftIntervention(
-                #             embed_dim=model.config.hidden_size, low_rank_dimension=4
-                #         ) 
-                #     }
-                # )
-                # reft_model = pyreft.get_reft_model(model, reft_config)
-                # reft_model.set_device(device)
-                # data_module = pyreft.make_last_position_supervised_data_module(
-                #     tokenizer, 
-                #     model, 
-                #     [prompt_template(x) for x in X], 
-                #     y 
-                # ) 
-            else:
-                raise NotImplementedError()
+                # elif peft == 'ReFT'
+                    # # From https://www.youtube.com/watch?v=iy9Z4DyHxvE
+                    # reft_config = pyreft.ReftConfig(
+                    #     representations={
+                    #         'layer':4,
+                    #         'component':'block_output', 
+                    #         'low_rank_dimension':4,
+                    #         'intervention':pyreft.LoreftIntervention(
+                    #             embed_dim=model.config.hidden_size, low_rank_dimension=4
+                    #         ) 
+                    #     }
+                    # )
+                    # reft_model = pyreft.get_reft_model(model, reft_config)
+                    # reft_model.set_device(device)
+                    # data_module = pyreft.make_last_position_supervised_data_module(
+                    #     tokenizer, 
+                    #     model, 
+                    #     [prompt_template(x) for x in X], 
+                    #     y 
+                    # ) 
+                else:
+                    raise NotImplementedError()
 
 
     def forward(self, input_ids, attention_mask):

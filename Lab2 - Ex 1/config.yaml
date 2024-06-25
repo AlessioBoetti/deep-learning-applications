@@ -20,6 +20,7 @@ config:
   # Machine
   seed: 1
   device: "cuda:0"
+  cuda_benchmark: True
 
   # Paths and dirs
   data: "divina_commedia.txt"
@@ -29,11 +30,12 @@ config:
 
   model_type: "NanoGPT"
   model:
-    block_size: 256  # What is the maximum context length for predictions?
-    n_embed: 384
-    n_head: 6
-    n_layers: 6
-    dropout: 0.2
+    block_size: 256  # 1024 for GPT2  # What is the maximum context length for predictions?  
+    n_embed: 384  # 768 for GPT2
+    n_head: 6  # 12 for GPT2
+    n_layers: 6  # 12 for GPT2
+    dropout: 0.2  # 0.0 for GPT2
+    parallel_heads: True 
   
   criterion: "CrossEntropyLoss"
   
@@ -57,9 +59,9 @@ config:
 
   training:
     n_epochs: 2500  # 5000
-    eval_interval: 5  # 500
+    eval_interval: 2  # 500
     eval_iters: 25  # 200
-    checkpoint_every: 50
+    checkpoint_every: 10
     clip_grads: False
     patience: 50
   
@@ -68,7 +70,7 @@ config:
 
 
   # Goals
-  problem: None
+  problem: null
   adversarial: False
   xai: False
   explain_gradients: False

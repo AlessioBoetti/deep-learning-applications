@@ -190,12 +190,16 @@ def print_logs(logger, cfg, args = None, init: bool = False, pretrain: bool = Fa
         if args.load_config is not None:
             logger.info('Loaded configuration from "%s".' % args.load_config)
         logger.info('Log filepath: %s.' % cfg['log_filepath'])
-        logger.info('Data dir: %s.' % cfg['data_dir'])
-        logger.info('Dataset: %s' % cfg['dataset']['dataset_name'])
+        if 'data_dir' in cfg.keys():
+            logger.info('Data dir: %s.' % cfg['data_dir'])
+        if 'dataset' in cfg.keys():
+            logger.info('Dataset: %s' % cfg['dataset']['dataset_name'])
         if cfg['problem'] is not None and cfg['problem'].lower() in ['od', 'ood']:
             logger.info('Normal class: %d' % cfg['dataset']['normal_class'])
             logger.info('Multiclass: %s' % cfg['dataset']['multiclass'])
-        logger.info('Number of dataloader workers: %d' % cfg['dataloader']['num_workers'])
+        if 'dataloader' in cfg.keys():
+            if 'num_workers' in cfg['dataloader'].keys():
+                logger.info('Number of dataloader workers: %d' % cfg['dataloader']['num_workers'])
         logger.info('Network: %s' % cfg['model_type'])
         logger.info('Computation device: %s' % cfg['device'])
 

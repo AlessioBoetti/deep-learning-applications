@@ -1,9 +1,8 @@
 #### Weight & Biases settings
 
 wandb:
-  name: "2024-06-03 - Second run"
-  resume: "must"
-  id: "29eilegw"
+  name: "Text Classification"
+  resume: False
   job_type: "Fine-Tuning"
   group: "Exercise 3.1"
   project: "University - DLA - Lab 2"
@@ -23,6 +22,7 @@ config:
   # Machine
   seed: 1
   device: "cuda:0"
+  cuda_benchmark: True
 
   # Paths and dirs
   data_dir: "../data"
@@ -36,10 +36,10 @@ config:
     output_size: 10
     init_mode: "xavier"
     init_dist: "normal"
-    device_map: 'auto'
+    device_map: "auto"
     freeze_model_base: False
     peft:
-      method: null  # LoRA
+      method: null  # "LoRA"
       r: 8
       alpha: 32
       dropout: 0.1
@@ -91,7 +91,7 @@ config:
 
 
   # Goals
-  problem: None
+  problem: null
   adversarial: False
   xai: False
   explain_gradients: False

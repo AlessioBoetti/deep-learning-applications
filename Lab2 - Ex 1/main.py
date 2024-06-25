@@ -57,9 +57,10 @@ def setup_logging(logging, cfg):
     return logger, cfg
 
 
-def setup_seed(seed, logger):
+def setup_seed(cfg, logger):
     # TODO: Improve randomization to make it global and permanent
     # When using CUDA, the env var in the .env file comes into play!
+    seed = cfg['seed']
     if seed != -1:
         random.seed(seed)
         np.random.seed(seed)
@@ -68,7 +69,7 @@ def setup_seed(seed, logger):
         torch.cuda.manual_seed_all(seed)  # For Multi-GPU, exception safe (https://github.com/pytorch/pytorch/issues/108341)
         # https://pytorch.org/docs/stable/generated/torch.use_deterministic_algorithms.html#torch.use_deterministic_algorithms
         torch.use_deterministic_algorithms(True, warn_only=True)
-        torch.backends.cudnn.benchmark = False
+        torch.backends.cudnn.benchmark = cfg['cuda_benchmark']
         torch.backends.cudnn.deterministic = True
         logger.info('Seed set to %d.' % seed)
 
@@ -272,7 +273,7 @@ def main(args, cfg, wb, run_name):
     
     cfg = setup_folders(args, cfg, run_name)
     logger, cfg = setup_logging(logging, cfg)
-    setup_seed(cfg['seed'], logger)
+    setup_seed(cfg, logger)
 
     device = 'cpu' if not torch.cuda.is_available() else cfg['device']
     cfg['device'] = device
@@ -427,42 +428,6 @@ def main(args, cfg, wb, run_name):
         logger.info(f'Generation time: {time.time() - start_time}')
         logger.info('Finished generating.')
 
-
-    # if cfg['explain_gradients']:
-    #     backprop_grads = VanillaBackprop(model)
-        
-    #     _, _, transformed_test_loader, org_test_loader = dataset.loaders(train=False, **dataloader_kw)
-    #     batch = next(iter(transformed_test_loader))
-    #     img, label, idx = batch
-    #     grads = backprop_grads.generate_gradients(img, label)
-        
-    #     # Save colored and grayscale gradients
-    #     save_gradient_images(grads, cfg['xai_path'], 'backprop_grads_color')
-    #     grayscale_grads = convert_to_grayscale(grads)
-    #     save_gradient_images(grayscale_grads, cfg['xai_path'], 'backprop_grads_grayscale')
-
-    #     logger.info('Finished explaining model.')
-    
-    # if cfg['explain_cam']:
-    #     logger.info('Explaining model predictions with Class Activation Mappings...')
-    #     cam = ClassActivationMapping(model, target_layer='hook')
-
-    #     _, _, transformed_test_loader, org_test_loader = dataset.loaders(train=False, **dataloader_kw)
-    #     iter_loader = iter(transformed_test_loader)
-    #     iter_org_loader = iter(org_test_loader)
-    #     batch = next(iter_loader)
-    #     org_batch = next(iter_org_loader)
-    #     imgs, labels, idx = batch
-    #     len_imgs = len(imgs)
-
-    #     for i in np.arange(0, len_imgs, 4):
-    #         img = imgs[i].unsqueeze(0)
-    #         label = labels[i].item()
-    #         cams = cam.generate_cam(img, label)
-    #         org_img = org_batch[0][i]
-    #         save_class_activation_images(org_img, cams, cfg['xai_path'] + f'/gradcam_{i+1}')
-        
-    #     logger.info('Finished explaining predictions with Class Activation Mappings..')
 
     logger.info('Finished run.')
     logger.info('Closing experiment.')

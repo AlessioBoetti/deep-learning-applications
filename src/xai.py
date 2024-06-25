@@ -216,10 +216,12 @@ class ClassActivationMapping:
         self.model.eval()
         self.gradients = None
         self.target_layer = target_layer
-    
+
+
     def save_gradient(self, grad):
         self.gradients = grad
-    
+
+
     def forward_pass_on_convolutions(self, x):
         """
             Does a forward pass on convolutions, hooks the function at given layer
@@ -245,7 +247,8 @@ class ClassActivationMapping:
         x.register_hook(self.save_gradient)
         conv_output = x
         return conv_output, x
-    
+
+
     def forward_pass(self, x):
         """
             Does a full forward pass on the model
@@ -256,25 +259,27 @@ class ClassActivationMapping:
         # Forward pass on the classifier
         x = self.model.fc(x)
         return conv_output, x
-    
-    def generate_cam(self, input_img, target_class=None):
+
+
+    def generate_cam(self, input_img, device, target_class=None):
         # Full forward pass
         # conv_output is the output of convolutions at specified layer
         # model_output is the final output of the model (1, 1000)
         conv_output, model_output = self.forward_pass(input_img)
         if target_class is None:
-            target_class = np.argmax(model_output.data.numpy())
+            target_class = np.argmax(model_output.data.cpu().numpy())
         # Target for backprop
-        one_hot_output = torch.FloatTensor(1, model_output.size()[-1]).zero_()
+        # one_hot_output = torch.FloatTensor(1, model_output.size()[-1]).zero_()
+        one_hot_output = torch.zeros(1, model_output.size()[-1], dtype=torch.float, device=device)
         one_hot_output[0][target_class] = 1
         # Zero grads
         self.model.zero_grad()
         # Backward pass with specified target
         model_output.backward(gradient=one_hot_output, retain_graph=True)
         # Get hooked gradients
-        guided_gradients = self.gradients.data.numpy()[0]
+        guided_gradients = self.gradients.data.cpu().numpy()[0]
         # Get convolution outputs
-        target = conv_output.data.numpy()[0]
+        target = conv_output.data.cpu().numpy()[0]
         # Get weights from gradients
         weights = np.mean(guided_gradients, axis=(1, 2))  # Take averages for each gradient
         # Create empty numpy array for cam
