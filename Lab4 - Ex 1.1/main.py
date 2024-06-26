@@ -19,7 +19,7 @@ import torch
 import torch.nn as nn
 # import torch.optim as optim
 
-from model import ConvolutionalNeuralNetwork
+from model import ConvolutionalNeuralNetwork, EarlyStopping
 from utils import *
 from xai import *
 from ood import *

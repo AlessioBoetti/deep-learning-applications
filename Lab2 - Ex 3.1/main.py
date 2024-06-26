@@ -19,7 +19,7 @@ import torch
 import torch.nn as nn
 # import torch.optim as optim
 
-from model import BERT
+from model import BERT, EarlyStopping
 from utils import *
 from xai import *
 from adversarial import *
