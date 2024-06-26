@@ -1,7 +1,7 @@
 #### Weight & Biases settings
 
 wandb:
-  name: "2024-05-25 - First run (mulambda)"
+  name: "DanteGPT"
   resume: False
   job_type: "Train-Test"
   group: "Exercise 1"
@@ -11,8 +11,7 @@ wandb:
   - "LLM"
   - "NLP"
   - "Base"
-
-  notes: "First attempt at training a basic NanoGPT."
+  notes: "First attempt at training a basic NanoGPT on Dante's Divina Commedia."
 
 
 #### Experiment settings
@@ -21,19 +20,22 @@ config:
   # Machine
   seed: 1
   device: "cuda:0"
+  cuda_benchmark: True
 
   # Paths and dirs
   data: "divina_commedia.txt"
   results_dir: "results"
   log_file: "log.txt"
+  # hf_cache_dir: "../hf"
 
   model_type: "NanoGPT"
   model:
-    block_size: 256  # What is the maximum context length for predictions?
-    n_embed: 384
-    n_head: 6
-    n_layers: 6
-    dropout: 0.2
+    block_size: 256  # 1024 for GPT2  # What is the maximum context length for predictions?  
+    n_embed: 384  # 768 for GPT2
+    n_head: 6  # 12 for GPT2
+    n_layers: 6  # 12 for GPT2
+    dropout: 0.2  # 0.0 for GPT2
+    parallel_heads: True 
   
   criterion: "CrossEntropyLoss"
   
@@ -56,16 +58,20 @@ config:
   generate: True
 
   training:
-    n_epochs: 500  # 5000
+    n_epochs: 2000  # 5000
     eval_interval: 10  # 500
-    eval_iters: 10  # 200
-    checkpoint_every: 10
-    patience: 20
+    eval_iters: 50  # 200
+    checkpoint_every: 50
+    clip_grads: False
+    patience: 50
+  
+  generation:
+    max_new_tokens: 1000
 
-  clip_grads: False
 
   # Goals
-  problem: None
+  problem: null
+  adversarial: False
   xai: False
   explain_gradients: False
   explain_cam: False

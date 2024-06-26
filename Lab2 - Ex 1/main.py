@@ -19,7 +19,7 @@ import torch
 import torch.nn as nn
 # import torch.optim as optim
 
-from model import GPTLanguageModel
+from model import GPTLanguageModel, EarlyStopping
 from utils import *
 from xai import *
 from adversarial import *
@@ -96,18 +96,15 @@ def estimate_loss(model, train_data, val_data, block_size, batch_size, eval_iter
     losses = {}
     start_time = time.time()
     for split in ['train', 'val']:
-        # losses = torch.zeros(eval_iters)
         running_loss = 0.0
         for k in range(eval_iters):
-            input, targets = get_batch(train_data, val_data, split, block_size, batch_size, device)
-            logits = model(input, device)
+            inputs, targets = get_batch(train_data, val_data, split, block_size, batch_size, device)
+            logits = model(inputs, device)
             B, T, C = logits.shape
             logits = logits.view(B*T, C)
             targets = targets.view(B*T)
             loss = criterion(logits, targets)
-            # losses[k] = loss.item()
             running_loss += loss.item()
-        # losses[split] = losses.mean()
         losses[split] = running_loss / eval_iters
         logger.info('  Evaluation {} Loss: {:.8f}'.format(split, losses[split]))
     total_time = time.time() - start_time
@@ -197,11 +194,10 @@ def train(
 
         # Other metrics: https://towardsdatascience.com/efficient-pytorch-supercharging-training-pipeline-19a26265adae
         wb_log = {
-            'train_loss': loss_epoch,
+            'epoch_train_loss': loss_epoch,
             # 'train_accuracy': epoch_metrics['MulticlassAccuracy'],
             # 'train_precision': epoch_metrics['MulticlassPrecision'],
             # 'train_recall': epoch_metrics['MulticlassRecall'],
-            # 'learning_rate': scheduler.get_last_lr(),
             'epoch_train_time': epoch_time,
         }
 
@@ -215,9 +211,9 @@ def train(
             losses, val_time = estimate_loss(model, train_data, val_data, block_size, batch_size, eval_iters, criterion, logger, device)
 
             wb_log.update({
-                'epoch': epoch + 1,
                 'train_loss': losses['train'],
                 'val_loss': losses['val'],
+                'val_time': val_time,
             })
 
             if patience:
@@ -350,8 +346,8 @@ def main(args, cfg, wb, run_name):
     else:
         logger.info('Starting model from scratch.')
         start, best = 0, None
-        patience = EarlyStopping('max', train_cfg['patience']) if train_cfg['patience'] else None
-        save_config('config.yaml', cfg['out_path']) 
+        patience = EarlyStopping('min', train_cfg['patience']) if train_cfg['patience'] else None
+        save_config('config.yaml', cfg['out_path'])
 
 
     # Pretraining model...

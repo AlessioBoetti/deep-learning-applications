@@ -1,1 +1,0 @@
-{"total_epochs": 500, "train_time": 299.5193500518799, "h-m-s_train_time": "0:04:59.519350", "last_epoch_epoch": 201, "last_epoch_train_loss": 2.2506592202186586, "last_epoch_val_loss": 2.281864619255066, "early_stopping": true, "best_epoch": 1, "best_train_loss": 3.461958110332489, "best_val_loss": 3.464130494594574}

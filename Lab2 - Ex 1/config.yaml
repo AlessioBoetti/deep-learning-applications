@@ -1,7 +1,7 @@
 #### Weight & Biases settings
 
 wandb:
-  name: "DanteGPT"
+  name: "DanteGPT - More epochs"
   resume: False
   job_type: "Train-Test"
   group: "Exercise 1"
@@ -58,10 +58,10 @@ config:
   generate: True
 
   training:
-    n_epochs: 2500  # 5000
-    eval_interval: 2  # 500
-    eval_iters: 25  # 200
-    checkpoint_every: 10
+    n_epochs: 5000  # 5000
+    eval_interval: 500  # 500
+    eval_iters: 200  # 200
+    checkpoint_every: 250
     clip_grads: False
     patience: 50
   
