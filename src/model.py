@@ -50,6 +50,39 @@ class Lion(optim.Optimizer):
         return loss
 
 
+class EarlyStopping:
+    def __init__(self, mod, patience, count=None, baseline=None):
+        self.patience = patience
+        self.count = patience if count is None else count
+        if mod == 'max':
+            self.baseline = 0
+            self.operation = self.max
+        if mod == 'min':
+            self.baseline = baseline
+            self.operation = self.min
+
+    def max(self, monitored_value):
+        if monitored_value > self.baseline:
+            self.baseline = monitored_value
+            self.count = self.patience
+            return True
+        else:
+            self.count -= 1
+            return False
+
+    def min(self, monitored_value):
+        if monitored_value < self.baseline:
+            self.baseline = monitored_value
+            self.count = self.patience
+            return True
+        else:
+            self.count -= 1
+            return False
+
+    def __call__(self, monitored_value):
+        return self.operation(monitored_value)
+
+
 """ class BaseModel(nn.Module):
     def __init__(self):
         super().__init__()
