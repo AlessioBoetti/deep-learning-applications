@@ -40,8 +40,8 @@ config:
     freeze_model_base: False
     peft:
       method: null  # "LoRA"
-      r: 8
-      alpha: 32
+      r: 4
+      alpha: 8
       dropout: 0.1
       rslora: True
 
@@ -85,7 +85,7 @@ config:
   training:
     n_epochs: 500
     eval_interval: 1
-    checkpoint_every: 5
+    checkpoint_every: 1
     clip_grads: False
     patience: 20
 
