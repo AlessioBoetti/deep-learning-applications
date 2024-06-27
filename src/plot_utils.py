@@ -82,19 +82,19 @@ def plot_curves(y_true, scores, out_path, scores_type):
 
 
 def extract_results(idx_label_scores, T):
-    y_true, y_pred, logit_scores, softmax_scores, max_logit_scores, max_softmax_scores = []*6
-    for idx, label, scores in zip(idx_label_scores):
+    y_true, y_pred, logit_scores_list, max_logit_scores_list, softmax_scores_list, max_softmax_scores_list = [], [], [], [], [], []
+    for idx, label, scores in idx_label_scores:
         y_true.append(label)
         y_pred.append(np.argmax(scores, 0))
-        logit_scores.append(scores)
-        max_logit_scores.append(np.max(scores, 0))
+        logit_scores_list.append(scores)
+        max_logit_scores_list.append(np.max(scores, 0))
 
         scores = torch.tensor(scores, dtype=torch.float)
         softmax_scores = F.softmax(scores / T, dim=0).numpy().tolist()
-        softmax_scores.append(softmax_scores)
-        max_softmax_scores.append(np.max(softmax_scores, 0))
+        softmax_scores_list.append(softmax_scores)
+        max_softmax_scores_list.append(np.max(softmax_scores, 0))
     
-    return y_true, y_pred, logit_scores, softmax_scores, max_logit_scores, max_softmax_scores
+    return y_true, y_pred, logit_scores_list, max_logit_scores_list, softmax_scores_list, max_softmax_scores_list
 
 
 def plot_results(idx_label_scores, out_path, split: str = None, classes = None, n_classes: int = None, ood_idx_label_scores=None, T: int = 1):

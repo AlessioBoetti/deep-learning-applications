@@ -2,6 +2,7 @@ import os
 from typing import List, Union
 import json
 import shutil
+from datetime import timedelta
 
 import torch
 import torch.optim as optim
@@ -163,6 +164,20 @@ def save_model(state: dict, model_path: str, name: str):
     torch.save(state, f"{model_path}/{name}.pth.tar")
 
 
+def format_train_results(total_batches, n_epochs, time, wb_log, patience=None, best_results=None):
+    results = {
+        'total_batches': total_batches,
+        'total_epochs': n_epochs,
+        'train_time': time,
+        'h-m-s_train_time': str(timedelta(seconds=time)),
+    }
+    results.update({f'last_epoch_{key}': value for key, value in wb_log.items()})
+    results['early_stopping'] = True if patience else False
+    if patience:
+        results.update(best_results)
+    return results
+
+
 def save_results(path, results: dict, set: str, suffix: str = 'results'):
     with open(f'{path}/{set}_{suffix}.json', 'w') as f:
         json.dump(results, f)
@@ -178,9 +193,9 @@ def get_metrics(cfg, wb, device):
     
     # From https://docs.wandb.ai/guides/technical-faq/metrics-and-performance#can-i-log-metrics-on-two-different-time-scales-for-example-i-want-to-log-training-accuracy-per-batch-and-validation-accuracy-per-epoch
     # From https://docs.wandb.ai/guides/track/log/log-summary
-    wb.define_metric("val_loss", summary="min")
-    wb.define_metric("val_accuracy", summary="max")
-    wb.define_metric("best_model_epoch")
+    # wb.define_metric("val_loss", summary="min")
+    # wb.define_metric("val_accuracy", summary="max")
+    # wb.define_metric("best_model_epoch")
     
     return metric_collection
 
@@ -195,8 +210,10 @@ def print_logs(logger, cfg, args = None, init: bool = False, pretrain: bool = Fa
         if 'dataset' in cfg.keys():
             logger.info('Dataset: %s' % cfg['dataset']['dataset_name'])
         if cfg['problem'] is not None and cfg['problem'].lower() in ['od', 'ood']:
-            logger.info('Normal class: %d' % cfg['dataset']['normal_class'])
-            logger.info('Multiclass: %s' % cfg['dataset']['multiclass'])
+            if 'normal_class' in cfg['dataset'].keys():
+                logger.info('Normal class: %d' % cfg['dataset']['normal_class'])
+            if 'multiclass' in cfg['dataset'].keys():
+                logger.info('Multiclass: %s' % cfg['dataset']['multiclass'])
         if 'dataloader' in cfg.keys():
             if 'num_workers' in cfg['dataloader'].keys():
                 logger.info('Number of dataloader workers: %d' % cfg['dataloader']['num_workers'])
@@ -230,17 +247,23 @@ def print_logs(logger, cfg, args = None, init: bool = False, pretrain: bool = Fa
     return
 
 
-def epoch_logger(logger, epoch, n_epochs, time, loss, metrics):
+def epoch_logger(logger, epoch, n_epochs, time, loss, metrics, metrics_adv=None):
     logger.info('Epoch {}/{}'.format(epoch + 1, n_epochs))
     logger.info('  Epoch Train Time: {:.3f}'.format(time))
     logger.info('  Epoch Train Loss: {:.8f}'.format(loss))
     for metric, value in metrics.items():
         logger.info('  Epoch Train {}: {:.4f}'.format(metric, value))
+    if metrics_adv:
+        for metric, value in metrics_adv.items():
+            logger.info('  Epoch Adv Train {}: {:.4f}'.format(metric, value))
 
 
-def evaluate_logger(logger, total_time, loss_norm, metric_dict, validation):
+def evaluate_logger(logger, time, loss, metrics, validation, metrics_adv=None):
     log_str = 'Validation' if validation else 'Test'
-    logger.info('  {} Time: {:.3f}'.format(log_str, total_time))
-    logger.info('  {} Loss: {:.8f}'.format(log_str, loss_norm))
-    for metric, value in metric_dict.items():
+    logger.info('  {} Time: {:.3f}'.format(log_str, time))
+    logger.info('  {} Loss: {:.8f}'.format(log_str, loss))
+    for metric, value in metrics.items():
         logger.info('  {} {}: {:.4f}'.format(log_str, metric, value))
+    if metrics_adv:
+        for metric, value in metrics_adv.items():
+            logger.info('  {} {} Adv: {:.4f}'.format(log_str, metric, value))

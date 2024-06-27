@@ -138,16 +138,15 @@ def train_llm(
         loss_epoch = 0.0
         epoch_start_time = time.time()
 
-        for batch in tqdm(loader, desc=f"Epoch {epoch + 1}"):
+        for batch in tqdm(loader, desc=f'Epoch {epoch + 1}'):
             # https://discuss.pytorch.org/t/should-we-set-non-blocking-to-true/38234/4
             input_ids, attention_masks, labels = batch
             input_ids = input_ids.to(device, non_blocking=True)
             attention_masks = attention_masks.to(device, non_blocking=True)
             labels = labels.to(device, non_blocking=True)
             
-            optimizer.zero_grad()  # https://pytorch.org/docs/stable/generated/torch.optim.Optimizer.zero_grad.html
-            with torch.cuda.amp.autocast():
-                # https://pytorch.org/docs/stable/amp.html
+            optimizer.zero_grad(set_to_none=True)  # https://pytorch.org/docs/stable/generated/torch.optim.Optimizer.zero_grad.html
+            with torch.cuda.amp.autocast():  # https://pytorch.org/docs/stable/amp.html
                 outputs = model(input_ids, attention_masks)
                 loss = criterion(outputs, labels)
             
@@ -225,7 +224,7 @@ def train_llm(
                 checkpoint.update({
                     'max_accuracy': getattr(patience, 'baseline'), 
                     'count': getattr(patience, 'count'), 
-                    'best': best_results
+                    'best': best_results,
                 })
             
             model.train()
@@ -240,7 +239,7 @@ def train_llm(
         if patience and getattr(patience, 'count') == 0:
             logger.info('  Early stopping. Ending training.')
             break
-    
+        
         gc.collect()
         torch.cuda.empty_cache()
 

@@ -1,7 +1,7 @@
 #### Weight & Biases settings
 
 wandb:
-  name: "OOD - CNN - 9 Conv Layers"
+  name: "First run - OOD - CNN - 9 Conv Layers"
   resume: False
   job_type: "OOD"
   group: "Exercise 1.1"
@@ -29,8 +29,8 @@ config:
 
   model_type: "CNN"
   model:
-    depth: 9
     in_channels: 1
+    depth: 9
     output_size: 10
     want_shortcut: False
     activation: "ReLU"
@@ -84,9 +84,10 @@ config:
     epsilon: 8
     alpha: 10
     normalize: True
-
   adversarial_add: True
+
   ood_dataset:
+    dataset_type: "Vision"
     dataset_name: "FashionMNIST"
     val_size: 0.2
     val_shuffle: True

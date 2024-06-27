@@ -88,6 +88,7 @@ def attack(model, x, y, epsilon: float, alpha: float, normalize: bool, criterion
         randomize = True
 
     if normalize:
+        dataset_name = dataset_name.lower().replace(' ', '')
         if dataset_name == 'mnist':
             mean = torch.tensor(mnist_mean, device=device).view(1, 1, 1)
             std = torch.tensor(mnist_std, device=device).view(1, 1, 1)
@@ -137,14 +138,15 @@ def attack(model, x, y, epsilon: float, alpha: float, normalize: bool, criterion
         max_delta = torch.zeros_like(x, device=device)
 
     for _ in range(restarts):
-        delta = torch.zeros_like(x, requires_grad=True, device=device)
+        delta = torch.zeros_like(x, device=device)
         if randomize:
             if fast:
                 for dim in np.arange(input_dims):
-                    delta[:, dim, :, :].uniform_(-epsilon[dim].item(), epsilon[dim].item())
+                    delta[:, dim, :, :] = delta[:, dim, :, :].uniform_(-epsilon[dim].item(), epsilon[dim].item())
             else:
-                delta = torch.rand_like(x, requires_grad=True, device=device)
-                delta.data = delta.data * 2 * epsilon - epsilon            
+                delta = torch.rand_like(x, device=device)
+                delta.data = delta.data * 2 * epsilon - epsilon
+        delta.requires_grad_(True)
         
         delta.data = torch.clamp(delta.data, lower_limit - x, upper_limit - x)
 

@@ -5,7 +5,6 @@ import argparse
 import logging
 import time
 import random
-from datetime import timedelta
 from typing import Union, List
 import gc
 
@@ -75,24 +74,97 @@ def setup_seed(cfg, logger):
         logger.info('Seed set to %d.' % seed)
 
 
-def evaluate_llm(loader, model, criterion, metrics, device, logger, validation: bool):
+def evaluate_adv_add(
+        loader, 
+        model, 
+        criterion, 
+        metrics, 
+        device, 
+        logger, 
+        scaler, 
+        adv_cfg,
+        metrics_adv,
+        validation: bool = True,
+    ):
+
     model.eval()
     running_loss = 0.0
     val_batches = len(loader)
+    idx_label_scores = []
+    idx_label_scores_adv = []
     start_time = time.time()
 
-    with torch.no_grad():
-        for batch in loader:
-            input_ids, attention_masks, labels = batch
+    for batch in loader:
+        inputs, labels, idx = batch
+        inputs = inputs.to(device, non_blocking=True)
+        labels = labels.to(device, non_blocking=True)
 
-            input_ids = input_ids.to(device, non_blocking=True)
-            attention_masks = attention_masks.to(device, non_blocking=True)
-            labels = labels.to(device, non_blocking=True)
+        delta = attack(model, inputs, labels, scaler=scaler, **adv_cfg)
+        outputs_adv = model(inputs + delta)
+        outputs = model(inputs)
 
-            outputs = model(input_ids, attention_masks)
-            loss = criterion(outputs, labels)
-            running_loss += loss.item()
-            metrics(outputs, labels)
+        loss = criterion(outputs, labels)
+        loss_adv = criterion(outputs_adv, labels)
+        loss = loss + loss_adv
+
+        running_loss += loss.item()
+        metrics(outputs, labels)
+        metrics_adv(outputs_adv, labels)
+
+        if not validation:
+            idx_label_scores += list(zip(idx.cpu().data.numpy().tolist(),
+                                    labels.cpu().data.numpy().tolist(),
+                                    outputs.cpu().data.numpy().tolist()))
+            idx_label_scores_adv += list(zip(idx.cpu().data.numpy().tolist(),
+                                    labels.cpu().data.numpy().tolist(),
+                                    outputs_adv.cpu().data.numpy().tolist()))
+    
+    total_time = time.time() - start_time
+    loss_norm = running_loss / val_batches
+    metric_dict = {metric: float(metrics[metric].compute().cpu().data.numpy() * 100) for metric in metrics.keys()}
+    metrics.reset()
+    metric_adv_dict = {metric: float(metrics_adv[metric].compute().cpu().data.numpy() * 100) for metric in metrics_adv.keys()}
+    metrics_adv.reset()
+
+    evaluate_logger(logger, total_time, loss_norm, metric_dict, validation, metric_adv_dict)
+    
+    return loss_norm, metric_dict, total_time, val_batches, idx_label_scores, metric_adv_dict, idx_label_scores_adv
+
+
+def evaluate_adv(
+        loader, 
+        model, 
+        criterion, 
+        metrics, 
+        device, 
+        logger,
+        scaler, 
+        adv_cfg, 
+        validation: bool = True,
+    ):
+
+    model.eval()
+    running_loss = 0.0
+    val_batches = len(loader)
+    idx_label_scores = []
+    start_time = time.time()
+
+    for batch in loader:
+        inputs, labels, idx = batch
+        inputs = inputs.to(device, non_blocking=True)
+        labels = labels.to(device, non_blocking=True)
+
+        delta = attack(model, inputs, labels, scaler=scaler, **adv_cfg)
+        outputs = model(inputs + delta)
+        loss = criterion(outputs, labels)
+
+        running_loss += loss.item()
+        metrics(outputs, labels)
+
+        if not validation:
+            idx_label_scores += list(zip(idx.cpu().data.numpy().tolist(),
+                                    labels.cpu().data.numpy().tolist(),
+                                    outputs.cpu().data.numpy().tolist()))
     
     total_time = time.time() - start_time
     loss_norm = running_loss / val_batches
@@ -101,37 +173,33 @@ def evaluate_llm(loader, model, criterion, metrics, device, logger, validation: 
 
     evaluate_logger(logger, total_time, loss_norm, metric_dict, validation)
     
-    return loss_norm, metric_dict, total_time, val_batches
+    return loss_norm, metric_dict, total_time, val_batches, idx_label_scores
 
 
-def evaluate(loader, model, criterion, metrics, device, logger, validation: bool, adversarial = None, adversarial_add: bool = False, scaler = None):
+def evaluate(
+        loader, 
+        model, 
+        criterion, 
+        metrics, 
+        device, 
+        logger, 
+        validation: bool = True, 
+    ):
+
     model.eval()
     running_loss = 0.0
     val_batches = len(loader)
     idx_label_scores = []
     start_time = time.time()
 
-    if adversarial:
-        adversarial.update(dict(criterion=criterion, scaler=scaler, device=device, logger=logger))
-
     with torch.no_grad():
         for batch in loader:
             inputs, labels, idx = batch
             inputs = inputs.to(device, non_blocking=True)
             labels = labels.to(device, non_blocking=True)
-
-            if adversarial:
-                delta = attack(model, inputs, labels, **adversarial)
-                if adversarial_add:
-                    outputs_adv = model(inputs + delta)
-                else:
-                    outputs = model(inputs + delta)
-            else:
-                outputs = model(inputs)
+            
+            outputs = model(inputs)
             loss = criterion(outputs, labels)
-            if adversarial_add:
-                loss_adv = criterion(outputs_adv, labels)
-                loss = loss + loss_adv
 
             running_loss += loss.item()
             metrics(outputs, labels)
@@ -151,166 +219,6 @@ def evaluate(loader, model, criterion, metrics, device, logger, validation: bool
     return loss_norm, metric_dict, total_time, val_batches, idx_label_scores
 
 
-def train_llm(
-        loader, 
-        model, 
-        start, 
-        n_epochs, 
-        criterion, 
-        optimizer,
-        clip_grads, 
-        scheduler, 
-        scaler,  
-        metrics, 
-        device, 
-        logger,
-        wb,
-        out_path,
-        update_scheduler_on_batch: bool, 
-        update_scheduler_on_epoch: bool,
-        patience = None,
-        val_loader = None, 
-        eval_interval: int = 1,
-        checkpoint_every: int = 5,
-        best: dict = None,
-        lr_milestones: List[int] = None, 
-    ): 
-
-    train_start_time = time.time()
-    total_batches_running = 0
-    total_batches = len(loader)
-    best_results = best
-    model = model.to(device)
-    model.train()
-
-    for epoch in range(start, n_epochs):
-        loss_epoch = 0.0
-        epoch_start_time = time.time()
-
-        for batch in tqdm(loader, desc=f'Epoch {epoch + 1}'):
-            # https://discuss.pytorch.org/t/should-we-set-non-blocking-to-true/38234/4
-            input_ids, attention_masks, labels = batch
-            input_ids = input_ids.to(device, non_blocking=True)
-            attention_masks = attention_masks.to(device, non_blocking=True)
-            labels = labels.to(device, non_blocking=True)
-            
-            optimizer.zero_grad(set_to_none=True)  # https://pytorch.org/docs/stable/generated/torch.optim.Optimizer.zero_grad.html
-            with torch.cuda.amp.autocast():  # https://pytorch.org/docs/stable/amp.html
-                outputs = model(input_ids, attention_masks)
-                loss = criterion(outputs, labels)
-            
-            if clip_grads:
-                nn.utils.clip_grad_norm_(model.parameters(), clip_grads)
-
-            scaler.scale(loss).backward()
-            scaler.step(optimizer)
-            scaler.update()
-            if update_scheduler_on_batch:
-                # https://discuss.pytorch.org/t/scheduler-step-after-each-epoch-or-after-each-minibatch/111249
-                scheduler.step()
-                if lr_milestones is not None:
-                    if total_batches_running in lr_milestones:
-                        logger.info('  LR scheduler: new learning rate is %g' % float(scheduler.get_lr()[0]))
-
-            loss_epoch += loss.item()
-            total_batches_running += 1
-
-            # From: https://lightning.ai/docs/torchmetrics/stable/classification/accuracy.html#torchmetrics.classification.MulticlassAccuracy
-            # The first argument of metrics() can be an int tensor of shape (N, ...) or float tensor of shape (N, C, ..).
-            # If preds is a floating point we apply torch.argmax along the C dimension to automatically convert probabilities/logits into an int tensor.
-            # This means that since the model returns logits (or softmax if the CrossEntropyLoss is NOT used and we are doing multiclass classification)
-            # the class with the higher output value is selected automatically by the metrics() class. Otherwise we should implement argmax ourselves.
-            metrics(outputs, labels)
-
-        epoch_time = time.time() - epoch_start_time
-        epoch_loss_norm = loss_epoch / total_batches
-        epoch_metrics = {metric: float(metrics[metric].compute().cpu().data.numpy() * 100) for metric in metrics.keys()}
-        metrics.reset()
-        
-        if update_scheduler_on_epoch:
-            scheduler.step()
-            if lr_milestones is not None:
-                if epoch in lr_milestones:
-                    logger.info('  LR scheduler: new learning rate is %g' % float(scheduler.get_lr()[0]))
-        
-        epoch_logger(logger, epoch, n_epochs, epoch_time, epoch_loss_norm, epoch_metrics)
-
-        # Other metrics: https://towardsdatascience.com/efficient-pytorch-supercharging-training-pipeline-19a26265adae
-        wb_log = {
-            'train_loss': epoch_loss_norm,
-            'train_accuracy': epoch_metrics['MulticlassAccuracy'],
-            'train_precision': epoch_metrics['MulticlassPrecision'],
-            'train_recall': epoch_metrics['MulticlassRecall'],
-            'learning_rate': scheduler.get_last_lr(),
-            'epoch_train_time': epoch_time,
-        }
-
-        checkpoint = {
-            'start': epoch + 1,
-            'state_dict': model.state_dict(),
-            'optimizer': optimizer.state_dict(),
-        }
-
-        if val_loader and (epoch % eval_interval == 0 or epoch == n_epochs - 1):
-            val_loss_norm, val_metrics, val_time, val_n_batches = evaluate_llm(val_loader, model, criterion, metrics, device, logger, validation=True)
-
-            wb_log.update({
-                'val_loss': val_loss_norm,
-                'val_accuracy': val_metrics['MulticlassAccuracy'],
-                'val_precision': val_metrics['MulticlassPrecision'],
-                'val_recall': val_metrics['MulticlassRecall'],
-                'val_time': val_time,
-            })
-
-            if patience:
-                # Save best checkpoint
-                if patience(val_metrics['MulticlassAccuracy']):
-                    logger.info('  Found best checkpoint, saving checkpoint.')
-                    best_results = {'best_epoch': epoch + 1}
-                    best_results.update({f'best_{key}': value for key, value in wb_log.items()})                                        
-                    save_model(checkpoint, out_path, 'best_checkpoint')
-                
-                checkpoint.update({
-                    'max_accuracy': getattr(patience, 'baseline'), 
-                    'count': getattr(patience, 'count'), 
-                    'best': best_results,
-                })
-            
-            model.train()
-
-        wb.log(wb_log)            
-
-        # Save checkpoint
-        if epoch % checkpoint_every == 0 or epoch == n_epochs - 1:
-            save_model(checkpoint, out_path, 'checkpoint')
-        
-        # Early stopping
-        if patience and getattr(patience, 'count') == 0:
-            logger.info('  Early stopping. Ending training.')
-            break
-        
-        gc.collect()
-        torch.cuda.empty_cache()
-
-    train_time = time.time() - train_start_time
-    logger.info('Training time: %.3f' % train_time)
-
-    results = {
-        'total_batches': total_batches,
-        'total_epochs': n_epochs,
-        'train_time': train_time,
-        'h-m-s_train_time': str(timedelta(seconds=train_time)),
-    }
-    results.update({f'last_epoch_{key}': value for key, value in wb_log.items()})
-    results['early_stopping'] = True if patience else False
-    if patience:
-        results.update(best_results)
-    
-    os.rename(f'{out_path}/best_checkpoint.pth.tar', f'{out_path}/model.pth.tar')
-
-    return model, results
-
-
 def train(
         loader, 
         model, 
@@ -328,14 +236,15 @@ def train(
         out_path,
         update_scheduler_on_batch: bool, 
         update_scheduler_on_epoch: bool,
-        val_loader = None, 
+        val_loader=None, 
         eval_interval: int = 1,
         checkpoint_every: int = 5,
-        patience = None,
+        patience=None,
         best: dict = None,
         lr_milestones: List[int] = None,
-        adversarial = None,
-        adversarial_add: bool = True,
+        adv_cfg = None,
+        adv_add: bool = True,
+        metrics_adv=None,
     ): 
 
     train_start_time = time.time()
@@ -344,6 +253,8 @@ def train(
     best_results = best
     model = model.to(device)
     model.train()
+
+    torch.cuda.empty_cache()
     
     for epoch in range(start, n_epochs):
         loss_epoch = 0.0
@@ -357,9 +268,10 @@ def train(
             
             optimizer.zero_grad(set_to_none=True)  # https://pytorch.org/docs/stable/generated/torch.optim.Optimizer.zero_grad.html
             with torch.cuda.amp.autocast():  # https://pytorch.org/docs/stable/amp.html
-                if adversarial:
-                    delta = attack(model, inputs, labels, **adversarial)
-                    if adversarial_add:
+                if adv_cfg:
+                    delta = attack(model, inputs, labels, scaler=scaler, **adv_cfg)
+                    if adv_add:
+                        outputs = model(inputs)
                         outputs_adv = model(inputs + delta)
                     else:
                         outputs = model(inputs + delta)
@@ -367,7 +279,7 @@ def train(
                 else:
                     outputs = model(inputs)
                 loss = criterion(outputs, labels)
-                if adversarial_add:
+                if adv_add:
                     loss_adv = criterion(outputs_adv, labels)
                     loss = loss + loss_adv
             
@@ -392,12 +304,18 @@ def train(
             # If preds is a floating point we apply torch.argmax along the C dimension to automatically convert probabilities/logits into an int tensor.
             # This means that since the model returns logits (or softmax if the CrossEntropyLoss is NOT used and we are doing multiclass classification)
             # the class with the higher output value is selected automatically by the metrics() class. Otherwise we should implement argmax ourselves.
-            metrics(outputs, labels)  
+            metrics(outputs, labels)
+            if adv_add:
+                metrics_adv(outputs_adv, labels) 
             
         epoch_time = time.time() - epoch_start_time
         epoch_loss_norm = loss_epoch / total_batches
         epoch_metrics = {metric: float(metrics[metric].compute().cpu().data.numpy() * 100) for metric in metrics.keys()}
         metrics.reset()
+
+        if adv_add:
+            epoch_metrics_adv = {metric: float(metrics_adv[metric].compute().cpu().data.numpy() * 100) for metric in metrics_adv.keys()}
+            metrics_adv.reset()
         
         if update_scheduler_on_epoch:
             scheduler.step()
@@ -405,7 +323,7 @@ def train(
                 if epoch in lr_milestones:
                     logger.info('  LR scheduler: new learning rate is %g' % float(scheduler.get_lr()[0]))
         
-        epoch_logger(logger, epoch, n_epochs, epoch_time, epoch_loss_norm, epoch_metrics)
+        epoch_logger(logger, epoch, n_epochs, epoch_time, epoch_loss_norm, epoch_metrics, epoch_metrics_adv if adv_add else None)
 
         # Other metrics: https://towardsdatascience.com/efficient-pytorch-supercharging-training-pipeline-19a26265adae
         wb_log = {
@@ -416,6 +334,12 @@ def train(
             'learning_rate': scheduler.get_last_lr(),
             'epoch_train_time': epoch_time,
         }
+        if adv_add:
+            wb_log.update({
+                'adv_train_accuracy': epoch_metrics_adv['MulticlassAccuracy'],
+                'adv_train_precision': epoch_metrics_adv['MulticlassPrecision'],
+                'adv_train_recall': epoch_metrics_adv['MulticlassRecall'],
+            })
 
         checkpoint = {
             'start': epoch + 1,
@@ -424,7 +348,13 @@ def train(
         }
 
         if val_loader and (epoch % eval_interval == 0 or epoch == n_epochs - 1):
-            val_loss_norm, val_metrics, val_time, val_n_batches, _ = evaluate(val_loader, model, criterion, metrics, device, logger, validation=True, adversarial=adversarial, adversarial_add=adversarial_add, scaler=scaler)
+            eval_kw = dict(loader=val_loader, model=model, criterion=criterion, metrics=metrics, device=device, logger=logger)
+            if adv_add:
+                val_loss_norm, val_metrics, val_time, val_n_batches, _, val_adv_metrics, _ = evaluate_adv_add(scaler=scaler, adv_cfg=adv_cfg, metrics_adv=metrics_adv, **eval_kw)
+            elif adv_cfg:
+                val_loss_norm, val_metrics, val_time, val_n_batches, _ = evaluate_adv(scaler=scaler, adv_cfg=adv_cfg, **eval_kw)
+            else:
+                val_loss_norm, val_metrics, val_time, val_n_batches, _ = evaluate(**eval_kw)
 
             wb_log.update({
                 'val_loss': val_loss_norm,
@@ -433,10 +363,16 @@ def train(
                 'val_recall': val_metrics['MulticlassRecall'],
                 'val_time': val_time,
             })
+            if adv_add:
+                wb_log.update({
+                    'adv_val_accuracy': val_adv_metrics['MulticlassAccuracy'],
+                    'adv_val_precision': val_adv_metrics['MulticlassPrecision'],
+                    'adv_val_recall': val_adv_metrics['MulticlassRecall'],
+                })
 
-            if patience:
-                # Save best model
-                if patience(val_metrics['MulticlassAccuracy']):
+            if patience:  # Save best model
+                patience_metric = val_adv_metrics['MulticlassAccuracy'] if adv_add else val_metrics['MulticlassAccuracy']
+                if patience(patience_metric):
                     logger.info('  Found best model, saving model.')
                     best_results = {'best_epoch': epoch + 1}
                     best_results.update({f'best_{key}': value for key, value in wb_log.items()})                                        
@@ -467,16 +403,7 @@ def train(
     train_time = time.time() - train_start_time
     logger.info('Training time: %.3f' % train_time)
 
-    results = {
-        'total_batches': total_batches,
-        'total_epochs': n_epochs,
-        'train_time': train_time,
-        'h-m-s_train_time': str(timedelta(seconds=train_time)),
-    }
-    results.update({f'last_epoch_{key}': value for key, value in wb_log.items()})
-    results['early_stopping'] = True if patience else False
-    if patience:
-        results.update(best_results)
+    results = format_train_results(total_batches, n_epochs, train_time, wb_log, patience, best_results if patience else None)
 
     os.rename(f'{out_path}/best_checkpoint.pth.tar', f'{out_path}/model.pth.tar')
 
@@ -491,7 +418,8 @@ def main(args, cfg, wb, run_name):
 
     device = 'cpu' if not torch.cuda.is_available() else cfg['device']
     cfg['device'] = device
-    model_cfg, train_cfg = cfg['model'], cfg['training']
+    model_cfg, train_cfg, adv_cfg = cfg['model'], cfg['training'], cfg['adversarial']
+    adv_add = cfg['adversarial_add'] if adv_cfg else False
 
     if wandb.run.resumed:
         logger.info('Resuming experiment.')
@@ -541,6 +469,8 @@ def main(args, cfg, wb, run_name):
     scaler = torch.cuda.amp.GradScaler()
     criterion = setup_loss(cfg['criterion'])
     metric_collection = get_metrics(cfg['model'], wb, device)
+    if adv_add:
+        metric_collection_adv = get_metrics(cfg['model'], wb, device)
 
 
     # Loading model and optimizer...
@@ -596,21 +526,19 @@ def main(args, cfg, wb, run_name):
         logger.info('Training.')
         train_loader, val_loader, _, _ = dataset.loaders(train=True, val=True, **dataloader_kw)
         print_logs(logger, cfg, train=True)
-        torch.cuda.empty_cache()
 
         scheduler = setup_scheduler(optimizer, cfg, train_loader, train_cfg['n_epochs'] - start)
 
         wb.watch(model, criterion=criterion, log='all', log_graph=True)
 
-        if cfg['adversarial']:
-            cfg['adversarial'].update(dict(
+        if adv_cfg:
+            adv_cfg.update(dict(
                 normalize=cfg['dataset']['normalize'],
                 dataset_name=cfg['dataset']['dataset_name'],
-                criterion=criterion, 
-                scaler=scaler, 
+                criterion=criterion,  
                 device=device, 
                 logger=logger,
-            ))
+            ))        
         
         logger.info('Starting training...')
         model, train_results = train(
@@ -635,8 +563,9 @@ def main(args, cfg, wb, run_name):
             checkpoint_every=train_cfg['checkpoint_every'],
             patience=patience,
             best=best,
-            adversarial=cfg['adversarial'],
-            adversarial_add=cfg['adversarial_add'] if cfg['adversarial'] else False,
+            adv_cfg=adv_cfg,
+            adv_add=adv_add,
+            metrics_adv=metric_collection_adv if adv_add else None,
         )
         logger.info('Finished training.')
 
@@ -649,7 +578,7 @@ def main(args, cfg, wb, run_name):
         _, _, test_loader, _ = dataset.loaders(train=False, **dataloader_kw)
 
         logger.info('Starting testing on test set...')
-        test_loss_norm, test_metrics, test_time, test_n_batches, idx_label_scores = evaluate(test_loader, model, criterion, metric_collection, device, logger, validation=False, adversarial=cfg['adversarial'], adversarial_add=cfg['adversarial_add'] if cfg['adversarial'] else False, scaler=scaler)
+        test_loss_norm, test_metrics, test_time, test_n_batches, idx_label_scores = evaluate(test_loader, model, criterion, metric_collection, device, logger, validation=False)
         logger.info('Finished testing.')
 
         test_results = {
@@ -671,7 +600,7 @@ def main(args, cfg, wb, run_name):
         _, _, _, org_test_loader = dataset.loaders(train=False, **dataloader_kw)
 
         logger.info('Starting testing on original (not transformed) test set...')
-        org_test_loss_norm, org_test_metrics, org_test_time, org_test_n_batches, org_idx_label_scores = evaluate(org_test_loader, model, criterion, metric_collection, device, logger, validation=False, adversarial=cfg['adversarial'], adversarial_add=cfg['adversarial_add'] if cfg['adversarial'] else False, scaler=scaler)
+        org_test_loss_norm, org_test_metrics, org_test_time, org_test_n_batches, org_idx_label_scores = evaluate(org_test_loader, model, criterion, metric_collection, device, logger, validation=False)
         logger.info('Finished testing.')
 
         test_results = {
@@ -686,6 +615,45 @@ def main(args, cfg, wb, run_name):
         
         plot_results(org_idx_label_scores, cfg['out_path'], 'original_test')
     
+
+    # Testing model on adversarial examples...
+    if adv_cfg:
+        logger.info('Testing on adversarial examples.')
+        _, _, test_loader, _ = dataset.loaders(train=False, **dataloader_kw)
+
+        logger.info('Starting testing on adversarial test set...')
+        eval_kw = dict(loader=test_loader, model=model, criterion=criterion, metrics=metric_collection, device=device, logger=logger, validation=False, )
+        if adv_add:
+            eval_fn = evaluate_adv_add
+            eval_kw.update(dict(scaler=scaler, adv_cfg=adv_cfg, metrics_adv=metric_collection_adv))
+            test_loss_norm, test_metrics, test_time, test_n_batches, idx_label_scores, test_adv_metrics, idx_label_scores_adv = eval_fn(**eval_kw)
+        else:
+            eval_fn = evaluate_add
+            eval_kw.update(dict(scaler=scaler, adv_cfg=adv_cfg))
+            test_loss_norm, test_metrics, test_time, test_n_batches, idx_label_scores = eval_fn(**eval_kw)
+        logger.info('Finished testing.')
+
+        test_results = {
+            'test_time': test_time,
+            'test_loss': test_loss_norm,
+            'test_accuracy': test_metrics['MulticlassAccuracy'],
+            'test_precision': test_metrics['MulticlassPrecision'],
+            'test_recall': test_metrics['MulticlassRecall'],
+            'test_scores': idx_label_scores,
+        }
+        if adv_add:
+            test_results.update({
+                'adv_test_accuracy': test_adv_metrics['MulticlassAccuracy'],
+                'adv_test_precision': test_adv_metrics['MulticlassPrecision'],
+                'adv_test_recall': test_adv_metrics['MulticlassRecall'],
+                'adv_test_scores': idx_label_scores_adv,
+            })
+        save_results(cfg['out_path'], test_results, 'test')
+
+        plot_results(idx_label_scores, cfg['out_path'], 'test', classes=['0','1','2','3','4','5','6','7','8','9'], n_classes=10)
+        if adv_add:
+            plot_results(idx_label_scores_adv, cfg['out_path'], 'adv_test', classes=['0','1','2','3','4','5','6','7','8','9'], n_classes=10)
+
 
     # Other testing...
     if cfg['test'] and cfg['problem'] is not None:
@@ -705,7 +673,7 @@ def main(args, cfg, wb, run_name):
                 ))
 
             logger.info('Starting testing on OOD test set...')
-            ood_test_loss_norm, ood_test_metrics, ood_test_time, ood_test_n_batches, ood_idx_label_scores = evaluate(ood_test_loader, model, criterion, metric_collection, device, logger, validation=False, adversarial=cfg['adversarial'], adversarial_add=cfg['adversarial_add'] if cfg['adversarial'] else False)
+            ood_test_loss_norm, ood_test_metrics, ood_test_time, ood_test_n_batches, ood_idx_label_scores = evaluate(ood_test_loader, model, criterion, metric_collection, device, logger, validation=False, adv=cfg['adversarial'], adv_add=cfg['adversarial_add'] if cfg['adversarial'] else False)
             logger.info('Finished testing.')
 
             ood_test_results = {
