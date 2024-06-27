@@ -1,13 +1,14 @@
 from typing import List, Tuple
 import math
 from collections import OrderedDict
+import numpy as np
 
 import torch
 import torch.optim as optim
 import torch.nn as nn
 import torch.nn.functional as F
 from transformers import AutoModel
-from peft import LoraConfig, TaskType, get_peft_model
+from peft import LoraConfig, LoftQConfig, TaskType, get_peft_model, replace_lora_weights_loftq
 
 
 class Lion(optim.Optimizer):
@@ -51,7 +52,7 @@ class Lion(optim.Optimizer):
 
 
 class EarlyStopping:
-    def __init__(self, mod, patience, count=None, baseline=None):
+    def __init__(self, mod, patience, count=None, baseline=np.inf):
         self.patience = patience
         self.count = patience if count is None else count
         if mod == 'max':
@@ -564,9 +565,23 @@ class GPTLanguageModel(BaseModel):
 
 
 class BERT(BaseModel):
-    def __init__(self, model_name, output_size, init_mode, init_dist, cache_dir, torch_dtype=torch.bfloat16, device_map='auto', freeze_model_base: bool = False, peft: str = None):
+    def __init__(self, model_name, output_size, init_mode, init_dist, cache_dir, torch_dtype=torch.bfloat16, device_map='auto', freeze_model_base: bool = False, peft: str = None, quantize: bool = False):
         super().__init__()
-        self.model = AutoModel.from_pretrained(model_name, return_dict=True, cache_dir=cache_dir, device_map=device_map)  # torch_dtype=torch_dtype
+        
+        if quantize and peft['method'] == 'LoftQ':
+            quantize = False
+
+        if quantize:
+            quant_config = BitsAndBytesConfig(
+                load_in_4bit=True,
+                bnb_4bit_quant_type="nf4",
+                bnb_4bit_use_double_quant=True,
+                bnb_4bit_compute_dtype=torch.bfloat16,
+            )
+        else:
+            quant_config = None
+
+        self.model = AutoModel.from_pretrained(model_name, return_dict=True, cache_dir=cache_dir, device_map=device_map, quantization_config=quant_config)  # torch_dtype=torch_dtype
         self.hidden = nn.Linear(self.model.config.hidden_size, self.model.config.hidden_size)
         self.classifier = nn.Linear(self.model.config.hidden_size, output_size)
         self._init_weights([self.hidden, self.classifier], init_mode, init_dist)
@@ -577,7 +592,7 @@ class BERT(BaseModel):
         if peft:
             if isinstance(peft['method'], str):
                 # From https://huggingface.co/docs/peft/quicktour
-                if peft['method'] == 'LoRA':
+                if peft['method'] == 'LoRA' or peft['method'] == 'LoftQ':
                     peft_config = LoraConfig(
                         task_type=TaskType.FEATURE_EXTRACTION, 
                         inference_mode=False, 
@@ -587,6 +602,8 @@ class BERT(BaseModel):
                         use_rslora=peft['rslora']
                     )
                     self.model = get_peft_model(self.model, peft_config)
+                    if peft['method'] == 'LoftQ':
+                        replace_lora_weights_loftq(self.model)
                     self.model.print_trainable_parameters()
 
                 # elif peft == 'ReFT'
