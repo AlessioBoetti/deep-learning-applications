@@ -18,7 +18,8 @@ wandb:
 config:
   # Machine
   seed: 1
-  device: "cuda:0"
+  # device: "cuda:0"
+  device: "cpu"
   cuda_benchmark: True
 
   # Paths and dirs
@@ -94,6 +95,10 @@ config:
     normalize: True
     augment: False
     use_sampler: True
+  cea:
+    percentile_top: 99
+    addition_coef: 1
+
   xai: False
   explain_gradients: False
   explain_cam: False

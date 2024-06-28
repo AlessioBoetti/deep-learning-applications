@@ -7,6 +7,7 @@ import time
 import random
 from typing import Union, List
 import gc
+from contextlib import nullcontext
 
 import yaml
 import numpy as np
@@ -16,7 +17,6 @@ from tqdm import tqdm
 
 import torch
 import torch.nn as nn
-# import torch.optim as optim
 
 from model import ConvolutionalNeuralNetwork, EarlyStopping
 from utils import *
@@ -86,6 +86,7 @@ def evaluate_adv_add(
         metrics_adv,
         validation: bool = True,
     ):
+    # Not sure if this function is needed
 
     model.eval()
     running_loss = 0.0
@@ -131,51 +132,6 @@ def evaluate_adv_add(
     return loss_norm, metric_dict, total_time, val_batches, idx_label_scores, metric_adv_dict, idx_label_scores_adv
 
 
-def evaluate_adv(
-        loader, 
-        model, 
-        criterion, 
-        metrics, 
-        device, 
-        logger,
-        scaler, 
-        adv_cfg, 
-        validation: bool = True,
-    ):
-
-    model.eval()
-    running_loss = 0.0
-    val_batches = len(loader)
-    idx_label_scores = []
-    start_time = time.time()
-
-    for batch in loader:
-        inputs, labels, idx = batch
-        inputs = inputs.to(device, non_blocking=True)
-        labels = labels.to(device, non_blocking=True)
-
-        delta = attack(model, inputs, labels, scaler=scaler, **adv_cfg)
-        outputs = model(inputs + delta)
-        loss = criterion(outputs, labels)
-
-        running_loss += loss.item()
-        metrics(outputs, labels)
-
-        if not validation:
-            idx_label_scores += list(zip(idx.cpu().data.numpy().tolist(),
-                                    labels.cpu().data.numpy().tolist(),
-                                    outputs.cpu().data.numpy().tolist()))
-    
-    total_time = time.time() - start_time
-    loss_norm = running_loss / val_batches
-    metric_dict = {metric: float(metrics[metric].compute().cpu().data.numpy() * 100) for metric in metrics.keys()}
-    metrics.reset()
-
-    evaluate_logger(logger, total_time, loss_norm, metric_dict, validation)
-    
-    return loss_norm, metric_dict, total_time, val_batches, idx_label_scores
-
-
 def evaluate(
         loader, 
         model, 
@@ -183,7 +139,9 @@ def evaluate(
         metrics, 
         device, 
         logger, 
-        validation: bool = True, 
+        validation: bool = True,
+        scaler=None,
+        adv_cfg=None, 
     ):
 
     model.eval()
@@ -192,13 +150,17 @@ def evaluate(
     idx_label_scores = []
     start_time = time.time()
 
-    with torch.no_grad():
+    with torch.no_grad() if adv_cfg is None else nullcontext() as context:
         for batch in loader:
             inputs, labels, idx = batch
             inputs = inputs.to(device, non_blocking=True)
             labels = labels.to(device, non_blocking=True)
             
-            outputs = model(inputs)
+            if adv_cfg:
+                delta = attack(model, inputs, labels, scaler=scaler, **adv_cfg)
+                outputs = model(inputs + delta)
+            else:
+                outputs = model(inputs)
             loss = criterion(outputs, labels)
 
             running_loss += loss.item()
@@ -242,7 +204,7 @@ def train(
         patience=None,
         best: dict = None,
         lr_milestones: List[int] = None,
-        adv_cfg = None,
+        adv_cfg=None,
         adv_add: bool = True,
         metrics_adv=None,
     ): 
@@ -349,13 +311,8 @@ def train(
 
         if val_loader and (epoch % eval_interval == 0 or epoch == n_epochs - 1):
             eval_kw = dict(loader=val_loader, model=model, criterion=criterion, metrics=metrics, device=device, logger=logger)
-            if adv_add:
-                val_loss_norm, val_metrics, val_time, val_n_batches, _, val_adv_metrics, _ = evaluate_adv_add(scaler=scaler, adv_cfg=adv_cfg, metrics_adv=metrics_adv, **eval_kw)
-            elif adv_cfg:
-                val_loss_norm, val_metrics, val_time, val_n_batches, _ = evaluate_adv(scaler=scaler, adv_cfg=adv_cfg, **eval_kw)
-            else:
-                val_loss_norm, val_metrics, val_time, val_n_batches, _ = evaluate(**eval_kw)
-
+            val_loss_norm, val_metrics, val_time, _, _ = evaluate(**eval_kw)
+            
             wb_log.update({
                 'val_loss': val_loss_norm,
                 'val_accuracy': val_metrics['MulticlassAccuracy'],
@@ -363,15 +320,21 @@ def train(
                 'val_recall': val_metrics['MulticlassRecall'],
                 'val_time': val_time,
             })
-            if adv_add:
+
+            if adv_cfg:
+                adv_val_loss_norm, adv_val_metrics, adv_val_time, _, _ = evaluate(scaler=scaler, adv_cfg=adv_cfg, **eval_kw)
+
                 wb_log.update({
-                    'adv_val_accuracy': val_adv_metrics['MulticlassAccuracy'],
-                    'adv_val_precision': val_adv_metrics['MulticlassPrecision'],
-                    'adv_val_recall': val_adv_metrics['MulticlassRecall'],
+                    'adv_val_loss': adv_val_loss_norm,
+                    'adv_val_accuracy': adv_val_metrics['MulticlassAccuracy'],
+                    'adv_val_precision': adv_val_metrics['MulticlassPrecision'],
+                    'adv_val_recall': adv_val_metrics['MulticlassRecall'],
+                    'adv_val_time': adv_val_time,
+                    'tot_val_loss': val_loss_norm + adv_val_loss_norm,
                 })
 
             if patience:  # Save best model
-                patience_metric = val_adv_metrics['MulticlassAccuracy'] if adv_add else val_metrics['MulticlassAccuracy']
+                patience_metric = adv_val_metrics['MulticlassAccuracy'] if adv_cfg else val_metrics['MulticlassAccuracy']
                 if patience(patience_metric):
                     logger.info('  Found best model, saving model.')
                     best_results = {'best_epoch': epoch + 1}
@@ -472,6 +435,14 @@ def main(args, cfg, wb, run_name):
     if adv_add:
         metric_collection_adv = get_metrics(cfg['model'], wb, device)
 
+    if adv_cfg:
+        adv_cfg.update(dict(
+            normalize=cfg['dataset']['normalize'],
+            dataset_name=cfg['dataset']['dataset_name'],
+            criterion=criterion,  
+            device=device, 
+            logger=logger,
+        ))
 
     # Loading model and optimizer...
     # https://pytorch.org/tutorials/recipes/recipes/saving_and_loading_a_general_checkpoint.html
@@ -489,7 +460,7 @@ def main(args, cfg, wb, run_name):
     
     if model_path is not None:
         logger.info('Loading model from "%s".' % model_path)
-        model, optimizer, checkpoint = load_model(model_path, model, optimizer)
+        model, optimizer, checkpoint = load_model(model_path, model, device, optimizer)
         start = checkpoint['start']
         if wandb.run.resumed and train_cfg['patience']:
             patience = EarlyStopping('max', train_cfg['patience'], checkpoint['count'], checkpoint['max_accuracy'])
@@ -529,16 +500,7 @@ def main(args, cfg, wb, run_name):
 
         scheduler = setup_scheduler(optimizer, cfg, train_loader, train_cfg['n_epochs'] - start)
 
-        wb.watch(model, criterion=criterion, log='all', log_graph=True)
-
-        if adv_cfg:
-            adv_cfg.update(dict(
-                normalize=cfg['dataset']['normalize'],
-                dataset_name=cfg['dataset']['dataset_name'],
-                criterion=criterion,  
-                device=device, 
-                logger=logger,
-            ))        
+        wb.watch(model, criterion=criterion, log='all', log_graph=True)      
         
         logger.info('Starting training...')
         model, train_results = train(
@@ -578,20 +540,19 @@ def main(args, cfg, wb, run_name):
         _, _, test_loader, _ = dataset.loaders(train=False, **dataloader_kw)
 
         logger.info('Starting testing on test set...')
-        test_loss_norm, test_metrics, test_time, test_n_batches, idx_label_scores = evaluate(test_loader, model, criterion, metric_collection, device, logger, validation=False)
+        test_loss, test_metrics, test_time, _, idx_label_scores = evaluate(test_loader, model, criterion, metric_collection, device, logger, validation=False)
         logger.info('Finished testing.')
 
-        test_results = {
-            'test_time': test_time,
-            'test_loss': test_loss_norm,
-            'test_accuracy': test_metrics['MulticlassAccuracy'],
-            'test_precision': test_metrics['MulticlassPrecision'],
-            'test_recall': test_metrics['MulticlassRecall'],
-            'test_scores': idx_label_scores,
+        results = {
+            'loss': test_loss,
+            'accuracy': test_metrics['MulticlassAccuracy'],
+            'precision': test_metrics['MulticlassPrecision'],
+            'recall': test_metrics['MulticlassRecall'],
+            'scores': idx_label_scores,
+            'time': test_time,
         }
-        save_results(cfg['out_path'], test_results, 'test')
-
-        plot_results(idx_label_scores, cfg['out_path'], 'test', classes=['0','1','2','3','4','5','6','7','8','9'], n_classes=10)
+        save_results(cfg['out_path'], results, 'test')
+        plot_results(idx_label_scores, cfg['out_path'], 'test', dataset.train_set.classes)
 
 
     # Testing model on original dataset...
@@ -600,20 +561,19 @@ def main(args, cfg, wb, run_name):
         _, _, _, org_test_loader = dataset.loaders(train=False, **dataloader_kw)
 
         logger.info('Starting testing on original (not transformed) test set...')
-        org_test_loss_norm, org_test_metrics, org_test_time, org_test_n_batches, org_idx_label_scores = evaluate(org_test_loader, model, criterion, metric_collection, device, logger, validation=False)
+        org_test_loss, org_test_metrics, org_test_time, _, org_idx_label_scores = evaluate(org_test_loader, model, criterion, metric_collection, device, logger, validation=False)
         logger.info('Finished testing.')
 
-        test_results = {
-            'test_time': org_test_time,
-            'test_loss': org_test_loss_norm,
-            'test_accuracy': org_test_metrics['MulticlassAccuracy'],
-            'test_precision': org_test_metrics['MulticlassPrecision'],
-            'test_recall': org_test_metrics['MulticlassRecall'],
-            'test_scores': org_idx_label_scores,
+        results = {
+            'loss': org_test_loss,
+            'accuracy': org_test_metrics['MulticlassAccuracy'],
+            'precision': org_test_metrics['MulticlassPrecision'],
+            'recall': org_test_metrics['MulticlassRecall'],
+            'scores': org_idx_label_scores,
+            'time': org_test_time,
         }
-        save_results(cfg['out_path'], test_results, 'original_test')
-        
-        plot_results(org_idx_label_scores, cfg['out_path'], 'original_test')
+        save_results(cfg['out_path'], results, 'test_original')
+        plot_results(org_idx_label_scores, cfg['out_path'], 'test_original', dataset.train_set.classes)
     
 
     # Testing model on adversarial examples...
@@ -622,76 +582,59 @@ def main(args, cfg, wb, run_name):
         _, _, test_loader, _ = dataset.loaders(train=False, **dataloader_kw)
 
         logger.info('Starting testing on adversarial test set...')
-        eval_kw = dict(loader=test_loader, model=model, criterion=criterion, metrics=metric_collection, device=device, logger=logger, validation=False, )
-        if adv_add:
-            eval_fn = evaluate_adv_add
-            eval_kw.update(dict(scaler=scaler, adv_cfg=adv_cfg, metrics_adv=metric_collection_adv))
-            test_loss_norm, test_metrics, test_time, test_n_batches, idx_label_scores, test_adv_metrics, idx_label_scores_adv = eval_fn(**eval_kw)
-        else:
-            eval_fn = evaluate_add
-            eval_kw.update(dict(scaler=scaler, adv_cfg=adv_cfg))
-            test_loss_norm, test_metrics, test_time, test_n_batches, idx_label_scores = eval_fn(**eval_kw)
+        adv_test_loss, adv_test_metrics, adv_test_time, _, adv_idx_label_scores = evaluate(
+            test_loader,
+            model,
+            criterion,
+            metric_collection,
+            device,
+            logger,
+            False,
+            scaler,
+            adv_cfg,
+        )
         logger.info('Finished testing.')
 
-        test_results = {
-            'test_time': test_time,
-            'test_loss': test_loss_norm,
-            'test_accuracy': test_metrics['MulticlassAccuracy'],
-            'test_precision': test_metrics['MulticlassPrecision'],
-            'test_recall': test_metrics['MulticlassRecall'],
-            'test_scores': idx_label_scores,
+        results = {
+            'loss': adv_test_loss,
+            'accuracy': adv_test_metrics['MulticlassAccuracy'],
+            'precision': adv_test_metrics['MulticlassPrecision'],
+            'recall': adv_test_metrics['MulticlassRecall'],
+            'scores': adv_idx_label_scores,
+            'time': adv_test_time,
+            'tot_loss': test_loss + adv_test_loss,
         }
-        if adv_add:
-            test_results.update({
-                'adv_test_accuracy': test_adv_metrics['MulticlassAccuracy'],
-                'adv_test_precision': test_adv_metrics['MulticlassPrecision'],
-                'adv_test_recall': test_adv_metrics['MulticlassRecall'],
-                'adv_test_scores': idx_label_scores_adv,
-            })
-        save_results(cfg['out_path'], test_results, 'test')
-
-        plot_results(idx_label_scores, cfg['out_path'], 'test', classes=['0','1','2','3','4','5','6','7','8','9'], n_classes=10)
-        if adv_add:
-            plot_results(idx_label_scores_adv, cfg['out_path'], 'adv_test', classes=['0','1','2','3','4','5','6','7','8','9'], n_classes=10)
+        save_results(cfg['out_path'], results, 'test_adversarial')
+        plot_results(adv_idx_label_scores, cfg['out_path'], 'test_adversarial', dataset.train_set.classes)
+        plot_results(idx_label_scores, cfg['out_path'], ood_idx_label_scores=adv_idx_label_scores)
 
 
     # Other testing...
     if cfg['test'] and cfg['problem'] is not None:
         if cfg['problem'] == 'OOD':
             logger.info('Testing on OOD dataset.')
-            
             _, _, ood_test_loader, _ = ood_dataset.loaders(train=False, **dataloader_kw)
-            
-            if cfg['adversarial']:
-                cfg['adversarial'].update(dict(
-                    normalize=cfg['ood_dataset']['normalize'],
-                    dataset_name=cfg['ood_dataset']['dataset_name'],
-                    criterion=criterion, 
-                    scaler=scaler, 
-                    device=device, 
-                    logger=logger,
-                ))
 
             logger.info('Starting testing on OOD test set...')
-            ood_test_loss_norm, ood_test_metrics, ood_test_time, ood_test_n_batches, ood_idx_label_scores = evaluate(ood_test_loader, model, criterion, metric_collection, device, logger, validation=False, adv=cfg['adversarial'], adv_add=cfg['adversarial_add'] if cfg['adversarial'] else False)
+            ood_test_loss, ood_test_metrics, ood_test_time, _, ood_idx_label_scores = evaluate(ood_test_loader, model, criterion, metric_collection, device, logger, validation=False)
             logger.info('Finished testing.')
 
-            ood_test_results = {
-                'ood_test_time': ood_test_time,
-                'ood_test_loss': ood_test_loss_norm,
-                'ood_test_accuracy': ood_test_metrics['MulticlassAccuracy'],
-                'ood_test_precision': ood_test_metrics['MulticlassPrecision'],
-                'ood_test_recall': ood_test_metrics['MulticlassRecall'],
-                'ood_test_scores': ood_idx_label_scores,
+            results = {
+                'loss': ood_test_loss,
+                'accuracy': ood_test_metrics['MulticlassAccuracy'],
+                'precision': ood_test_metrics['MulticlassPrecision'],
+                'recall': ood_test_metrics['MulticlassRecall'],
+                'scores': ood_idx_label_scores,
+                'time': ood_test_time,
             }
-            save_results(cfg['out_path'], ood_test_results, 'ood_test')
-            
-            plot_results(ood_idx_label_scores, cfg['out_path'], 'ood_test', classes=['t-shirt','trouser','pullover','dress','coat','sandal','shirt','sneaker','bag','ankle boot'], n_classes=10)
+            save_results(cfg['out_path'], ood_test_results, 'test_ood')
+            plot_results(ood_idx_label_scores, cfg['out_path'], 'test_ood', ood_dataset.train_set.classes)
             plot_results(idx_label_scores, cfg['out_path'], ood_idx_label_scores=ood_idx_label_scores)
 
             if cfg['cea']:
                 cea = CEA(model, MaxLogitPostprocessor, val_loader, device, cfg['cea']['percentile_top'], cfg['cea']['addition_coef'])
-                get_ood_score(model, test_loader, ood_test_loader, cea.postprocess, device)
+                cea_metrics = get_ood_score(model, test_loader, ood_test_loader, cea.postprocess, device)
+                save_results(cfg['out_path'], cea_metrics, 'test_ood_cea')
 
         else:
             raise NotImplementedError()

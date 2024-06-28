@@ -89,46 +89,46 @@ def extract_results(idx_label_scores, T):
         logit_scores_list.append(scores)
         max_logit_scores_list.append(np.max(scores, 0))
 
-        scores = torch.tensor(scores, dtype=torch.float)
-        softmax_scores = F.softmax(scores / T, dim=0).numpy().tolist()
+        scores_t = torch.tensor(scores, dtype=torch.float)
+        softmax_scores = F.softmax(scores_t / T, dim=0).numpy().tolist()
         softmax_scores_list.append(softmax_scores)
         max_softmax_scores_list.append(np.max(softmax_scores, 0))
     
     return y_true, y_pred, logit_scores_list, max_logit_scores_list, softmax_scores_list, max_softmax_scores_list
 
 
-def plot_results(idx_label_scores, out_path, split: str = None, classes = None, n_classes: int = None, ood_idx_label_scores=None, T: int = 1):
+def plot_results(idx_label_scores, out_path, split: str = None, classes = None, ood_idx_label_scores=None, T: int = 1):
     
-    y_true_id, y_pred_id, logit_scores_id, softmax_scores_id, max_logit_scores_id, max_softmax_scores_id = extract_results(idx_label_scores, T)
+    y_true_id, y_pred_id, logit_scores_id, max_logit_scores_id, softmax_scores_id, max_softmax_scores_id = extract_results(idx_label_scores, T)
 
-    out_path = f'{out_path}/imgs'
-    create_dirs_if_not_exist(out_path)
+    img_path = f'{out_path}/imgs'
+    create_dirs_if_not_exist(img_path)
 
     if ood_idx_label_scores is None:
-        confusion_matrix(y_true_id, y_pred_id, classes, out_path)
+        plot_confusion_matrix(y_true_id, y_pred_id, classes, img_path)
 
         metrics = {
             'accuracy': accuracy_score(y_true_id, y_pred_id),
             'precision': precision_score(y_true_id, y_pred_id, average='macro'),
             'recall': recall_score(y_true_id, y_pred_id, average='macro'),
             'fbeta': fbeta_score(y_true_id, y_pred_id, beta=1, average='macro'),
-            'logit_auc_roc': roc_auc_score(y_true_id, max_logit_scores_id),
-            'softmax_auc_roc': roc_auc_score(y_true_id, max_softmax_scores),
+            'softmax_auc_roc_ovr': roc_auc_score(y_true_id, softmax_scores_id, multi_class='ovr'),
+            'softmax_auc_roc_ovo': roc_auc_score(y_true_id, softmax_scores_id, multi_class='ovo'),
         }
         save_results(out_path, metrics, split, suffix='metrics')
 
     else:
         y_true_ood, y_pred_ood, logit_scores_ood, softmax_scores_ood, max_logit_scores_ood, max_softmax_scores_ood = extract_results(ood_idx_label_scores, T)
 
-        plot_scores(max_logit_scores_id, max_logit_scores_ood, out_path, 'logit')
-        plot_scores(max_softmax_scores_id, max_softmax_scores_ood, out_path, 'softmax')
+        plot_scores(max_logit_scores_id, max_logit_scores_ood, img_path, 'logit')
+        plot_scores(max_softmax_scores_id, max_softmax_scores_ood, img_path, 'softmax')
 
         y_true = [[0] * len(max_logit_scores_id), [0] * len(max_logit_scores_ood)]
         max_logit_scores = max_logit_scores_id + max_logit_scores_ood
         max_softmax_scores = max_softmax_scores_id + max_softmax_scores_ood
         
-        plot_curves(y_true, max_logit_scores, 'logit')
-        plot_curves(y_true, max_softmax_scores, 'softmax')
+        plot_curves(y_true, max_logit_scores, img_path, 'logit')
+        plot_curves(y_true, max_softmax_scores, img_path, 'softmax')
 
 
 def save_plot(train_l, train_a, test_l, test_a):

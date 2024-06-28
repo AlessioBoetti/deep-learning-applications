@@ -171,17 +171,12 @@ def compute_all_metrics(conf, label, pred):
     return fpr, auroc, aupr_in, aupr_out, accuracy
 
 
-def eval_ood(pred_id, conf_id, gt_id, pred_ood, conf_ood, gt_ood, missclass_as_ood=False):
+def compute_ood_metrics(pred_id, conf_id, gt_id, pred_ood, conf_ood, gt_ood, missclass_as_ood=False):
     """
         Calculates the OOD metrics (fpr, auroc, etc.) based on the postprocessing results.
         
         Parameters:
         -----------
-        postprocess_results: list
-            A list containing the following elements in order:
-            [id_pred, id_conf, ood_pred, ood_conf, id_gt, ood_gt].
-        to_print: bool, optional
-            Whether to print the evaluation metrics or only return the metrics. Default is True.
         missclass_as_ood: bool, optional
             If True, consider misclassified in-distribution samples as OOD. Default is False.
     
@@ -220,30 +215,13 @@ def get_ood_score(model, id_loader, ood_loader, score_function, hook_name, devic
 
         Parameters:
         -----------
-        model: torch.nn.Module or None
-            The neural network model for applying the post-hoc method.
-        in_test_features: torch.Tensor
-            In-distribution test features.
-        in_test_labels: torch.Tensor
-            In-distribution test labels.
-        ood_type: str
-            The type of out-of-distribution (OOD) data ('other_domain', 'feature_separation', or 'multiplication').
-        score_function: callable
-            The scoring function that assigns each sample a novelty score.
-        batch_size: int
-            Batch size for processing data.
-        device: str
-            The device on which to run the model (e.g., 'cpu' or 'cuda').
-        preprocess: object
-            The preprocess for normalizing the data if it is needed.
-        random_sample: list or None, optional
-            List of randomly selected feature indices for 'multiplication'. Default is None.
-        scales: list or None, optional
-            List of scales for feature multiplication. Default is None.
-        out_features: torch.Tensor or None, optional
-            Out-of-distribution (OOD) features for 'other_domain' or 'feature_separation'. Default is None.
-        missclass_as_ood: bool, optional
-            If True, consider misclassified in-distribution samples as OOD. Default is False.
+        model: The neural network model for applying the post-hoc method.
+        id_loader
+        ood_loader
+        score_function: The scoring function that assigns each sample a novelty score.
+        hook_name
+        device: The device on which to run the model (e.g., 'cpu' or 'cuda').
+        missclass_as_ood: If True, consider misclassified in-distribution samples as OOD. Default is False.
     """
     
     model.eval() 
@@ -267,7 +245,6 @@ def get_ood_score(model, id_loader, ood_loader, score_function, hook_name, devic
         confs_id += list(conf)
         gt_id += list(labels.cpu().detach().numpy())
 
-    
     preds_ood, confs_ood, gt_ood = [], [], []
     for batch in ood_loader:
             inputs, labels, idx = batch
@@ -279,5 +256,7 @@ def get_ood_score(model, id_loader, ood_loader, score_function, hook_name, devic
             confs_ood += list(conf)
             gt_ood += list(np.ones(conf.shape[0])*-1)
     
-    eval_ood(preds_id, confs_id, gt_id, preds_ood, confs_ood, gt_ood, missclass_as_ood)
+    metrics = compute_ood_metrics(preds_id, confs_id, gt_id, preds_ood, confs_ood, gt_ood, missclass_as_ood)
     # auc = ood_score_calc(scores_inlier, scores_ood)
+
+    return metrics

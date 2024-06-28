@@ -152,8 +152,8 @@ def load_dataset(
     return dataset
 
 
-def load_model(model_path, model, optimizer = None):
-    chkpt = torch.load(model_path)
+def load_model(model_path, model, device, optimizer=None):
+    chkpt = torch.load(model_path, map_location=torch.device(device))
     model.load_state_dict(chkpt["state_dict"])
     if optimizer:
         optimizer.load_state_dict(chkpt['optimizer'])
@@ -258,12 +258,10 @@ def epoch_logger(logger, epoch, n_epochs, time, loss, metrics, metrics_adv=None)
             logger.info('  Epoch Adv Train {}: {:.4f}'.format(metric, value))
 
 
-def evaluate_logger(logger, time, loss, metrics, validation, metrics_adv=None):
+def evaluate_logger(logger, time, loss, metrics, validation, adv: bool = False):
     log_str = 'Validation' if validation else 'Test'
+    log_str = f'Adv {log_str}' if adv else log_str
     logger.info('  {} Time: {:.3f}'.format(log_str, time))
     logger.info('  {} Loss: {:.8f}'.format(log_str, loss))
     for metric, value in metrics.items():
         logger.info('  {} {}: {:.4f}'.format(log_str, metric, value))
-    if metrics_adv:
-        for metric, value in metrics_adv.items():
-            logger.info('  {} {} Adv: {:.4f}'.format(log_str, metric, value))

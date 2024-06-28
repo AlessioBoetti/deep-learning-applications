@@ -87,7 +87,7 @@ class BaseDataset(object):
         pin_memory: bool = False, 
         persistent_workers: bool = False,
         seed: int = 1,
-    ) -> Union[DataLoader, DataLoader]:
+        ) -> Union[DataLoader, DataLoader]:
                 
         # https://pytorch.org/docs/stable/notes/randomness.html#dataloader
         g = torch.Generator(device)
@@ -124,7 +124,18 @@ class BaseDataset(object):
         self.outlier_classes.remove(normal_class)
 
 
-    def _get_transforms(self, img_size: bool = None, augment: str = None, normalize = None, gcn: str = None, gcn_minmax: bool = None, min_max = None, normal_class: int = None, gcn_dims: int = 1):
+    def _get_transforms(
+        self, 
+        img_size: bool = None,
+        augment: str = None,
+        normalize = None, 
+        gcn: str = None, 
+        gcn_minmax: bool = None, 
+        min_max = None, 
+        normal_class: int = None, 
+        gcn_dims: int = 1
+        ):
+        
         transform_list, basic_transform_list = [], []
         if img_size:
             transform_list.append(transforms.Resize(img_size))
