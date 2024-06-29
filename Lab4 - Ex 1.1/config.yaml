@@ -1,7 +1,7 @@
 #### Weight & Biases settings
 
 wandb:
-  name: "First run - OOD - CNN - 9 Conv Layers"
+  name: "OOD - CNN - 9 Conv Layers"
   resume: False
   job_type: "OOD"
   group: "Exercise 1.1"

@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.metrics import accuracy_score, precision_score, recall_score, fbeta_score, precision_recall_curve, average_precision_score, roc_auc_score, roc_curve, confusion_matrix, ConfusionMatrixDisplay
-
+from sklearn.utils.validation import column_or_1d
 import torch
 import torch.nn.functional as F
 
@@ -82,19 +82,19 @@ def plot_curves(y_true, scores, out_path, scores_type):
 
 
 def extract_results(idx_label_scores, T):
-    y_true, y_pred, logit_scores_list, max_logit_scores_list, softmax_scores_list, max_softmax_scores_list = [], [], [], [], [], []
+    y_true, y_pred, logit_scores, max_logit_scores, softmax_scores, max_softmax_scores = [], [], [], [], [], []
     for idx, label, scores in idx_label_scores:
         y_true.append(label)
-        y_pred.append(np.argmax(scores, 0))
-        logit_scores_list.append(scores)
-        max_logit_scores_list.append(np.max(scores, 0))
+        y_pred.append(np.argmax(scores))
+        logit_scores.append(scores)
+        max_logit_scores.append(np.max(scores))
 
         scores_t = torch.tensor(scores, dtype=torch.float)
-        softmax_scores = F.softmax(scores_t / T, dim=0).numpy().tolist()
-        softmax_scores_list.append(softmax_scores)
-        max_softmax_scores_list.append(np.max(softmax_scores, 0))
+        soft_scores = F.softmax(scores_t / T, dim=0).numpy().tolist()
+        softmax_scores.append(soft_scores)
+        max_softmax_scores.append(np.max(soft_scores))
     
-    return y_true, y_pred, logit_scores_list, max_logit_scores_list, softmax_scores_list, max_softmax_scores_list
+    return y_true, y_pred, logit_scores, max_logit_scores, softmax_scores, max_softmax_scores
 
 
 def plot_results(idx_label_scores, out_path, split: str = None, classes = None, ood_idx_label_scores=None, T: int = 1):
@@ -112,18 +112,20 @@ def plot_results(idx_label_scores, out_path, split: str = None, classes = None, 
             'precision': precision_score(y_true_id, y_pred_id, average='macro'),
             'recall': recall_score(y_true_id, y_pred_id, average='macro'),
             'fbeta': fbeta_score(y_true_id, y_pred_id, beta=1, average='macro'),
+            'softmax_average_precision': average_precision_score(y_true_id, softmax_scores_id, average='macro'),
             'softmax_auc_roc_ovr': roc_auc_score(y_true_id, softmax_scores_id, multi_class='ovr'),
             'softmax_auc_roc_ovo': roc_auc_score(y_true_id, softmax_scores_id, multi_class='ovo'),
         }
         save_results(out_path, metrics, split, suffix='metrics')
 
     else:
-        y_true_ood, y_pred_ood, logit_scores_ood, softmax_scores_ood, max_logit_scores_ood, max_softmax_scores_ood = extract_results(ood_idx_label_scores, T)
+        y_true_ood, y_pred_ood, logit_scores_ood, max_logit_scores_ood, softmax_scores_ood, max_softmax_scores_ood = extract_results(ood_idx_label_scores, T)
 
         plot_scores(max_logit_scores_id, max_logit_scores_ood, img_path, 'logit')
         plot_scores(max_softmax_scores_id, max_softmax_scores_ood, img_path, 'softmax')
 
-        y_true = [[0] * len(max_logit_scores_id), [0] * len(max_logit_scores_ood)]
+        y_true = [0] * len(max_logit_scores_id)
+        y_true.extend([1] * len(max_logit_scores_ood))
         max_logit_scores = max_logit_scores_id + max_logit_scores_ood
         max_softmax_scores = max_softmax_scores_id + max_softmax_scores_ood
         

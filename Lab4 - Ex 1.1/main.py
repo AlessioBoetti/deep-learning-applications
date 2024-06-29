@@ -627,14 +627,15 @@ def main(args, cfg, wb, run_name):
                 'scores': ood_idx_label_scores,
                 'time': ood_test_time,
             }
-            save_results(cfg['out_path'], ood_test_results, 'test_ood')
+            save_results(cfg['out_path'], results, 'test_ood')
             plot_results(ood_idx_label_scores, cfg['out_path'], 'test_ood', ood_dataset.train_set.classes)
             plot_results(idx_label_scores, cfg['out_path'], ood_idx_label_scores=ood_idx_label_scores)
 
             if cfg['cea']:
-                cea = CEA(model, MaxLogitPostprocessor, val_loader, device, cfg['cea']['percentile_top'], cfg['cea']['addition_coef'])
+                _, val_loader, test_loader, _ = dataset.loaders(train=True, val=True, **dataloader_kw)
+                cea = CEA(model, MaxLogitPostprocessor(), val_loader, device, cfg['cea']['percentile_top'], cfg['cea']['addition_coef'])
                 cea_metrics = get_ood_score(model, test_loader, ood_test_loader, cea.postprocess, device)
-                save_results(cfg['out_path'], cea_metrics, 'test_ood_cea')
+                save_results(cfg['out_path'], cea_metrics, 'test_ood_cea', suffix='metrics')
 
         else:
             raise NotImplementedError()

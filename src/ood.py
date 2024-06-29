@@ -1,5 +1,5 @@
 import numpy as np
-from sklearn.metrics import roc_curve, precision_recall_curve, auc
+from sklearn.metrics import roc_curve, precision_recall_curve, auc, accuracy_score
 import torch
 
 
@@ -17,7 +17,7 @@ class MaxLogitPostprocessor():
 class CEA():
     # From https://github.com/mazizmalayeri/CEA
     
-    def __init__(self, model, processor, loader, device, percentile_top, addition_coef, hook_name, treshold_caution_coef=1.1):
+    def __init__(self, model, processor, loader, device, percentile_top, addition_coef, treshold_caution_coef=1.1, hook_name: str = 'penultimate'):
         """
             Args:
                 device (str): Device for computation.
@@ -46,13 +46,13 @@ class CEA():
         added_scores = []
         model.eval()
 
-        activation = {}
-        def get_activation(name):
-            def hook(model, input, output):
-                activation[name] = output.detach()
-            return hook
+        # activation = {}
+        # def get_activation(name):
+        #     def hook(model, input, output):
+        #         activation[name] = output.detach()
+        #     return hook
         
-        model.penultimate_layer.register_forward_hook(get_activation(hook_name))
+        # model.fc.layers.act_2.register_forward_hook(get_activation(hook_name))
 
         with torch.no_grad():
             for batch in loader:
@@ -60,17 +60,22 @@ class CEA():
                 inputs = inputs.to(device, non_blocking=True)
                 labels = labels.to(device, non_blocking=True)
 
-                outputs = model(inputs)
-                activations_list.append(activation[hook_name])
-                activation[hook_name] = None
+                # outputs = model(inputs)
+                # activations_list.append(activation[hook_name])
+                # activation[hook_name] = None
 
-                _, original_score = self.processor(model, inputs)
+                x = model.conv_net(inputs)
+                x = x.view(x.size(0), -1)
+                x = model.fc.layers.act_1(model.fc.layers.bn_1(model.fc.layers.linear_1(x)))
+                act = model.fc.layers.act_2(model.fc.layers.bn_2(model.fc.layers.linear_2(x)))
+                activations_list.append(act)
+
+                _, original_score = self.processor.postprocess(model, inputs)
                 original_scores.append(original_score)
 
         self.activations_list = np.concatenate(activations_list, axis=0)
         self.set_threshold()
 
-        added_scores = []
         for activation in activations_list:
             nov = activation - self.threshold_top
             nov = nov.clip(min=0)
@@ -80,39 +85,31 @@ class CEA():
         self.added_scores = np.concatenate(added_scores, axis=0)
         self.original_scores = np.concatenate(original_scores, axis=0)
         self.set_coef()
-        
-        # with torch.no_grad():
-        #     for batch in loader:
-        #         inputs, labels, idx = batch
-        #         inputs = inputs.to(device, non_blocking=True)
-        #         labels = labels.to(device, non_blocking=True)
-                
-        #         added_score, original_score = self.postprocess(model, inputs, val=True)
-        #         added_scores.append(added_score)
-        #         original_scores.append(original_score)
-
-        # self.added_scores = np.concatenate(added_scores, axis=0)
-        # self.original_scores = np.concatenate(original_scores, axis=0)
-        # self.set_coef()
 
 
     @torch.no_grad()
-    def postprocess(self, model, inputs, activation, hook_name):
+    def postprocess(self, model, inputs):
         """
             Calculating the novelty score on data.
         """
         
         # Compute original novelty score
-        pred, conf = self.processor(model, inputs)
+        pred, conf = self.processor.postprocess(model, inputs)
         
         # Compute CEA added value
-        outputs = model(inputs)
-        act = activation[hook_name]
+        # outputs = model(inputs)
+        # act = activation[hook_name]
+
+        x = model.conv_net(inputs)
+        x = x.view(x.size(0), -1)
+        x = model.fc.layers.act_1(model.fc.layers.bn_1(model.fc.layers.linear_1(x)))
+        act = model.fc.layers.act_2(model.fc.layers.bn_2(model.fc.layers.linear_2(x)))
+        
         nov = act - self.threshold_top
         nov = nov.clip(min=0)
         nov = -torch.norm(nov, dim=1)
         
-        return pred, self.coef * nov.cpu().numpy() + conf, activation
+        return pred, self.coef * nov.cpu().numpy() + conf
 
 
     def set_threshold(self):
@@ -134,27 +131,27 @@ class CEA():
         # print('Coeffient of added novelty score is: {}'.format(self.coef))
 
 
-def acc(pred, label):
-    ind_pred = pred[label != -1]
-    ind_label = label[label != -1]
+def acc(y_pred, y_true):
+    ind_pred = y_pred[y_true != -1]
+    ind_label = y_true[y_true != -1]
     num_tp = np.sum(ind_pred == ind_label)
     acc = num_tp / len(ind_label)
     return acc
 
 
-def auc_and_fpr_recall(conf, label, tpr_th):
+def auc_and_fpr_recall(y_true, max_scores, tpr_th):
     # following convention in ML we treat OOD as positive
-    ood_indicator = np.zeros_like(label)
-    ood_indicator[label == -1] = 1
+    ood_indicator = np.zeros_like(y_true)
+    ood_indicator[y_true == -1] = 1
 
     # in the postprocessor we assume ID samples will have larger
     # "conf" values than OOD samples
     # therefore here we need to negate the "conf" values
-    fpr_list, tpr_list, thresholds = roc_curve(ood_indicator, -conf)
+    fpr_list, tpr_list, thresholds = roc_curve(ood_indicator, -max_scores)
     fpr = fpr_list[np.argmax(tpr_list >= tpr_th)]
 
-    precision_in, recall_in, thresholds_in = precision_recall_curve(1 - ood_indicator, conf)
-    precision_out, recall_out, thresholds_out = precision_recall_curve(ood_indicator, -conf)
+    precision_in, recall_in, thresholds_in = precision_recall_curve(1 - ood_indicator, max_scores)
+    precision_out, recall_out, thresholds_out = precision_recall_curve(ood_indicator, -max_scores)
 
     auroc = auc(fpr_list, tpr_list)
     aupr_in = auc(recall_in, precision_in)
@@ -163,12 +160,13 @@ def auc_and_fpr_recall(conf, label, tpr_th):
     return auroc, aupr_in, aupr_out, fpr
 
 
-def compute_all_metrics(conf, label, pred):
+def compute_all_metrics(y_true, y_pred, max_scores):
     # np.set_printoptions(precision=3)
     recall = 0.95
-    auroc, aupr_in, aupr_out, fpr = auc_and_fpr_recall(conf, label, recall)
-    accuracy = acc(pred, label)
-    return fpr, auroc, aupr_in, aupr_out, accuracy
+    auroc, aupr_in, aupr_out, fpr = auc_and_fpr_recall(y_true, max_scores, recall)
+    # accuracy = acc(y_pred, y_true)
+    accuracy = accuracy_score(y_true, y_pred)
+    return {'FPR at 0.95 TPR': fpr, 'auc_roc': auroc, 'average_precision_id': aupr_in, 'average_precision_ood': aupr_out, 'accuracy': accuracy}
 
 
 def compute_ood_metrics(pred_id, conf_id, gt_id, pred_ood, conf_ood, gt_ood, missclass_as_ood=False):
@@ -191,25 +189,25 @@ def compute_ood_metrics(pred_id, conf_id, gt_id, pred_ood, conf_ood, gt_ood, mis
         id_gt_np[np.array(pred_id) != id_gt_np] = -1
         # print((id_gt_np == -1).mean())
         gt_id = id_gt_np.tolist()
-        
-    pred = np.concatenate([pred_id, pred_ood])
-    conf = np.concatenate([conf_id, conf_ood])
-    label = np.concatenate([gt_id, gt_ood])
     
-    check_nan = np.isnan(conf)
-    check_inf = np.isinf(conf)
+    y_true = np.concatenate([gt_id, gt_ood])
+    y_pred = np.concatenate([pred_id, pred_ood])
+    max_scores = np.concatenate([conf_id, conf_ood])
+    
+    check_nan = np.isnan(max_scores)
+    check_inf = np.isinf(max_scores)
     for check in [check_nan, check_inf]:
         num_check = check.sum()
         if num_check > 0:
-            conf = np.delete(conf, np.where(check))
-            pred = np.delete(pred, np.where(check))
-            label = np.delete(label, np.where(check))
+            y_true = np.delete(y_true, np.where(check))
+            y_pred = np.delete(y_pred, np.where(check))
+            max_scores = np.delete(max_scores, np.where(check))
 
-    ood_metrics = compute_all_metrics(conf, label, pred)
+    ood_metrics = compute_all_metrics(y_true, y_pred, max_scores)
     return ood_metrics
 
 
-def get_ood_score(model, id_loader, ood_loader, score_function, hook_name, device, missclass_as_ood=False):
+def get_ood_score(model, id_loader, ood_loader, score_function, device, hook_name: str = 'penultimate', missclass_as_ood: bool = False):
     """
         Calculate the novelty scores that an OOD detector (score_function) assigns to ID and OOD and evaluate them via AUROC and FPR.
 
@@ -226,21 +224,20 @@ def get_ood_score(model, id_loader, ood_loader, score_function, hook_name, devic
     
     model.eval() 
     
-    activation = {}
-    def get_activation(name):
-        def hook(model, input, output):
-            activation[name] = output.detach()
-        return hook
+    # activation = {}
+    # def get_activation(name):
+    #     def hook(model, input, output):
+    #         activation[name] = output.detach()
+    #     return hook
 
-    model.penultimate_layer.register_forward_hook(get_activation(hook_name))
+    # model.fc.layers.act_2.register_forward_hook(get_activation(hook_name))
 
     preds_id, confs_id, gt_id = [], [], []
     for batch in id_loader:
         inputs, labels, idx = batch
         inputs = inputs.to(device, non_blocking=True)
         labels = labels.to(device, non_blocking=True)
-        pred, conf, activation = score_function(model, inputs, activation, hook_name)
-        activation[hook_name] = None
+        pred, conf = score_function(model, inputs)
         preds_id += list(pred)
         confs_id += list(conf)
         gt_id += list(labels.cpu().detach().numpy())
@@ -250,8 +247,7 @@ def get_ood_score(model, id_loader, ood_loader, score_function, hook_name, devic
             inputs, labels, idx = batch
             inputs = inputs.to(device, non_blocking=True)
             labels = labels.to(device, non_blocking=True)
-            pred, conf = score_function(model, inputs, activation, hook_name)
-            activation[hook_name] = None
+            pred, conf = score_function(model, inputs)
             preds_ood += list(pred)
             confs_ood += list(conf)
             gt_ood += list(np.ones(conf.shape[0])*-1)
