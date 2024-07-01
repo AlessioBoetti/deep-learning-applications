@@ -7,11 +7,65 @@ class MaxLogitPostprocessor():
     def __init__(self):
         pass
 
+
     @torch.no_grad()
     def postprocess(self, model, inputs):
         output = model(inputs)
         conf, pred = torch.max(output, dim=1)
         return pred.cpu().numpy(), conf.cpu().numpy()
+
+
+
+class ODINPostprocessor():
+    def __init__(self, temperature: float = 1000.0, noise: float = 0.0014):
+        self.temperature = temperature
+        self.noise = noise
+
+
+    def postprocess(self, model, inputs, criterion):
+        inputs.requires_grad = True
+        outputs = model(inputs)
+
+        # Calculating the perturbation we need to add, that is,
+        # the sign of gradient of cross entropy loss w.r.t. input
+        targets = output.detach().argmax(axis=1)
+
+        # Using temperature scaling
+        output = output / self.temperature
+
+        loss = criterion(outputs, targets)
+        loss.backward()
+
+        # Normalizing the gradient to binary in {0, 1}
+        gradient = torch.ge(inputs.grad.detach(), 0)  # torch.ge: greater or equal
+        gradient = (gradient.float() - 0.5) * 2
+
+        # Scaling values taken from original code
+        # gradient = gradient/std
+
+        # Adding small perturbations to images
+        temp_inputs = torch.add(inputs.detach(), gradient, alpha=-self.noise)  # torch.add(input, other, alpha): adds other, scaled by alpha, to input.
+        outputs = model(temp_inputs)
+        outputs = outputs / self.temperature
+
+        # Calculating the confidence after adding perturbations
+        outputs = outputs.detach()
+        outputs = outputs - outputs.max(dim=1, keepdims=True).values
+        outputs = outputs.exp() / outputs.exp().sum(dim=1, keepdims=True)
+
+        conf, pred = outputs.max(dim=1)
+
+        return pred.cpu().numpy(), conf.cpu().numpy()
+
+
+    def set_hyperparam(self, hyperparam: list):
+        self.temperature = hyperparam[0]
+        self.noise = hyperparam[1]
+
+
+    def get_hyperparam(self):
+        return [self.temperature, self.noise]
+
 
 
 class CEA():

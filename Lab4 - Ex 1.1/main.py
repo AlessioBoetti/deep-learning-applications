@@ -623,10 +623,20 @@ def main(args, cfg, wb, run_name):
             plot_results(ood_idx_label_scores, cfg['out_path'], 'test_ood', ood_dataset.train_set.classes)
             plot_results(idx_label_scores, cfg['out_path'], 'ood', ood_idx_label_scores=ood_idx_label_scores)
 
+            if cfg['odin']:
+                odin = ODINPostprocessor()
+                odin_metrics = get_ood_score(model, test_loader, ood_test_loader, cea.postprocess, device)
+                save_results(cfg['out_path'], odin_metrics, 'test_ood_odin', suffix='metrics')
+                
             if cfg['cea']:
                 cea = CEA(model, MaxLogitPostprocessor(), val_loader, device, cfg['cea']['percentile_top'], cfg['cea']['addition_coef'])
                 cea_metrics = get_ood_score(model, test_loader, ood_test_loader, cea.postprocess, device)
-                save_results(cfg['out_path'], cea_metrics, 'test_ood_cea', suffix='metrics')
+                save_results(cfg['out_path'], cea_metrics, 'test_ood_cea_logits', suffix='metrics')
+
+                if cfg['odin']:
+                    cea = CEA(model, odin, val_loader, device, cfg['cea']['percentile_top'], cfg['cea']['addition_coef'])
+                    cea_metrics = get_ood_score(model, test_loader, ood_test_loader, cea.postprocess, device)
+                    save_results(cfg['out_path'], cea_metrics, 'test_ood_cea_logits', suffix='metrics')
 
         else:
             raise NotImplementedError()
