@@ -176,7 +176,7 @@ def evaluate(
     metric_dict = {metric: float(metrics[metric].compute().cpu().data.numpy() * 100) for metric in metrics.keys()}
     metrics.reset()
 
-    evaluate_logger(logger, total_time, loss_norm, metric_dict, validation)
+    evaluate_logger(logger, total_time, loss_norm, metric_dict, validation, True if adv_cfg else False)
     
     return loss_norm, metric_dict, total_time, val_batches, idx_label_scores
 
@@ -222,8 +222,7 @@ def train(
         loss_epoch = 0.0
         epoch_start_time = time.time()
 
-        for batch in tqdm(loader, desc=f'Epoch {epoch + 1}'):
-            # https://discuss.pytorch.org/t/should-we-set-non-blocking-to-true/38234/4
+        for batch in tqdm(loader, desc=f'Epoch {epoch + 1}'):  # https://discuss.pytorch.org/t/should-we-set-non-blocking-to-true/38234/4
             inputs, labels, idx = batch
             inputs = inputs.to(device, non_blocking=True)
             labels = labels.to(device, non_blocking=True)
@@ -409,8 +408,10 @@ def main(args, cfg, wb, run_name):
             )
         else:
             raise NotImplementedError()
-    dataloader_kw = dict(seed=cfg['seed'], device='cpu', **cfg['dataloader'])  # https://stackoverflow.com/questions/68621210/runtimeerror-expected-a-cuda-device-type-for-generator-but-found-cpu
     logger.info('Dataset loaded.')
+
+    dataloader_kw = dict(seed=cfg['seed'], device='cpu', **cfg['dataloader'])  # https://stackoverflow.com/questions/68621210/runtimeerror-expected-a-cuda-device-type-for-generator-but-found-cpu
+    train_loader, val_loader, test_loader, org_test_loader = dataset.loaders(train=True, val=True, **dataloader_kw)
 
 
     # Initializing model...
@@ -495,7 +496,6 @@ def main(args, cfg, wb, run_name):
     # Training model...
     if cfg['train']:
         logger.info('Training.')
-        train_loader, val_loader, _, _ = dataset.loaders(train=True, val=True, **dataloader_kw)
         print_logs(logger, cfg, train=True)
 
         scheduler = setup_scheduler(optimizer, cfg, train_loader, train_cfg['n_epochs'] - start)
@@ -537,8 +537,6 @@ def main(args, cfg, wb, run_name):
     # Testing model...
     if cfg['test']:
         logger.info('Testing.')
-        _, _, test_loader, _ = dataset.loaders(train=False, **dataloader_kw)
-
         logger.info('Starting testing on test set...')
         test_loss, test_metrics, test_time, _, idx_label_scores = evaluate(test_loader, model, criterion, metric_collection, device, logger, validation=False)
         logger.info('Finished testing.')
@@ -554,12 +552,39 @@ def main(args, cfg, wb, run_name):
         save_results(cfg['out_path'], results, 'test')
         plot_results(idx_label_scores, cfg['out_path'], 'test', dataset.train_set.classes)
 
+        # Testing model on adversarial examples...
+        if adv_cfg:
+            logger.info('Testing on adversarial examples.')
+            logger.info('Starting testing on adversarial test set...')
+            adv_test_loss, adv_test_metrics, adv_test_time, _, adv_idx_label_scores = evaluate(
+                test_loader,
+                model,
+                criterion,
+                metric_collection,
+                device,
+                logger,
+                False,
+                scaler,
+                adv_cfg,
+            )
+            logger.info('Finished testing.')
+
+            results = {
+                'loss': adv_test_loss,
+                'accuracy': adv_test_metrics['MulticlassAccuracy'],
+                'precision': adv_test_metrics['MulticlassPrecision'],
+                'recall': adv_test_metrics['MulticlassRecall'],
+                'scores': adv_idx_label_scores,
+                'time': adv_test_time,
+            }
+            save_results(cfg['out_path'], results, 'test_adversarial')
+            plot_results(adv_idx_label_scores, cfg['out_path'], 'test_adversarial', dataset.train_set.classes)
+            plot_results(idx_label_scores, cfg['out_path'], 'adv', ood_idx_label_scores=adv_idx_label_scores)
+
 
     # Testing model on original dataset...
     if cfg['test_original']:
         logger.info('Testing on original dataset.')
-        _, _, _, org_test_loader = dataset.loaders(train=False, **dataloader_kw)
-
         logger.info('Starting testing on original (not transformed) test set...')
         org_test_loss, org_test_metrics, org_test_time, _, org_idx_label_scores = evaluate(org_test_loader, model, criterion, metric_collection, device, logger, validation=False)
         logger.info('Finished testing.')
@@ -575,39 +600,6 @@ def main(args, cfg, wb, run_name):
         save_results(cfg['out_path'], results, 'test_original')
         plot_results(org_idx_label_scores, cfg['out_path'], 'test_original', dataset.train_set.classes)
     
-
-    # Testing model on adversarial examples...
-    if adv_cfg:
-        logger.info('Testing on adversarial examples.')
-        _, _, test_loader, _ = dataset.loaders(train=False, **dataloader_kw)
-
-        logger.info('Starting testing on adversarial test set...')
-        adv_test_loss, adv_test_metrics, adv_test_time, _, adv_idx_label_scores = evaluate(
-            test_loader,
-            model,
-            criterion,
-            metric_collection,
-            device,
-            logger,
-            False,
-            scaler,
-            adv_cfg,
-        )
-        logger.info('Finished testing.')
-
-        results = {
-            'loss': adv_test_loss,
-            'accuracy': adv_test_metrics['MulticlassAccuracy'],
-            'precision': adv_test_metrics['MulticlassPrecision'],
-            'recall': adv_test_metrics['MulticlassRecall'],
-            'scores': adv_idx_label_scores,
-            'time': adv_test_time,
-            'tot_loss': test_loss + adv_test_loss,
-        }
-        save_results(cfg['out_path'], results, 'test_adversarial')
-        plot_results(adv_idx_label_scores, cfg['out_path'], 'test_adversarial', dataset.train_set.classes)
-        plot_results(idx_label_scores, cfg['out_path'], ood_idx_label_scores=adv_idx_label_scores)
-
 
     # Other testing...
     if cfg['test'] and cfg['problem'] is not None:
@@ -629,10 +621,9 @@ def main(args, cfg, wb, run_name):
             }
             save_results(cfg['out_path'], results, 'test_ood')
             plot_results(ood_idx_label_scores, cfg['out_path'], 'test_ood', ood_dataset.train_set.classes)
-            plot_results(idx_label_scores, cfg['out_path'], ood_idx_label_scores=ood_idx_label_scores)
+            plot_results(idx_label_scores, cfg['out_path'], 'ood', ood_idx_label_scores=ood_idx_label_scores)
 
             if cfg['cea']:
-                _, val_loader, test_loader, _ = dataset.loaders(train=True, val=True, **dataloader_kw)
                 cea = CEA(model, MaxLogitPostprocessor(), val_loader, device, cfg['cea']['percentile_top'], cfg['cea']['addition_coef'])
                 cea_metrics = get_ood_score(model, test_loader, ood_test_loader, cea.postprocess, device)
                 save_results(cfg['out_path'], cea_metrics, 'test_ood_cea', suffix='metrics')
@@ -644,8 +635,7 @@ def main(args, cfg, wb, run_name):
     if cfg['explain_gradients']:
         backprop_grads = VanillaBackprop(model)
         
-        _, _, transformed_test_loader, org_test_loader = dataset.loaders(train=False, **dataloader_kw)
-        batch = next(iter(transformed_test_loader))
+        batch = next(iter(test_loader))
         img, label, idx = batch
         grads = backprop_grads.generate_gradients(img, label)
         
@@ -661,8 +651,7 @@ def main(args, cfg, wb, run_name):
         logger.info('Explaining model predictions with Class Activation Mappings...')
         cam = ClassActivationMapping(model, target_layer='hook')
 
-        _, _, transformed_test_loader, org_test_loader = dataset.loaders(train=False, **dataloader_kw)
-        iter_loader = iter(transformed_test_loader)
+        iter_loader = iter(test_loader)
         iter_org_loader = iter(org_test_loader)
         batch = next(iter_loader)
         org_batch = next(iter_org_loader)

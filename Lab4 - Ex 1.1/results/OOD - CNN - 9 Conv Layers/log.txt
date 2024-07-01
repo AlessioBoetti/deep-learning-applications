@@ -2032,37 +2032,37 @@
 2024-06-30 17:52:37,140 -   Early stopping. Ending training.
 2024-06-30 17:52:37,141 - Training time: 83050.352
 2024-06-30 17:52:37,142 - Finished training.
-2024-06-30 17:52:37,142 - Testing.
-2024-06-30 17:52:37,143 - Starting testing on test set...
-2024-06-30 17:52:52,991 -   Test Time: 15.847
-2024-06-30 17:52:52,992 -   Test Loss: 0.01889140
-2024-06-30 17:52:52,992 -   Test MulticlassAccuracy: 99.4394
-2024-06-30 17:52:52,992 -   Test MulticlassPrecision: 99.4502
-2024-06-30 17:52:52,992 -   Test MulticlassRecall: 99.4394
-2024-06-30 17:52:52,992 - Finished testing.
-2024-06-30 17:52:53,880 - Testing on original dataset.
-2024-06-30 17:52:53,880 - Starting testing on original (not transformed) test set...
-2024-06-30 17:53:09,580 -   Test Time: 15.698
-2024-06-30 17:53:09,580 -   Test Loss: 0.29442341
-2024-06-30 17:53:09,580 -   Test MulticlassAccuracy: 91.1873
-2024-06-30 17:53:09,580 -   Test MulticlassPrecision: 93.5432
-2024-06-30 17:53:09,580 -   Test MulticlassRecall: 91.1873
-2024-06-30 17:53:09,580 - Finished testing.
-2024-06-30 17:53:10,412 - Testing on adversarial examples.
-2024-06-30 17:53:10,497 - Starting testing on adversarial test set...
-2024-06-30 17:54:19,512 -   Test Time: 69.014
-2024-06-30 17:54:19,512 -   Test Loss: 0.04435111
-2024-06-30 17:54:19,512 -   Test MulticlassAccuracy: 98.9001
-2024-06-30 17:54:19,512 -   Test MulticlassPrecision: 98.9060
-2024-06-30 17:54:19,512 -   Test MulticlassRecall: 98.9001
-2024-06-30 17:54:19,512 - Finished testing.
-2024-06-30 17:54:21,702 - Testing on OOD dataset.
-2024-06-30 17:54:21,702 - Starting testing on OOD test set...
-2024-06-30 17:54:37,556 -   Test Time: 15.853
-2024-06-30 17:54:37,557 -   Test Loss: 5.58213197
-2024-06-30 17:54:37,557 -   Test MulticlassAccuracy: 10.6600
-2024-06-30 17:54:37,557 -   Test MulticlassPrecision: 13.8869
-2024-06-30 17:54:37,557 -   Test MulticlassRecall: 10.6600
-2024-06-30 17:54:37,557 - Finished testing.
-2024-06-30 17:56:17,220 - Finished run.
-2024-06-30 17:56:17,220 - Closing experiment.
+2024-07-01 13:42:02,891 - Testing.
+2024-07-01 13:42:02,891 - Starting testing on test set...
+2024-07-01 13:42:24,109 -   Test Time: 21.217
+2024-07-01 13:42:24,109 -   Test Loss: 0.01813717
+2024-07-01 13:42:24,109 -   Test MulticlassAccuracy: 99.4910
+2024-07-01 13:42:24,109 -   Test MulticlassPrecision: 99.5000
+2024-07-01 13:42:24,109 -   Test MulticlassRecall: 99.4910
+2024-07-01 13:42:24,110 - Finished testing.
+2024-07-01 13:42:24,961 - Testing on adversarial examples.
+2024-07-01 13:42:24,961 - Starting testing on adversarial test set...
+2024-07-01 13:43:32,798 -   Adv Test Time: 67.837
+2024-07-01 13:43:32,798 -   Adv Test Loss: 0.04347142
+2024-07-01 13:43:32,798 -   Adv Test MulticlassAccuracy: 98.9307
+2024-07-01 13:43:32,798 -   Adv Test MulticlassPrecision: 98.9352
+2024-07-01 13:43:32,798 -   Adv Test MulticlassRecall: 98.9307
+2024-07-01 13:43:32,809 - Finished testing.
+2024-07-01 13:43:34,956 - Testing on original dataset.
+2024-07-01 13:43:34,957 - Starting testing on original (not transformed) test set...
+2024-07-01 13:43:50,651 -   Test Time: 15.694
+2024-07-01 13:43:50,652 -   Test Loss: 0.28437046
+2024-07-01 13:43:50,652 -   Test MulticlassAccuracy: 91.5206
+2024-07-01 13:43:50,652 -   Test MulticlassPrecision: 93.5814
+2024-07-01 13:43:50,652 -   Test MulticlassRecall: 91.5206
+2024-07-01 13:43:50,652 - Finished testing.
+2024-07-01 13:43:51,480 - Testing on OOD dataset.
+2024-07-01 13:43:51,480 - Starting testing on OOD test set...
+2024-07-01 13:44:07,724 -   Test Time: 16.243
+2024-07-01 13:44:07,724 -   Test Loss: 5.29300572
+2024-07-01 13:44:07,724 -   Test MulticlassAccuracy: 10.7500
+2024-07-01 13:44:07,724 -   Test MulticlassPrecision: 13.6258
+2024-07-01 13:44:07,724 -   Test MulticlassRecall: 10.7500
+2024-07-01 13:44:07,725 - Finished testing.
+2024-07-01 13:45:46,517 - Finished run.
+2024-07-01 13:45:46,517 - Closing experiment.

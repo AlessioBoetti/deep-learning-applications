@@ -178,8 +178,8 @@ def format_train_results(total_batches, n_epochs, time, wb_log, patience=None, b
     return results
 
 
-def save_results(path, results: dict, set: str, suffix: str = 'results'):
-    with open(f'{path}/{set}_{suffix}.json', 'w') as f:
+def save_results(path, results: dict, split: str, suffix: str = 'results'):
+    with open(f'{path}/{split}_{suffix}.json', 'w') as f:
         json.dump(results, f)
 
 

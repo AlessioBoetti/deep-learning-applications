@@ -8,7 +8,7 @@ import torch.nn.functional as F
 from utils import *
 
 
-def plot_confusion_matrix(y_true, y_pred, classes, out_path):
+def plot_confusion_matrix(y_true, y_pred, classes, out_path, split):
     plt.figure()
     cm = confusion_matrix(y_true, y_pred)
     cmn = cm.astype(np.float32)
@@ -16,33 +16,37 @@ def plot_confusion_matrix(y_true, y_pred, classes, out_path):
     cmn = (100*cmn).astype(np.int32)
     disp = ConfusionMatrixDisplay(cmn, display_labels=classes)
     disp.plot()
-    plt.savefig(f'{out_path}/confusion_matrix.png')
+    plt.savefig(f'{out_path}/{split}_confusion_matrix.png')
     plt.close()
 
     # multilabel_confusion_matrix(y_true, y_pred, labels=classes)
 
 
-def plot_scores(scores_id, scores_ood, out_path, scores_type, T=1):
+def plot_scores(scores_id, scores_ood, out_path, split, scores_type, T=1):
+    suptitle = 'ID vs OOD scores'
+    title = f'({scores_type})' if scores_type == 'logits' else f'({scores_type}, T = {T})'
+    filename = f'{out_path}/{split}_max_{scores_type}_scores'
+
     plt.figure()
     plt.hist(scores_id, density=True, alpha=0.5, bins=25, label='ID')
     plt.hist(scores_ood, density=True, alpha=0.5, bins=25, label='OOD')
-    plt.suptitle(f'ID vs OOD scores')
-    title = f'({scores_type})' if scores_type == 'logits' else f'({scores_type}, T = {T})'
+    plt.suptitle(suptitle)
     plt.title(title)
-    plt.savefig(f'{out_path}/max_{scores_type}_scores_histogram.png')
+    plt.savefig(f'{filename}_histogram.png')
     plt.close()
 
     plt.figure()
     plt.plot(sorted(scores_id), label='ID')
     plt.plot(sorted(scores_ood), label='OOD')
-    plt.suptitle(f'ID vs OOD scores')
-    title = f'({scores_type})' if scores_type == 'logits' else f'({scores_type}, T = {T})'
+    plt.suptitle(suptitle)
     plt.title(title)
-    plt.savefig(f'{out_path}/max_{scores_type}_scores_plot.png')
+    plt.savefig(f'{filename}_plot.png')
     plt.close()
 
 
-def plot_curves(y_true, scores, out_path, scores_type):
+def plot_curves(y_true, scores, out_path, split, scores_type):
+
+    filename = f'{out_path}/{split}_max_{scores_type}'
 
     # ROC Curve & AUC ROC score
     fpr, tpr, _ = roc_curve(y_true, scores)
@@ -67,7 +71,7 @@ def plot_curves(y_true, scores, out_path, scores_type):
     plt.ylabel('Precision')
     plt.suptitle('Precision-Recall curve')
     plt.title('AP = {0:0.4f}'.format(ap))
-    plt.savefig(f'{out_path}/max_{scores_type}_precision_recall_curve.png')
+    plt.savefig(f'{filename}_precision_recall_curve.png')
     plt.close()
 
     plt.figure()
@@ -77,7 +81,7 @@ def plot_curves(y_true, scores, out_path, scores_type):
     plt.ylabel('True Positive Rate (TPR)')
     plt.suptitle('ROC curve')
     plt.title('AUC ROC = {0:0.4f}'.format(auc_roc))
-    plt.savefig(f'{out_path}/roc_curve.png')
+    plt.savefig(f'{filename}_roc_curve.png')
     plt.close()
 
 
@@ -97,7 +101,7 @@ def extract_results(idx_label_scores, T):
     return y_true, y_pred, logit_scores, max_logit_scores, softmax_scores, max_softmax_scores
 
 
-def plot_results(idx_label_scores, out_path, split: str = None, classes = None, ood_idx_label_scores=None, T: int = 1):
+def plot_results(idx_label_scores, out_path: str, split: str = None, classes = None, ood_idx_label_scores=None, T: float = 1.0):
     
     y_true_id, y_pred_id, logit_scores_id, max_logit_scores_id, softmax_scores_id, max_softmax_scores_id = extract_results(idx_label_scores, T)
 
@@ -105,7 +109,7 @@ def plot_results(idx_label_scores, out_path, split: str = None, classes = None, 
     create_dirs_if_not_exist(img_path)
 
     if ood_idx_label_scores is None:
-        plot_confusion_matrix(y_true_id, y_pred_id, classes, img_path)
+        plot_confusion_matrix(y_true_id, y_pred_id, classes, img_path, split)
 
         metrics = {
             'accuracy': accuracy_score(y_true_id, y_pred_id),
@@ -121,16 +125,16 @@ def plot_results(idx_label_scores, out_path, split: str = None, classes = None, 
     else:
         y_true_ood, y_pred_ood, logit_scores_ood, max_logit_scores_ood, softmax_scores_ood, max_softmax_scores_ood = extract_results(ood_idx_label_scores, T)
 
-        plot_scores(max_logit_scores_id, max_logit_scores_ood, img_path, 'logit')
-        plot_scores(max_softmax_scores_id, max_softmax_scores_ood, img_path, 'softmax')
+        plot_scores(max_logit_scores_id, max_logit_scores_ood, img_path, split, 'logit')
+        plot_scores(max_softmax_scores_id, max_softmax_scores_ood, img_path, split, 'softmax')
 
         y_true = [0] * len(max_logit_scores_id)
         y_true.extend([1] * len(max_logit_scores_ood))
         max_logit_scores = max_logit_scores_id + max_logit_scores_ood
         max_softmax_scores = max_softmax_scores_id + max_softmax_scores_ood
         
-        plot_curves(y_true, max_logit_scores, img_path, 'logit')
-        plot_curves(y_true, max_softmax_scores, img_path, 'softmax')
+        plot_curves(y_true, max_logit_scores, img_path, split, 'logit')
+        plot_curves(y_true, max_softmax_scores, img_path, split, 'softmax')
 
 
 def save_plot(train_l, train_a, test_l, test_a):

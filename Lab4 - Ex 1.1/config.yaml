@@ -95,6 +95,7 @@ config:
     normalize: True
     augment: False
     use_sampler: True
+  
   cea:
     percentile_top: 99
     addition_coef: 1
