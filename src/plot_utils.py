@@ -72,6 +72,9 @@ def plot_curves(fpr, tpr, auc_roc, prec_id, rec_id, ap_id, prec_ood, rec_ood, ap
 
 def compute_metrics(y_true, scores, tpr_threshold: float = 0.95):
 
+    y_true = np.array(y_true)
+    scores = np.array(scores)
+
     # accuracy = accuracy_score(y_true, scores)
 
     # we assume ID samples will have larger score values than OOD samples
@@ -162,7 +165,7 @@ def plot_results(idx_label_scores, out_path: str, split: str = None, classes = N
             y_true_ood, y_pred_ood, logit_scores_ood, max_logit_scores_ood, softmax_scores_ood, max_softmax_scores_ood = extract_results(ood_idx_label_scores, T)
             
             y_true = get_y_true(y_true_id, y_pred_id, max_logit_scores_id, max_logit_scores_ood, missclass_as_ood)
-            y_pred = np.concatenate(y_pred_id, y_pred_ood)
+            y_pred = np.concatenate([y_pred_id, y_pred_ood])
             max_logit_scores = max_logit_scores_id + max_logit_scores_ood
             max_softmax_scores = max_softmax_scores_id + max_softmax_scores_ood
 
@@ -173,23 +176,23 @@ def plot_results(idx_label_scores, out_path: str, split: str = None, classes = N
             plot_scores(max_softmax_scores_id, max_softmax_scores_ood, img_path, split, 'max_softmax')
 
             logit_metrics = compute_metrics(y_true, max_logit_scores)
-            plot_curves(*logit_metrics, out_path=img_path, split=split, score_type='max_logit')
+            plot_curves(*logit_metrics, out_path=img_path, split=split, scores_type='max_logit')
 
             softmax_metrics = compute_metrics(y_true, max_softmax_scores)
-            plot_curves(*softmax_metrics, out_path=img_path, split=split, score_type='max_softmax')
+            plot_curves(*softmax_metrics, out_path=img_path, split=split, scores_type='max_softmax')
         else:
             y_true_id, y_pred_id, max_scores_id = idx_label_scores
             y_true_ood, y_pred_ood, max_scores_ood = ood_idx_label_scores
             
             y_true = get_y_true(y_true_id, y_pred_id, max_scores_id, max_scores_ood, missclass_as_ood)
-            y_pred = np.concatenate(y_pred_id, y_pred_ood)
+            y_pred = np.concatenate([y_pred_id, y_pred_ood])
             max_scores = max_scores_id + max_scores_ood
 
             y_true, y_pred, max_scores = check_values(y_true, y_pred, max_scores)
 
             plot_scores(max_scores_id, max_scores_ood, img_path, split, postprocess)
             metrics = compute_metrics(y_true, max_scores)
-            plot_curves(*metrics, out_path=img_path, split=split, score_type=postprocess)
+            plot_curves(*metrics, out_path=img_path, split=split, scores_type=postprocess)
 
         # accuracy = accuracy_score(y_true, y_pred)
 

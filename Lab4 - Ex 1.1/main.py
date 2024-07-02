@@ -381,6 +381,7 @@ def main(args, cfg, wb, run_name):
     device = 'cpu' if not torch.cuda.is_available() else cfg['device']
     cfg['device'] = device
     model_cfg, train_cfg, adv_cfg = cfg['model'], cfg['training'], cfg['adversarial']
+    adv_add = cfg['adversarial_add'] if adv_cfg else False
 
     if wandb.run.resumed:
         logger.info('Resuming experiment.')
@@ -498,7 +499,7 @@ def main(args, cfg, wb, run_name):
             patience=patience,
             best=best,
             adv_cfg=adv_cfg,
-            adv_add=cfg['adversarial_add'] if adv_cfg else False,
+            adv_add=adv_add,
             metrics_adv=metric_collection_adv if adv_add else None,
         )
         logger.info('Finished training.')
@@ -535,7 +536,7 @@ def main(args, cfg, wb, run_name):
                 metric_collection,
                 device,
                 logger,
-                validation=False,
+                False,  # validation
                 scaler,
                 adv_cfg,
             )
@@ -599,18 +600,18 @@ def main(args, cfg, wb, run_name):
                 for method_name in cfg['postprocess']:
                     method_class = getattr(adversarial, method_name)
                     method = method_class()
-                    method_name = f'{method_name.lower().replace('postprocessor', '')}'
+                    method_name = f"{method_name.lower().replace('postprocessor', '')}"
                     id_label_scores, ood_label_scores = get_ood_scores(model, test_loader, ood_test_loader, method.postprocess, device)
                     plot_results(id_label_scores, cfg['out_path'], 'ood', ood_idx_label_scores=ood_label_scores, postprocess=method_name)
                 
             if cfg['cea']:
-                if cfg['postprocess'] is None or not cfg['postprocess'];
+                if cfg['postprocess'] is None or not cfg['postprocess']:
                     raise ValueError('CEA postprocessing method was selected but no postprocessing method was chosen.')
                 
                 for method_name in cfg['postprocess']:
                     method_class = getattr(adversarial, method_name)
                     method = method_class()
-                    method_name = f'{method_name.lower().replace('postprocessor', '')}' + 'cea'
+                    method_name = f"{method_name.lower().replace('postprocessor', '')}" + 'cea'
                     cea = CEA(model, method, val_loader, device, cfg['cea']['percentile_top'], cfg['cea']['addition_coef'])
                     id_label_scores, ood_label_scores = get_ood_scores(model, test_loader, ood_test_loader, cea.postprocess, device)
                     plot_results(id_label_scores, cfg['out_path'], 'ood', ood_idx_label_scores=ood_label_scores, postprocess=method_name)
