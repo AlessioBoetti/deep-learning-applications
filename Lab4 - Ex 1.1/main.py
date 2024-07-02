@@ -599,8 +599,9 @@ def main(args, cfg, wb, run_name):
                 for method_name in cfg['postprocess']:
                     method_class = getattr(adversarial, method_name)
                     method = method_class()
+                    method_name = f'{method_name.lower().replace('postprocessor', '')}'
                     id_label_scores, ood_label_scores = get_ood_scores(model, test_loader, ood_test_loader, method.postprocess, device)
-                    plot_results(id_label_scores, cfg['out_path'], f'{method_name.lower().replace('postprocessor', '')}_ood', ood_idx_label_scores=ood_label_scores, postprocess=True)
+                    plot_results(id_label_scores, cfg['out_path'], 'ood', ood_idx_label_scores=ood_label_scores, postprocess=method_name)
                 
             if cfg['cea']:
                 if cfg['postprocess'] is None or not cfg['postprocess'];
@@ -609,9 +610,10 @@ def main(args, cfg, wb, run_name):
                 for method_name in cfg['postprocess']:
                     method_class = getattr(adversarial, method_name)
                     method = method_class()
+                    method_name = f'{method_name.lower().replace('postprocessor', '')}' + 'cea'
                     cea = CEA(model, method, val_loader, device, cfg['cea']['percentile_top'], cfg['cea']['addition_coef'])
                     id_label_scores, ood_label_scores = get_ood_scores(model, test_loader, ood_test_loader, cea.postprocess, device)
-                    plot_results(id_label_scores, cfg['out_path'], f'{method_name.lower().replace('postprocessor', '')}_cea_ood', ood_idx_label_scores=ood_label_scores, postprocess=True)
+                    plot_results(id_label_scores, cfg['out_path'], 'ood', ood_idx_label_scores=ood_label_scores, postprocess=method_name)
 
         else:
             raise NotImplementedError()
