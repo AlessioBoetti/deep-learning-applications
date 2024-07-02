@@ -17,12 +17,10 @@ from tqdm import tqdm
 
 import torch
 import torch.nn as nn
-# import torch.optim as optim
 
 from model import GPTLanguageModel, EarlyStopping
 from utils import *
 from xai import *
-from adversarial import *
 
 
 def parse_args():
@@ -143,14 +141,15 @@ def train(
     model = model.to(device)
     model.train()
 
+    torch.cuda.empty_cache()
+
     for epoch in range(start, n_epochs):
         loss_epoch = 0.0
         epoch_start_time = time.time()
 
         inputs, targets = get_batch(train_data, val_data, 'train', block_size, batch_size, device)        
         optimizer.zero_grad(set_to_none=True)  # https://pytorch.org/docs/stable/generated/torch.optim.Optimizer.zero_grad.html
-        with torch.cuda.amp.autocast():
-            # https://pytorch.org/docs/stable/amp.html
+        with torch.cuda.amp.autocast():  # https://pytorch.org/docs/stable/amp.html
             logits = model(inputs, device)
             B, T, C = logits.shape
             logits = logits.view(B*T, C)
@@ -186,11 +185,7 @@ def train(
         #         if epoch in lr_milestones:
         #             logger.info('  LR scheduler: new learning rate is %g' % float(scheduler.get_lr()[0]))
 
-        logger.info('Epoch {}/{}'.format(epoch + 1, n_epochs))
-        logger.info('  Epoch Train Time: {:.3f}'.format(epoch_time))
-        logger.info('  Epoch Train Loss: {:.8f}'.format(loss_epoch))  # epoch_loss_norm
-        # for metric, value in epoch_metrics.items():
-        #     logger.info('  Epoch Train {}: {:.4f}'.format(metric, value))
+        epoch_logger(logger, epoch, n_epochs, epoch_time, loss_epoch)
 
         # Other metrics: https://towardsdatascience.com/efficient-pytorch-supercharging-training-pipeline-19a26265adae
         wb_log = {
@@ -216,8 +211,7 @@ def train(
                 'val_time': val_time,
             })
 
-            if patience:
-                # Save best model
+            if patience:  # Save best model
                 if patience(losses['val']):
                     logger.info('  Found best checkpoint, saving checkpoint.')
                     best_results = {'best_epoch': epoch + 1}
@@ -320,34 +314,7 @@ def main(args, cfg, wb, run_name):
 
 
     # Loading model and optimizer...
-    # https://pytorch.org/tutorials/recipes/recipes/saving_and_loading_a_general_checkpoint.html
-    model_path = None
-    if args.load_model:
-        model_path = args.load_model
-    elif wandb.run.resumed:
-        if 'checkpoint.pth.tar' in os.listdir(cfg['out_path']):
-            model_path = cfg['out_path'] + '/checkpoint.pth.tar'
-        else:
-            logger.info('Resuming run, but no checkpoint found.')
-    elif 'model.pth.tar' in os.listdir(cfg['out_path']):
-        model_path = cfg['out_path'] + '/model.pth.tar'
-        cfg['train'] = False
-    
-    if model_path is not None:
-        logger.info('Loading model from "%s".' % model_path)
-        model, optimizer, checkpoint = load_model(model_path, model, optimizer)
-        start = checkpoint['start']
-        if wandb.run.resumed and train_cfg['patience']:
-            patience = EarlyStopping('max', train_cfg['patience'], checkpoint['count'], checkpoint['max_accuracy'])
-            best = checkpoint['best']
-        else:
-            patience, best = None, None
-        logger.info('Model loaded.')
-    else:
-        logger.info('Starting model from scratch.')
-        start, best = 0, None
-        patience = EarlyStopping('min', train_cfg['patience']) if train_cfg['patience'] else None
-        save_config('config.yaml', cfg['out_path'])
+    model, optimizer, start, patience, best, cfg = load_or_start_model(model, optimizer, args, wandb, cfg, train_cfg, device, logger)
 
 
     # Pretraining model...
@@ -372,7 +339,6 @@ def main(args, cfg, wb, run_name):
         logger.info('Training.')
         train_data, val_data = train_val_test_split(data, split_size=0.9)
         print_logs(logger, cfg, train=True)
-        torch.cuda.empty_cache()
 
         wb.watch(model, criterion=criterion, log="all", log_graph=True)
 

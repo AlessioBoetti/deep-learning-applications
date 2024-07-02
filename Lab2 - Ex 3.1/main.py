@@ -5,7 +5,6 @@ import argparse
 import logging
 import time
 import random
-from datetime import timedelta
 from typing import Union, List
 import gc
 
@@ -17,12 +16,10 @@ from tqdm import tqdm
 
 import torch
 import torch.nn as nn
-# import torch.optim as optim
 
 from model import BERT, EarlyStopping
 from utils import *
 from xai import *
-from adversarial import *
 
 
 def parse_args():
@@ -134,12 +131,13 @@ def train_llm(
     model = model.to(device)
     model.train()
 
+    torch.cuda.empty_cache()
+
     for epoch in range(start, n_epochs):
         loss_epoch = 0.0
         epoch_start_time = time.time()
 
-        for batch in tqdm(loader, desc=f'Epoch {epoch + 1}'):
-            # https://discuss.pytorch.org/t/should-we-set-non-blocking-to-true/38234/4
+        for batch in tqdm(loader, desc=f'Epoch {epoch + 1}'):  # https://discuss.pytorch.org/t/should-we-set-non-blocking-to-true/38234/4
             input_ids, attention_masks, labels = batch
             input_ids = input_ids.to(device, non_blocking=True)
             attention_masks = attention_masks.to(device, non_blocking=True)
@@ -213,8 +211,7 @@ def train_llm(
                 'val_time': val_time,
             })
 
-            if patience:
-                # Save best checkpoint
+            if patience:  # Save best checkpoint
                 if patience(val_metrics['MulticlassAccuracy']):
                     logger.info('  Found best checkpoint, saving checkpoint.')
                     best_results = {'best_epoch': epoch + 1}
@@ -246,16 +243,7 @@ def train_llm(
     train_time = time.time() - train_start_time
     logger.info('Training time: %.3f' % train_time)
 
-    results = {
-        'total_batches': total_batches,
-        'total_epochs': n_epochs,
-        'train_time': train_time,
-        'h-m-s_train_time': str(timedelta(seconds=train_time)),
-    }
-    results.update({f'last_epoch_{key}': value for key, value in wb_log.items()})
-    results['early_stopping'] = True if patience else False
-    if patience:
-        results.update(best_results)
+    results = format_train_results(total_batches, n_epochs, train_time, wb_log, patience, best_results if patience else None)
     
     os.rename(f'{out_path}/best_checkpoint.pth.tar', f'{out_path}/model.pth.tar')
 
@@ -288,8 +276,10 @@ def main(args, cfg, wb, run_name):
         val_shuffle_seed=cfg['seed'], 
         **cfg['dataset']
     )
-    dataloader_kw = dict(seed=cfg['seed'], device='cpu', **cfg['dataloader'])  # https://stackoverflow.com/questions/68621210/runtimeerror-expected-a-cuda-device-type-for-generator-but-found-cpu
     logger.info('Dataset loaded.')
+
+    dataloader_kw = dict(seed=cfg['seed'], device='cpu', **cfg['dataloader'])  # https://stackoverflow.com/questions/68621210/runtimeerror-expected-a-cuda-device-type-for-generator-but-found-cpu
+    train_loader, val_loader, test_loader, org_test_loader = dataset.loaders(train=True, val=True, **dataloader_kw)
 
 
     # Initializing model...
@@ -315,34 +305,7 @@ def main(args, cfg, wb, run_name):
 
 
     # Loading model and optimizer...
-    # https://pytorch.org/tutorials/recipes/recipes/saving_and_loading_a_general_checkpoint.html
-    model_path = None
-    if args.load_model:
-        model_path = args.load_model
-    elif wandb.run.resumed:
-        if 'checkpoint.pth.tar' in os.listdir(cfg['out_path']):
-            model_path = cfg['out_path'] + '/checkpoint.pth.tar'
-        else:
-            logger.info('Resuming run, but no checkpoint found.')
-    elif 'model.pth.tar' in os.listdir(cfg['out_path']):
-        model_path = cfg['out_path'] + '/model.pth.tar'
-        cfg['train'] = False
-    
-    if model_path is not None:
-        logger.info('Loading model from "%s".' % model_path)
-        model, optimizer, checkpoint = load_model(model_path, model, optimizer)
-        start = checkpoint['start']
-        if wandb.run.resumed and train_cfg['patience']:
-            patience = EarlyStopping('max', train_cfg['patience'], checkpoint['count'], checkpoint['max_accuracy'])
-            best = checkpoint['best']
-        else:
-            patience, best = None, None
-        logger.info('Model loaded.')
-    else:
-        logger.info('Starting model from scratch.')
-        start, best = 0, None
-        patience = EarlyStopping('max', train_cfg['patience']) if train_cfg['patience'] else None
-        save_config('config.yaml', cfg['out_path']) 
+    model, optimizer, start, patience, best, cfg = load_or_start_model(model, optimizer, args, wandb, cfg, train_cfg, device, logger)
 
 
     # Pretraining model...
@@ -365,9 +328,7 @@ def main(args, cfg, wb, run_name):
     # Training model...
     if cfg['train']:
         logger.info('Training.')
-        train_loader, val_loader, _, _ = dataset.loaders(train=True, val=True, **dataloader_kw)
         print_logs(logger, cfg, train=True)
-        torch.cuda.empty_cache()
 
         scheduler = setup_scheduler(optimizer, cfg, train_loader, train_cfg['n_epochs'] - start)
 
@@ -405,8 +366,6 @@ def main(args, cfg, wb, run_name):
     # Testing model...
     if cfg['test']:
         logger.info('Testing.')
-        _, _, test_loader, _ = dataset.loaders(train=False, **dataloader_kw)
-
         logger.info('Starting testing on test set...')
         test_loss_norm, test_metrics, test_time, test_n_batches = evaluate_llm(test_loader, model, criterion, metric_collection, device, logger, validation=False)
         logger.info('Finished testing.')
@@ -422,41 +381,15 @@ def main(args, cfg, wb, run_name):
 
 
     if cfg['explain_gradients']:
-        backprop_grads = VanillaBackprop(model)
-        
-        _, _, transformed_test_loader, org_test_loader = dataset.loaders(train=False, **dataloader_kw)
-        batch = next(iter(transformed_test_loader))
-        img, label, idx = batch
-        grads = backprop_grads.generate_gradients(img, label)
-        
-        # Save colored and grayscale gradients
-        save_gradient_images(grads, cfg['xai_path'], 'backprop_grads_color')
-        grayscale_grads = convert_to_grayscale(grads)
-        save_gradient_images(grayscale_grads, cfg['xai_path'], 'backprop_grads_grayscale')
-
+        logger.info('Explaining model predictions with vanilla gradients...')
+        explain_vanilla_gradients(model, test_loader, cfg['xai_path'])
         logger.info('Finished explaining model.')
 
 
     if cfg['explain_cam']:
         logger.info('Explaining model predictions with Class Activation Mappings...')
-        cam = ClassActivationMapping(model, target_layer='hook')
-
-        _, _, transformed_test_loader, org_test_loader = dataset.loaders(train=False, **dataloader_kw)
-        iter_loader = iter(transformed_test_loader)
-        iter_org_loader = iter(org_test_loader)
-        batch = next(iter_loader)
-        org_batch = next(iter_org_loader)
-        imgs, labels, idx = batch
-        imgs = imgs.to(device, non_blocking=True)
-        labels = labels.to(device, non_blocking=True)
-        len_imgs = len(imgs)
-
-        for i in np.arange(0, len_imgs, 4):
-            img = imgs[i].unsqueeze(0)
-            label = labels[i]
-            cams = cam.generate_cam(img, target_class=label, device=device)
-            org_img = org_batch[0][i]
-            save_class_activation_images(org_img, cams, cfg['xai_path'] + f'/gradcam_{i+1}')
+        explain_cams(model, test_loader, org_test_loader, cfg['xai_path'], device)
+        logger.info('Finished explaining predictions with Class Activation Mappings..')
 
 
     logger.info('Finished run.')

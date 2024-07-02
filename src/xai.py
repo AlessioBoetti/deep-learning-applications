@@ -304,3 +304,33 @@ class ClassActivationMapping:
         # from scipy.ndimage.interpolation import zoom
         # cam = zoom(cam, np.array(input_img[0].shape[1:])/np.array(cam.shape))
         return cam
+
+
+def explain_vanilla_gradients(model, loader, out_path):
+    backprop_grads = VanillaBackprop(model)
+    batch = next(iter(loader))
+    img, label, idx = batch
+    grads = backprop_grads.generate_gradients(img, label)
+    
+    # Save colored and grayscale gradients
+    save_gradient_images(grads, out_path, 'backprop_grads_color')
+    grayscale_grads = convert_to_grayscale(grads)
+    save_gradient_images(grayscale_grads, out_path, 'backprop_grads_grayscale')
+
+
+def explain_cams(model, loader, org_loader, out_path, device, batch_step: int = 4, hook: str = 'hook'):
+    cam = ClassActivationMapping(model, target_layer=hook)
+
+    batch = next(iter(loader))
+    org_batch = next(iter(org_loader))
+    imgs, labels, idx = batch
+    imgs = imgs.to(device, non_blocking=True)
+    labels = labels.to(device, non_blocking=True)
+    len_imgs = len(imgs)
+
+    for i in np.arange(0, len_imgs, batch_step):
+        img = imgs[i].unsqueeze(0)
+        label = labels[i].item()
+        cams = cam.generate_cam(img, target_class=label, device=device)
+        org_img = org_batch[0][i]
+        save_class_activation_images(org_img, cams, out_path + f'/gradcam_{i+1}')

@@ -10,7 +10,7 @@ import torch.nn as nn
 import torchmetrics
 
 from dataloaders import MNIST_Dataset, CIFAR10_Dataset, FashionMNIST_Dataset, NLP_Dataset
-from model import Lion
+from model import Lion, EarlyStopping
 
 
 def create_dirs_if_not_exist(dirs: List[str]):
@@ -178,8 +178,8 @@ def format_train_results(total_batches, n_epochs, time, wb_log, patience=None, b
     return results
 
 
-def save_results(path, results: dict, split: str, suffix: str = 'results'):
-    with open(f'{path}/{split}_{suffix}.json', 'w') as f:
+def save_results(path, results: dict, prefix: str, suffix: str = 'results'):
+    with open(f'{path}/{prefix}_{suffix}.json', 'w') as f:
         json.dump(results, f)
 
 
@@ -247,12 +247,13 @@ def print_logs(logger, cfg, args = None, init: bool = False, pretrain: bool = Fa
     return
 
 
-def epoch_logger(logger, epoch, n_epochs, time, loss, metrics, metrics_adv=None):
+def epoch_logger(logger, epoch, n_epochs, time, loss, metrics=None, metrics_adv=None):
     logger.info('Epoch {}/{}'.format(epoch + 1, n_epochs))
     logger.info('  Epoch Train Time: {:.3f}'.format(time))
     logger.info('  Epoch Train Loss: {:.8f}'.format(loss))
-    for metric, value in metrics.items():
-        logger.info('  Epoch Train {}: {:.4f}'.format(metric, value))
+    if metrics:
+        for metric, value in metrics.items():
+            logger.info('  Epoch Train {}: {:.4f}'.format(metric, value))
     if metrics_adv:
         for metric, value in metrics_adv.items():
             logger.info('  Epoch Adv Train {}: {:.4f}'.format(metric, value))
@@ -265,3 +266,36 @@ def evaluate_logger(logger, time, loss, metrics, validation, adv: bool = False):
     logger.info('  {} Loss: {:.8f}'.format(log_str, loss))
     for metric, value in metrics.items():
         logger.info('  {} {}: {:.4f}'.format(log_str, metric, value))
+
+
+def load_or_start_model(model, optimizer, args, wandb, cfg, train_cfg, device, logger):
+    # https://pytorch.org/tutorials/recipes/recipes/saving_and_loading_a_general_checkpoint.html
+    model_path = None
+    if args.load_model:
+        model_path = args.load_model
+    elif wandb.run.resumed:
+        if 'checkpoint.pth.tar' in os.listdir(cfg['out_path']):
+            model_path = cfg['out_path'] + '/checkpoint.pth.tar'
+        else:
+            logger.info('Resuming run, but no checkpoint found.')
+    elif 'model.pth.tar' in os.listdir(cfg['out_path']):
+        model_path = cfg['out_path'] + '/model.pth.tar'
+        cfg['train'] = False
+    
+    if model_path is not None:
+        logger.info('Loading model from "%s".' % model_path)
+        model, optimizer, checkpoint = load_model(model_path, model, device, optimizer)
+        start = checkpoint['start']
+        if wandb.run.resumed and train_cfg['patience']:
+            patience = EarlyStopping('max', train_cfg['patience'], checkpoint['count'], checkpoint['max_accuracy'])
+            best = checkpoint['best']
+        else:
+            patience, best = None, None
+        logger.info('Model loaded.')
+    else:
+        logger.info('Starting model from scratch.')
+        start, best = 0, None
+        patience = EarlyStopping('max', train_cfg['patience']) if train_cfg['patience'] else None
+        save_config('config.yaml', cfg['out_path'])
+    
+    return model, optimizer, start, patience, best, cfg

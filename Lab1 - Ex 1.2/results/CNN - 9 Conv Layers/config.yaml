@@ -29,6 +29,7 @@ config:
 
   model_type: "CNN"
   model:
+    in_channels: 3
     depth: 9
     output_size: 10
     want_shortcut: False
@@ -79,7 +80,6 @@ config:
 
   # Goals
   problem: null
-  adversarial: False
   xai: False
   explain_gradients: False
   explain_cam: False

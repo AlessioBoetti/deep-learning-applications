@@ -342,7 +342,7 @@ class MNIST_Dataset(BaseDataset):
 
         transform, basic_transform, target_transform = self._get_transforms(
             img_size=img_size, 
-            augment=augment, 
+            augment=False, 
             normalize=[(0.1307,), (0.3081,)] if normalize else False, 
             gcn=gcn, 
             gcn_minmax=gcn_minmax, 

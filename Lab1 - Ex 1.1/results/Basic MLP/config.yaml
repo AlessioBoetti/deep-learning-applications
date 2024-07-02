@@ -1,14 +1,14 @@
 #### Weight & Biases settings
 
 wandb:
-  name: "2024-05-12 - First run"
+  name: "Basic MLP"
   resume: False
   job_type: "Train-Test"
   group: "Exercise 1.1"
   project: "University - DLA - Lab 1"
   tags: 
-  - "MLP"  # Model
-  - "Base"  # Type
+  - "MLP"
+  - "Base"
   notes: "First attempt at training a basic MLP on MNIST dataset."
 
 
@@ -18,11 +18,13 @@ config:
   # Machine
   seed: 1
   device: "cuda:0"
+  cuda_benchmark: True
 
   # Paths and dirs
-  data_dir: "data"
+  data_dir: "../data"
   results_dir: "results"
   log_file: "log.txt"
+  # hf_cache_dir: "../hf"
 
   model_type: "MLP"
   model:
@@ -33,20 +35,22 @@ config:
     activation: "ReLU"
     batch_norm: True
     dropout: 0.2  # If not using dropout, set this to null (null is the YAML equivalent for None)
+    flatten_input: True
 
   criterion: "CrossEntropyLoss"
 
   dataset:
+    dataset_type: "Vision"
     dataset_name: "MNIST"
     val_size: 0.2
     val_shuffle: True
     normalize: True
-    augment: True
+    augment: False
     use_sampler: True
 
   dataloader:
-    num_workers: 4
-    batch_size: 512
+    num_workers: 8
+    batch_size: 256
     pin_memory: True
     persistent_workers: True
 
@@ -64,17 +68,18 @@ config:
   pretest: False
   train: True
   test: True
+  test_original: True
 
   training:
     n_epochs: 150
     eval_interval: 1
     checkpoint_every: 1
-    patience: 20
+    clip_grads: False
+    patience: 30
 
-  clip_grads: False
 
   # Goals
-  problem: None
+  problem: null
   xai: False
   explain_gradients: False
   explain_cam: False

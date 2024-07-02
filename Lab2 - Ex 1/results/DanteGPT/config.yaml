@@ -71,7 +71,6 @@ config:
 
   # Goals
   problem: null
-  adversarial: False
   xai: False
   explain_gradients: False
   explain_cam: False
