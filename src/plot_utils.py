@@ -1,7 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.metrics import accuracy_score, precision_score, recall_score, fbeta_score, precision_recall_curve, average_precision_score, roc_auc_score, roc_curve, confusion_matrix, ConfusionMatrixDisplay
-from sklearn.utils.validation import column_or_1d
 import torch
 import torch.nn.functional as F
 
@@ -16,7 +15,7 @@ def plot_confusion_matrix(y_true, y_pred, classes, out_path, split):
     cmn = (100*cmn).astype(np.int32)
     disp = ConfusionMatrixDisplay(cmn, display_labels=classes)
     disp.plot()
-    plt.savefig(f'{out_path}/{split}_confusion_matrix.png')
+    plt.savefig(f'{out_path}/confusion_matrix_{split}.png')
     plt.close()
 
     # multilabel_confusion_matrix(y_true, y_pred, labels=classes)
@@ -44,35 +43,9 @@ def plot_scores(scores_id, scores_ood, out_path, split, scores_type, T=1):
     plt.close()
 
 
-def plot_curves(y_true, scores, out_path, split, scores_type):
+def plot_curves(fpr, tpr, auc_roc, prec_id, rec_id, ap_id, prec_ood, rec_ood, ap_ood, fpr_at_tpr, out_path, split, scores_type):
 
     filename = f'{out_path}/{split}_max_{scores_type}'
-
-    # ROC Curve & AUC ROC score
-    fpr, tpr, _ = roc_curve(y_true, scores)
-    # roc_display = RocCurveDisplay(fpr=fpr, tpr=tpr)
-    auc_roc = roc_auc_score(y_true, scores)
-
-    # DET Curve
-    # fpr, fnr = det_curve(y_true, scores)
-    # det_display = DetCurveDisplay(fpr=fpr, fnr=fnr)
-
-    # Precision-Recall Curve & Average Precision score
-    prec, recall, _ = precision_recall_curve(y_true, scores)
-    # pr_display = PrecisionRecallDisplay(precision=prec, recall=recall)
-    ap = average_precision_score(y_true, scores)
-
-    # fig, axes = plt.subplots(2, 2, figsize=(12, 8))
-    plt.figure()
-    plt.step(recall, prec, color='b', alpha=0.2, where='post')
-    plt.ylim([0, 1.05])
-    plt.xlim([0, 1])
-    plt.xlabel('Recall')
-    plt.ylabel('Precision')
-    plt.suptitle('Precision-Recall curve')
-    plt.title('AP = {0:0.4f}'.format(ap))
-    plt.savefig(f'{filename}_precision_recall_curve.png')
-    plt.close()
 
     plt.figure()
     plt.plot([0, 1], [0, 1], 'k--')
@@ -80,9 +53,45 @@ def plot_curves(y_true, scores, out_path, split, scores_type):
     plt.xlabel('False Positive Rate (FPR)')
     plt.ylabel('True Positive Rate (TPR)')
     plt.suptitle('ROC curve')
-    plt.title('AUC ROC = {0:0.4f}'.format(auc_roc))
+    plt.title('AUC ROC = {0:0.4f} - FPR at 95% TPR = {0:0.4f}'.format(auc_roc, fpr_at_tpr))
     plt.savefig(f'{filename}_roc_curve.png')
     plt.close()
+
+    for recall, precision, ap, dist in zip([rec_id, rec_ood], [prec_id, prec_ood], [ap_id, ap_ood], ['id', 'ood']):
+        plt.figure()
+        plt.step(recall, precision, color='b', alpha=0.2, where='post')
+        plt.ylim([0, 1.05])
+        plt.xlim([0, 1])
+        plt.xlabel('Recall')
+        plt.ylabel('Precision')
+        plt.suptitle(f'Precision-Recall curve ({dist.upper()} data as positive label)')
+        plt.title('AP = {0:0.4f}'.format(ap))
+        plt.savefig(f'{filename}_precision_recall_curve_{dist}.png')
+        plt.close()
+
+
+def compute_metrics(y_true, scores, tpr_threshold: float = 0.95):
+
+    accuracy = accuracy_score(y_true, scores)
+
+    # we assume ID samples will have larger score values than OOD samples
+    # therefore here we need to negate the scores so that higher scores indicate OOD
+    fpr, tpr, _ = roc_curve(y_true, -scores)
+    auc_roc = roc_auc_score(y_true, -scores)
+    # auc_roc = auc(fpr, tpr)
+    fpr_at_tpr = fpr[np.argmax(tpr >= tpr_threshold)]
+
+    # precision and recall curve when ID data have positive label
+    precision_id, recall_id, _ = precision_recall_curve(1 - y_true, scores)
+    ap_id = average_precision_score(1 - y_true, scores)
+    # ap_id = auc(recall_id, precision_id)
+    
+    # precision and recall curve when OOD data have positive label
+    precision_ood, recall_ood, _ = precision_recall_curve(y_true, -scores)
+    ap_ood = average_precision_score(y_true, -scores)
+    # ap_ood = auc(recall_ood, precision_ood)
+
+    return fpr, tpr, auc_roc, precision_id, recall_id, ap_id, precision_ood, recall_ood, ap_ood, fpr_at_tpr
 
 
 def extract_results(idx_label_scores, T):
@@ -101,9 +110,10 @@ def extract_results(idx_label_scores, T):
     return y_true, y_pred, logit_scores, max_logit_scores, softmax_scores, max_softmax_scores
 
 
-def plot_results(idx_label_scores, out_path: str, split: str = None, classes = None, ood_idx_label_scores=None, T: float = 1.0):
+def plot_results(idx_label_scores, out_path: str, split: str = None, classes = None, ood_idx_label_scores=None, T: float = 1.0, missclass_as_ood: bool = False, postprocess: bool = False):
     
-    y_true_id, y_pred_id, logit_scores_id, max_logit_scores_id, softmax_scores_id, max_softmax_scores_id = extract_results(idx_label_scores, T)
+    if not postprocess:
+        y_true_id, y_pred_id, logit_scores_id, max_logit_scores_id, softmax_scores_id, max_softmax_scores_id = extract_results(idx_label_scores, T)
 
     img_path = f'{out_path}/imgs'
     create_dirs_if_not_exist(img_path)
@@ -123,18 +133,51 @@ def plot_results(idx_label_scores, out_path: str, split: str = None, classes = N
         save_results(out_path, metrics, split, suffix='metrics')
 
     else:
-        y_true_ood, y_pred_ood, logit_scores_ood, max_logit_scores_ood, softmax_scores_ood, max_softmax_scores_ood = extract_results(ood_idx_label_scores, T)
+        if not postprocess:
+            y_true_ood, y_pred_ood, logit_scores_ood, max_logit_scores_ood, softmax_scores_ood, max_softmax_scores_ood = extract_results(ood_idx_label_scores, T)
+        else:
+            y_true_id, y_pred_id, scores_id = idx_label_scores
+            y_true_ood, y_pred_ood, scores_ood = ood_idx_label_scores
+
+        ####################################
+
+        if missclass_as_ood:
+            y_true_id_np = np.array(y_true_id)
+            y_true_id_np[np.array(y_pred_id) != y_true_id_np] = 1
+            y_true_id_np[np.array(y_pred_id) == y_true_id_np] = 0
+            y_true_id = y_true_id_np.tolist()
+            y_true = y_true_id
+        else:
+            y_true = [0] * len(max_logit_scores_id)
+        
+        y_true.extend([1] * len(max_logit_scores_ood))
+        y_pred = np.concatenate(y_pred_id, y_pred_ood)
+        max_logit_scores = max_logit_scores_id + max_logit_scores_ood
+        max_softmax_scores = max_softmax_scores_id + max_softmax_scores_ood
+
+        check_nan = np.isnan(max_scores)
+        check_inf = np.isinf(max_scores)
+        for check in [check_nan, check_inf]:
+            num_check = check.sum()
+            if num_check > 0:
+                y_true = np.delete(y_true, np.where(check))
+                y_pred = np.delete(y_pred, np.where(check))
+                max_logit_scores = np.delete(max_logit_scores, np.where(check))
+                max_softmax_scores = np.delete(max_softmax_scores, np.where(check))
+
+        # accuracy = accuracy_score(y_true, y_pred)
 
         plot_scores(max_logit_scores_id, max_logit_scores_ood, img_path, split, 'logit')
         plot_scores(max_softmax_scores_id, max_softmax_scores_ood, img_path, split, 'softmax')
 
-        y_true = [0] * len(max_logit_scores_id)
-        y_true.extend([1] * len(max_logit_scores_ood))
-        max_logit_scores = max_logit_scores_id + max_logit_scores_ood
-        max_softmax_scores = max_softmax_scores_id + max_softmax_scores_ood
-        
-        plot_curves(y_true, max_logit_scores, img_path, split, 'logit')
-        plot_curves(y_true, max_softmax_scores, img_path, split, 'softmax')
+        metrics = compute_metrics(y_true, max_logit_scores)
+        plot_curves(*metrics, out_path=img_path, split=split, score_type='logit')
+
+        metrics = compute_metrics(y_true, max_softmax_scores)
+        plot_curves(*metrics, out_path=img_path, split=split, score_type='logit')
+    
+    else:
+
 
 
 def save_plot(train_l, train_a, test_l, test_a):

@@ -381,7 +381,6 @@ def main(args, cfg, wb, run_name):
     device = 'cpu' if not torch.cuda.is_available() else cfg['device']
     cfg['device'] = device
     model_cfg, train_cfg, adv_cfg = cfg['model'], cfg['training'], cfg['adversarial']
-    adv_add = cfg['adversarial_add'] if adv_cfg else False
 
     if wandb.run.resumed:
         logger.info('Resuming experiment.')
@@ -446,34 +445,7 @@ def main(args, cfg, wb, run_name):
         ))
 
     # Loading model and optimizer...
-    # https://pytorch.org/tutorials/recipes/recipes/saving_and_loading_a_general_checkpoint.html
-    model_path = None
-    if args.load_model:
-        model_path = args.load_model
-    elif wandb.run.resumed:
-        if 'checkpoint.pth.tar' in os.listdir(cfg['out_path']):
-            model_path = cfg['out_path'] + '/checkpoint.pth.tar'
-        else:
-            logger.info('Resuming run, but no checkpoint found.')
-    elif 'model.pth.tar' in os.listdir(cfg['out_path']):
-        model_path = cfg['out_path'] + '/model.pth.tar'
-        cfg['train'] = False
-    
-    if model_path is not None:
-        logger.info('Loading model from "%s".' % model_path)
-        model, optimizer, checkpoint = load_model(model_path, model, device, optimizer)
-        start = checkpoint['start']
-        if wandb.run.resumed and train_cfg['patience']:
-            patience = EarlyStopping('max', train_cfg['patience'], checkpoint['count'], checkpoint['max_accuracy'])
-            best = checkpoint['best']
-        else:
-            patience, best = None, None
-        logger.info('Model loaded.')
-    else:
-        logger.info('Starting model from scratch.')
-        start, best = 0, None
-        patience = EarlyStopping('max', train_cfg['patience']) if train_cfg['patience'] else None
-        save_config('config.yaml', cfg['out_path'])  
+    model, optimizer, start, patience, best, cfg = load_or_start_model(model, optimizer, args, wandb, cfg, train_cfg, device, logger)
 
 
     # Pretraining model...
@@ -526,7 +498,7 @@ def main(args, cfg, wb, run_name):
             patience=patience,
             best=best,
             adv_cfg=adv_cfg,
-            adv_add=adv_add,
+            adv_add=cfg['adversarial_add'] if adv_cfg else False,
             metrics_adv=metric_collection_adv if adv_add else None,
         )
         logger.info('Finished training.')
@@ -563,7 +535,7 @@ def main(args, cfg, wb, run_name):
                 metric_collection,
                 device,
                 logger,
-                False,
+                validation=False,
                 scaler,
                 adv_cfg,
             )
@@ -623,60 +595,37 @@ def main(args, cfg, wb, run_name):
             plot_results(ood_idx_label_scores, cfg['out_path'], 'test_ood', ood_dataset.train_set.classes)
             plot_results(idx_label_scores, cfg['out_path'], 'ood', ood_idx_label_scores=ood_idx_label_scores)
 
-            if cfg['odin']:
-                odin = ODINPostprocessor()
-                odin_metrics = get_ood_score(model, test_loader, ood_test_loader, cea.postprocess, device)
-                save_results(cfg['out_path'], odin_metrics, 'test_ood_odin', suffix='metrics')
+            if cfg['postprocess']:                
+                for method_name in cfg['postprocess']:
+                    method_class = getattr(adversarial, method_name)
+                    method = method_class()
+                    id_label_scores, ood_label_scores = get_ood_scores(model, test_loader, ood_test_loader, method.postprocess, device)
+                    plot_results(id_label_scores, cfg['out_path'], f'{method_name.lower().replace('postprocessor', '')}_ood', ood_idx_label_scores=ood_label_scores, postprocess=True)
                 
             if cfg['cea']:
-                cea = CEA(model, MaxLogitPostprocessor(), val_loader, device, cfg['cea']['percentile_top'], cfg['cea']['addition_coef'])
-                cea_metrics = get_ood_score(model, test_loader, ood_test_loader, cea.postprocess, device)
-                save_results(cfg['out_path'], cea_metrics, 'test_ood_cea_logits', suffix='metrics')
-
-                if cfg['odin']:
-                    cea = CEA(model, odin, val_loader, device, cfg['cea']['percentile_top'], cfg['cea']['addition_coef'])
-                    cea_metrics = get_ood_score(model, test_loader, ood_test_loader, cea.postprocess, device)
-                    save_results(cfg['out_path'], cea_metrics, 'test_ood_cea_logits', suffix='metrics')
+                if cfg['postprocess'] is None or not cfg['postprocess'];
+                    raise ValueError('CEA postprocessing method was selected but no postprocessing method was chosen.')
+                
+                for method_name in cfg['postprocess']:
+                    method_class = getattr(adversarial, method_name)
+                    method = method_class()
+                    cea = CEA(model, method, val_loader, device, cfg['cea']['percentile_top'], cfg['cea']['addition_coef'])
+                    id_label_scores, ood_label_scores = get_ood_scores(model, test_loader, ood_test_loader, cea.postprocess, device)
+                    plot_results(id_label_scores, cfg['out_path'], f'{method_name.lower().replace('postprocessor', '')}_cea_ood', ood_idx_label_scores=ood_label_scores, postprocess=True)
 
         else:
             raise NotImplementedError()
 
 
     if cfg['explain_gradients']:
-        backprop_grads = VanillaBackprop(model)
-        
-        batch = next(iter(test_loader))
-        img, label, idx = batch
-        grads = backprop_grads.generate_gradients(img, label)
-        
-        # Save colored and grayscale gradients
-        save_gradient_images(grads, cfg['xai_path'], 'backprop_grads_color')
-        grayscale_grads = convert_to_grayscale(grads)
-        save_gradient_images(grayscale_grads, cfg['xai_path'], 'backprop_grads_grayscale')
-
+        logger.info('Explaining model predictions with vanilla gradients...')
+        explain_vanilla_gradients(model, test_loader, cfg['xai_path'])
         logger.info('Finished explaining model.')
     
 
     if cfg['explain_cam']:
         logger.info('Explaining model predictions with Class Activation Mappings...')
-        cam = ClassActivationMapping(model, target_layer='hook')
-
-        iter_loader = iter(test_loader)
-        iter_org_loader = iter(org_test_loader)
-        batch = next(iter_loader)
-        org_batch = next(iter_org_loader)
-        imgs, labels, idx = batch
-        imgs = imgs.to(device, non_blocking=True)
-        labels = labels.to(device, non_blocking=True)
-        len_imgs = len(imgs)
-
-        for i in np.arange(0, len_imgs, 4):
-            img = imgs[i].unsqueeze(0)
-            label = labels[i]
-            cams = cam.generate_cam(img, target_class=label, device=device)
-            org_img = org_batch[0][i]
-            save_class_activation_images(org_img, cams, cfg['xai_path'] + f'/gradcam_{i+1}')
-        
+        explain_cams(model, test_loader, org_test_loader, cfg['xai_path'], device)
         logger.info('Finished explaining predictions with Class Activation Mappings..')
 
 
