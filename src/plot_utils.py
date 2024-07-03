@@ -138,26 +138,39 @@ def check_values(y_true, y_pred, max_scores):
     return y_true, y_pred, max_scores
 
 
-def plot_results(idx_label_scores, out_path: str, split: str = None, classes = None, ood_idx_label_scores=None, T: float = 1.0, missclass_as_ood: bool = False, postprocess: str = None):
+def plot_results(idx_label_scores, out_path: str, split: str = None, classes = None, ood_idx_label_scores=None, T: float = 1.0, metrics: dict = None, missclass_as_ood: bool = False, postprocess: str = None, eps=None):
     
     if not postprocess:
         y_true_id, y_pred_id, logit_scores_id, max_logit_scores_id, softmax_scores_id, max_softmax_scores_id = extract_results(idx_label_scores, T)
 
-    img_path = f'{out_path}/imgs'
+    if eps:
+        img_path = f'{out_path}/imgs_adv/eps_{eps}'
+    else:
+        img_path = f'{out_path}/imgs'
     create_dirs_if_not_exist(img_path)
 
     if ood_idx_label_scores is None:
         plot_confusion_matrix(y_true_id, y_pred_id, classes, img_path, split)
 
-        metrics = {
-            'accuracy': accuracy_score(y_true_id, y_pred_id),
-            'precision': precision_score(y_true_id, y_pred_id, average='macro'),
-            'recall': recall_score(y_true_id, y_pred_id, average='macro'),
-            'fbeta': fbeta_score(y_true_id, y_pred_id, beta=1, average='macro'),
-            'softmax_average_precision': average_precision_score(y_true_id, softmax_scores_id, average='macro'),
-            'softmax_auc_roc_ovr': roc_auc_score(y_true_id, softmax_scores_id, multi_class='ovr'),
-            'softmax_auc_roc_ovo': roc_auc_score(y_true_id, softmax_scores_id, multi_class='ovo'),
-        }
+        if metrics:
+            scores = metrics.pop('scores')
+            metrics.update({
+                'f1': fbeta_score(y_true_id, y_pred_id, beta=1, average='macro'),
+                'softmax_average_precision': average_precision_score(y_true_id, softmax_scores_id, average='macro'),
+                'softmax_auc_roc_ovr': roc_auc_score(y_true_id, softmax_scores_id, multi_class='ovr'),
+                'softmax_auc_roc_ovo': roc_auc_score(y_true_id, softmax_scores_id, multi_class='ovo'),
+            })
+            metrics['scores'] = scores
+        else:
+            metrics = {
+                'accuracy': accuracy_score(y_true_id, y_pred_id),
+                'precision': precision_score(y_true_id, y_pred_id, average='macro'),
+                'recall': recall_score(y_true_id, y_pred_id, average='macro'),
+                'f1': fbeta_score(y_true_id, y_pred_id, beta=1, average='macro'),
+                'softmax_average_precision': average_precision_score(y_true_id, softmax_scores_id, average='macro'),
+                'softmax_auc_roc_ovr': roc_auc_score(y_true_id, softmax_scores_id, multi_class='ovr'),
+                'softmax_auc_roc_ovo': roc_auc_score(y_true_id, softmax_scores_id, multi_class='ovo'),
+            }
         save_results(out_path, metrics, split, suffix='metrics')
 
     else:

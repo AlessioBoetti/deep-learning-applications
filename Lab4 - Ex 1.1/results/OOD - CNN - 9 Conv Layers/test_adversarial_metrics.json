@@ -1,1 +1,0 @@
-{"accuracy": 0.9894, "precision": 0.989352231865962, "recall": 0.98930727412507, "fbeta": 0.9893226249826099, "softmax_average_precision": 0.9988193464990973, "softmax_auc_roc_ovr": 0.9998212823840399, "softmax_auc_roc_ovo": 0.9998201977997841}

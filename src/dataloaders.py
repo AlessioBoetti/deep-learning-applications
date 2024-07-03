@@ -204,7 +204,8 @@ class BaseDataset(object):
         val_shuffle: bool = None, 
         val_shuffle_seed: int = None,
         use_sampler: bool = None,
-    ):
+        ):
+
         self.train_set = MyDataset(root=self.root, train=True, download=True, transform=transform, target_transform=target_transform)
         self.test_set = MyDataset(root=self.root, train=False, download=True, transform=transform, target_transform=target_transform)
         self.org_test_set = MyDataset(root=self.root, train=False, download=True, transform=basic_transform, target_transform=target_transform)
@@ -313,9 +314,11 @@ class MNIST_Dataset(BaseDataset):
         val_shuffle_seed: int = 1,
         use_sampler: bool = True,
         multiclass: bool = None,  # TODO: Implement from DL PW
-    ):
+        ):
+        
         super().__init__()
         self.root = root
+        self.norm_stats = [(0.1307,), (0.3081,)]
         
         if problem is not None:
             self.problem = problem.lower().replace(' ', '')
@@ -343,7 +346,7 @@ class MNIST_Dataset(BaseDataset):
         transform, basic_transform, target_transform = self._get_transforms(
             img_size=img_size, 
             augment=False, 
-            normalize=[(0.1307,), (0.3081,)] if normalize else False, 
+            normalize=self.norm_stats if normalize else False, 
             gcn=gcn, 
             gcn_minmax=gcn_minmax, 
             min_max=min_max,
@@ -382,9 +385,11 @@ class CIFAR10_Dataset(BaseDataset):
         val_shuffle_seed: int = 1,
         use_sampler: bool = True,
         multiclass: bool = None,  # TODO: Implement from DL PW
-    ):
+        ):
+
         super().__init__()
         self.root = root
+        self.norm_stats = [(0.49139968, 0.48215827, 0.44653124), (0.24703233, 0.24348505, 0.26158768)]
 
         if problem is not None:
             self.problem = problem.lower().replace(' ', '')
@@ -409,11 +414,10 @@ class CIFAR10_Dataset(BaseDataset):
         else:
             min_max = None
 
-        # Normalize correct values are: mean = (0.49139968, 0.48215827 ,0.44653124), std = (0.24703233 0.24348505 0.26158768)
         transform, basic_transform, target_transform = self._get_transforms(
             img_size=img_size, 
             augment='CIFAR10' if augment else False, 
-            normalize=[(0.5, 0.5, 0.5), (0.5, 0.5, 0.5)] if normalize else False, 
+            normalize=self.norm_stats if normalize else False, 
             gcn=gcn, 
             gcn_minmax=gcn_minmax, 
             min_max=min_max,

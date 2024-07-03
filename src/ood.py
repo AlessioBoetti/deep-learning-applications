@@ -186,7 +186,6 @@ class CEA():
         # print('Coeffient of added novelty score is: {}'.format(self.coef))
 
 
-
 def get_ood_scores(model, id_loader, ood_loader, score_function, device, hook_name: str = 'penultimate', missclass_as_ood: bool = False):
     """
         Calculate the novelty scores that an OOD detector (score_function) assigns to ID and OOD and evaluate them via AUROC and FPR.

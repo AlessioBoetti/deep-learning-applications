@@ -9,12 +9,11 @@ import torch.nn.functional as F
 mnist_mean = (0.1307)
 mnist_std = (0.3081)
 
-cifar10_mean = (0.4914, 0.4822, 0.4465)
-cifar10_std = (0.2471, 0.2435, 0.2616)
+cifar10_mean = (0.49139968, 0.48215827, 0.44653124)
+cifar10_std = (0.24703233, 0.24348505, 0.26158768)
 
 
-
-def gradient_update(x, delta, alpha, epsilon):
+def gradient_update(delta, x, alpha, epsilon):
     return (delta + x.shape[0]*alpha*delta.grad.data).clamp(-epsilon, epsilon)
 
 
@@ -28,7 +27,7 @@ def norms(Z):
     return Z.view(Z.shape[0], -1).norm(dim=1)[:, None, None, None]
 
 
-def l_2_update(x, delta, alpha, epsilon, lower_limit, upper_limit):
+def l_2_update(delta, x, alpha, epsilon, lower_limit, upper_limit):
     delta.data += alpha*delta.grad.detach() / norms(delta.grad.detach())
     delta.data = torch.clamp(delta.detach(), lower_limit - x, upper_limit - x)
     delta.data *= epsilon / norms(delta.detach()).clamp(min=epsilon)
@@ -43,6 +42,8 @@ def criterion_fn(criterion, outputs, y):
 def targeted_loss_ovo(outputs, y, y_targ):
     """
         Maximize the loss of the true label and minimize the loss of the alternative label.
+        But since max(loss_target - loss_true) = max(output_true - output_target), we invert the signs, so we
+        maximize the target class logits and minimize the true class logits. 
     """
     loss = (outputs[:, y_targ] - outputs.gather(1, y[:, None])[:, 0]).sum()
     return loss
@@ -50,13 +51,15 @@ def targeted_loss_ovo(outputs, y, y_targ):
 
 def targeted_loss_ovr(outputs, y_targ, y=None):
     """
-        Maximize the target class logits and minimize the logits of all other classes.
+        Maximize the loss of the true label and minimize the loss of all other labels.
+        But since max(loss_other - loss_true) = max(output_true - output_other), we invert the signs, so we
+        maximize the target class logits and minimize the logits of all other classes.
     """
     loss = 2*outputs[:, y_targ].sum() - outputs.sum()
     return loss
 
 
-def attack(model, x, y, epsilon: float, alpha: float, normalize: bool, criterion, scaler, device, logger, l_inf: bool = True, l_2: bool = False, dataset_name: str = None, fast: bool = True, target=None, restarts: int = 1, n_steps: int = 1, randomize: bool = True, mask = False):
+def attack(model, x, y, epsilon: float, alpha: float, normalize: bool, criterion, scaler, device, logger, l_inf: bool = True, l_2: bool = False, dataset_name: str = None, fast: bool = True, target=None, target_type: str = 'OVO', restarts: int = 1, n_steps: int = 1, randomize: bool = True, mask = False, until_success: bool = False):
     """
         If l_inf = True, restarts = 1, n_steps = 1 --> FGSM
         If restarts = 1, n_steps > 1               --> PGD
@@ -81,6 +84,22 @@ def attack(model, x, y, epsilon: float, alpha: float, normalize: bool, criterion
         - https://pyimagesearch.com/2021/03/15/mixing-normal-images-and-adversarial-images-when-training-cnns/
         - https://github.com/LetheSec/Adversarial_Training_Pytorch/tree/main
     """
+
+    """ 
+        From https://adversarial-ml-tutorial.org/adversarial_examples/, section "The Fast Gradient Sign Method (FGSM)"
+        FGSM is exactly the optimal attack against a linear binary classification model under the ℓ∞ norm. 
+        This hopefully gives some additional helpful understanding of what FGSM is doing: 
+        it assumes that the linear approximation of the hypothesis given by its gradient at the point x 
+        is a reasonably good approximation to the function over the entire region $\|\delta\|\infty \leq \epsilon$. 
+        It also, however, hints right away at the potential disadvantages to the FGSM attack: 
+        because we know that neural networks are not in fact linear even over a relatively small region, 
+        if we want a stronger attack we likely want to consider better methods at maximizing the loss function than a single projected gradient step. 
+    """
+
+    # From https://adversarial-ml-tutorial.org/introduction/, section "Training adversarially robust classifiers"
+    # TODO: ... although in theory one can take just the worst-case perturbation as the point at which to compute the gradient, 
+    # TODO: in practice this can cause osscilations of the training process, 
+    # TODO: and it is often better to incorporate multiple perturbations with different random initializations and potentially also a gradient based upon the initial point with no perturbation.
 
     if fast:
         epsilon = 8 / 255.  # epsilon default value is 8 for CIFAR10 (from https://github.com/locuslab/fast_adversarial/blob/master/CIFAR10/train_fgsm.py)
@@ -124,9 +143,9 @@ def attack(model, x, y, epsilon: float, alpha: float, normalize: bool, criterion
         randomize = True
 
     if target:
-        if target == 'OVO':  # faster but less consistent
+        if target_type == 'OVO':  # faster but less consistent
             loss_fn = targeted_loss_ovo
-        elif target == 'OVR':  # slower but more consistent
+        elif target_type == 'OVR':  # slower but more consistent
             loss_fn = targeted_loss_ovr
         loss_fn_kw = dict(y=y, y_targ=target)
     else:
@@ -150,18 +169,31 @@ def attack(model, x, y, epsilon: float, alpha: float, normalize: bool, criterion
         
         delta.data = torch.clamp(delta.data, lower_limit - x, upper_limit - x)
 
-        for _ in np.arange(n_steps):
+        if until_success:
             outputs = model(x + delta)  # outputs = model(x + delta[:x.size(0)])
-            loss_fn_kw.update({'outputs': outputs})
-            loss = loss_fn(**loss_fn_kw)
-            scaler.scale(loss).backward()
-            if mask:
+            while (outputs.argmax(1) == y).any():
+                loss_fn_kw.update({'outputs': outputs})
+                loss = loss_fn(**loss_fn_kw)
+                scaler.scale(loss).backward()
                 idx = outputs.argmax(1) == y
-                delta.data[idx] = update_fn(delta=delta, **update_fn_kw)[idx]
+                delta.data[idx] = update_fn(delta, **update_fn_kw)[idx]
                 delta.data[idx] = torch.clamp(delta.data, lower_limit - x, upper_limit - x)[idx]
-            delta.data = update_fn(delta=delta, **update_fn_kw)
-            delta.data = torch.clamp(delta.data, lower_limit - x, upper_limit - x)
-            delta.grad.zero_()
+                delta.grad.zero_()
+                outputs = model(x + delta)  # outputs = model(x + delta[:x.size(0)])
+        else:
+            for _ in np.arange(n_steps):
+                outputs = model(x + delta)  # outputs = model(x + delta[:x.size(0)])
+                loss_fn_kw.update({'outputs': outputs})
+                loss = loss_fn(**loss_fn_kw)
+                scaler.scale(loss).backward()
+                if mask:
+                    idx = outputs.argmax(1) == y
+                    delta.data[idx] = update_fn(delta, **update_fn_kw)[idx]
+                    delta.data[idx] = torch.clamp(delta.data, lower_limit - x, upper_limit - x)[idx]
+                else:
+                    delta.data = update_fn(delta, **update_fn_kw)
+                    delta.data = torch.clamp(delta.data, lower_limit - x, upper_limit - x)
+                delta.grad.zero_()
         
         if restarts > 1:
             outputs = model(x + delta)
@@ -195,13 +227,31 @@ def draw_loss(model, x, y, criterion, epsilon, device):
     outputs = model(all_deltas.view(-1, 1, 28, 28) + x)
     Zi = nn.CrossEntropyLoss(reduction="none")(outputs, y[0:1].repeat(yp.shape[0])).detach().cpu().numpy()
     Zi = Zi.reshape(*Xi.shape)
-    #Zi = (Zi-Zi.min())/(Zi.max() - Zi.min())
+    # Zi = (Zi-Zi.min())/(Zi.max() - Zi.min())
     
     fig = plt.figure(figsize=(10, 10))
     ax = fig.gca(projection='3d')
     ls = LightSource(azdeg=0, altdeg=200)
     rgb = ls.shade(Zi, plt.cm.coolwarm)
     surf = ax.plot_surface(Xi, Yi, Zi, rstride=1, cstride=1, linewidth=0, antialiased=True, facecolors=rgb)
+
+
+def plot_images(inputs, labels, outputs, M, N, out_path, classes, adv: bool = False, eps=None, n=''):
+    
+    f, ax = plt.subplots(M, N, sharex=True, sharey=True, figsize=(25, 25))
+    for i in range(M):
+        for j in range(N):
+            # img = inputs[i*N+j][0].permute(1,2,0).detach().cpu().numpy()
+            img = inputs[i*N+j][0].detach().cpu().numpy()
+            ax[i][j].imshow(img, cmap="gray")
+            title = ax[i][j].set_title("Pred: {}".format(classes[outputs[i*N+j].max(dim=0)[1]]))
+            plt.setp(title, color=('g' if outputs[i*N+j].max(dim=0)[1] == labels[i*N+j] else 'r'))
+            ax[i][j].set_axis_off()
+    plt.tight_layout()
+    if adv:
+        plt.savefig(f'{out_path}/corrupted_images{n}.png')
+    else:
+        plt.savefig(f'{out_path}/sample_images{n}.png')
 
 
 class NormalizeInverse(T.Normalize):
