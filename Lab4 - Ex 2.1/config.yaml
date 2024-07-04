@@ -1,17 +1,17 @@
 #### Weight & Biases settings
 
 wandb:
-  name: "Adv & OOD - CNN - 9 Conv Layers"
+  name: "Adv Images - CNN - 9 Conv Layers"
   resume: False
-  job_type: "OOD"
-  group: "Exercise 1"
+  job_type: "Adv"
+  group: "Exercise 2.1"
   project: "University - DLA - Lab 4"
   tags: 
   - "CNN"
   - "ResNet"
   - "OOD"
   - "Adv"
-  notes: "Out of distribution detection with adversarial training."
+  notes: "Showing adversarial images created from ID model."
 
 
 #### Experiment settings
@@ -67,9 +67,9 @@ config:
   
   pretrain: False
   pretest: False
-  train: True
+  train: False
   test: True
-  test_original: True
+  test_original: False
 
   training:
     n_epochs: 150
@@ -80,7 +80,7 @@ config:
 
 
   # Goals
-  problem: "OOD"
+  problem: null
   ood_dataset:
     dataset_type: "Vision"
     dataset_name: "FashionMNIST"

@@ -508,11 +508,12 @@ def main(args, cfg, wb, run_name):
 
 
     if cfg['show_adv_imgs']:
-        
+        logger.info('Plotting original and adversarial images...')
+
         norm_stats = dataset.norm_stats
         inv = NormalizeInverse(norm_stats[0], norm_stats[1])
         classes = dataset.test_set.classes
-        adv_imgs_path = f"{cfg['out_path']}/adv_imgs"
+        adv_imgs_path = f"{cfg['out_path']}/imgs_adv_samples"
         create_dirs_if_not_exist(adv_imgs_path)
 
         model.train()
@@ -531,12 +532,13 @@ def main(args, cfg, wb, run_name):
         imgs = inv(inputs)
         plot_images(imgs, labels, outputs, M, N, adv_imgs_path, classes)
 
-        for i, eps in enumerate(np.arange(1, 11)):
+        for k, eps in enumerate(np.arange(1, 11)):
+            k += 1
             adv_cfg.update({'epsilon': eps})
             delta = attack(model, inputs, labels, scaler=scaler, **adv_cfg)
             outputs = model(inputs + delta)
             adv_imgs = inv(inputs + delta)
-            plot_images(adv_imgs, labels, outputs, 3, 6, adv_imgs_path, classes, adv=True, eps=eps, n=f'_{i}')
+            plot_images(adv_imgs, labels, outputs, 3, 6, adv_imgs_path, classes, adv=True, eps=eps, n=f'_{k}')
 
             after = (inputs + delta).clone().detach()
             diffs = torch.abs(after - before)
@@ -551,15 +553,17 @@ def main(args, cfg, wb, run_name):
                     plt.setp('Diff')
                     ax[i][j].set_axis_off()
             plt.tight_layout()
-            plt.savefig(f'{adv_imgs_path}/diffs_{i}.png')
+            plt.savefig(f'{adv_imgs_path}/diffs_{k}.png')
             plt.close()
 
             diffs_flat = diffs.flatten()
             plt.figure()
             plt.hist(diffs_flat.detach().cpu())
             plt.title('Diffs')
-            plt.savefig(f'{adv_imgs_path}/diffs_hist_{i}.png')
+            plt.savefig(f'{adv_imgs_path}/diffs_hist_{k}.png')
             plt.close()
+        
+        logger.info('Finished plotting images.')
 
 
     # Testing model...
@@ -583,9 +587,10 @@ def main(args, cfg, wb, run_name):
         # Testing model on adversarial examples...
         if adv_cfg:
             logger.info('Testing on adversarial examples.')
-            logger.info('Starting testing on adversarial test set...')
+            logger.info('Starting testing on adversarial test set with multiple epsilon values...')
 
             for i, eps in enumerate(np.arange(1, 11)):
+                logger.info(f'Epsilon set to {eps}.')
                 adv_cfg.update({'epsilon': eps})
 
                 adv_test_loss, adv_test_metrics, adv_test_time, _, adv_idx_label_scores = evaluate(
@@ -599,7 +604,7 @@ def main(args, cfg, wb, run_name):
                     scaler,
                     adv_cfg,
                 )
-                logger.info('Finished testing.')
+                logger.info(f'Finished testing for eps set to {eps}.')
 
                 results = {
                     'time': adv_test_time,
