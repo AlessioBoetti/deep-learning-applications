@@ -194,6 +194,9 @@ def plot_results(idx_label_scores, out_path: str, split: str = None, classes = N
             softmax_metrics = compute_metrics(y_true, max_softmax_scores)
             plot_curves(*softmax_metrics, out_path=img_path, split=split, scores_type='max_softmax')
         else:
+            img_path = f'{img_path}/postprocess'
+            create_dirs_if_not_exist(img_path)
+            
             y_true_id, y_pred_id, max_scores_id = idx_label_scores
             y_true_ood, y_pred_ood, max_scores_ood = ood_idx_label_scores
             

@@ -59,7 +59,31 @@ def targeted_loss_ovr(outputs, y_targ, y=None):
     return loss
 
 
-def attack(model, x, y, epsilon: float, alpha: float, normalize: bool, criterion, scaler, device, logger, l_inf: bool = True, l_2: bool = False, dataset_name: str = None, fast: bool = True, target=None, target_type: str = 'OVO', restarts: int = 1, n_steps: int = 1, randomize: bool = True, mask = False, until_success: bool = False):
+def attack(
+    model, 
+    x, 
+    y, 
+    epsilon: float, 
+    alpha: float, 
+    normalize: bool, 
+    criterion, 
+    scaler, 
+    device, 
+    logger, 
+    l_inf: bool = True, 
+    l_2: bool = False, 
+    dataset_name: str = None, 
+    fast: bool = True, 
+    target=None, 
+    target_type: str = 'OVO', 
+    restarts: int = 1, 
+    n_steps: int = 1, 
+    randomize: bool = True, 
+    mask = False, 
+    until_success: bool = False,
+    temperature: float = None,
+    ):
+
     """
         If l_inf = True, restarts = 1, n_steps = 1 --> FGSM
         If restarts = 1, n_steps > 1               --> PGD
@@ -171,6 +195,8 @@ def attack(model, x, y, epsilon: float, alpha: float, normalize: bool, criterion
 
         if until_success:
             outputs = model(x + delta)  # outputs = model(x + delta[:x.size(0)])
+            if temperature:
+                outputs = outputs / temperature
             while (outputs.argmax(1) == y).any():
                 loss_fn_kw.update({'outputs': outputs})
                 loss = loss_fn(**loss_fn_kw)
@@ -180,9 +206,13 @@ def attack(model, x, y, epsilon: float, alpha: float, normalize: bool, criterion
                 delta.data[idx] = torch.clamp(delta.data, lower_limit - x, upper_limit - x)[idx]
                 delta.grad.zero_()
                 outputs = model(x + delta)  # outputs = model(x + delta[:x.size(0)])
+                if temperature:
+                    outputs = outputs / temperature
         else:
             for _ in np.arange(n_steps):
                 outputs = model(x + delta)  # outputs = model(x + delta[:x.size(0)])
+                if temperature:
+                    outputs = outputs / temperature
                 loss_fn_kw.update({'outputs': outputs})
                 loss = loss_fn(**loss_fn_kw)
                 scaler.scale(loss).backward()
@@ -197,6 +227,8 @@ def attack(model, x, y, epsilon: float, alpha: float, normalize: bool, criterion
         
         if restarts > 1:
             outputs = model(x + delta)
+            if temperature:
+                outputs = outputs / temperature
             all_loss = F.cross_entropy(outputs, y, reduction='none')
             max_delta[all_loss >= max_loss] = delta.detach()[all_loss >= max_loss]
             max_loss = torch.max(max_loss, all_loss)
@@ -244,7 +276,9 @@ def plot_images(inputs, labels, outputs, M, N, out_path, classes, adv: bool = Fa
             # img = inputs[i*N+j][0].permute(1,2,0).detach().cpu().numpy()
             img = inputs[i*N+j][0].detach().cpu().numpy()
             ax[i][j].imshow(img, cmap="gray")
-            title = ax[i][j].set_title("Pred: {}".format(classes[outputs[i*N+j].max(dim=0)[1]]))
+            title_prefix = f"Eps {eps} - " if eps else ""
+            title_string = "{}Pred: {}".format(title_prefix, classes[outputs[i*N+j].max(dim=0)[1]])
+            title = ax[i][j].set_title(title_string)
             plt.setp(title, color=('g' if outputs[i*N+j].max(dim=0)[1] == labels[i*N+j] else 'r'))
             ax[i][j].set_axis_off()
     plt.tight_layout()
@@ -252,6 +286,7 @@ def plot_images(inputs, labels, outputs, M, N, out_path, classes, adv: bool = Fa
         plt.savefig(f'{out_path}/corrupted_images{n}.png')
     else:
         plt.savefig(f'{out_path}/sample_images{n}.png')
+    plt.close()
 
 
 class NormalizeInverse(T.Normalize):
