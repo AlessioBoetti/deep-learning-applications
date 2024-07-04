@@ -169,7 +169,6 @@ class CEA():
             self.setup_done = True
 
 
-    @torch.no_grad()
     def postprocess(self, model, inputs, labels, criterion, scaler, adv_cfg):
         """
             Calculating the novelty score on data.
@@ -182,10 +181,11 @@ class CEA():
         # outputs = model(inputs)
         # act = activation[hook_name]
 
-        x = model.conv_net(inputs)
-        x = x.view(x.size(0), -1)
-        x = model.fc.layers.act_1(model.fc.layers.bn_1(model.fc.layers.linear_1(x)))
-        act = model.fc.layers.act_2(model.fc.layers.bn_2(model.fc.layers.linear_2(x)))
+        with torch.no_grad():
+            x = model.conv_net(inputs)
+            x = x.view(x.size(0), -1)
+            x = model.fc.layers.act_1(model.fc.layers.bn_1(model.fc.layers.linear_1(x)))
+            act = model.fc.layers.act_2(model.fc.layers.bn_2(model.fc.layers.linear_2(x)))
         
         nov = act - self.threshold_top
         nov = nov.clip(min=0)

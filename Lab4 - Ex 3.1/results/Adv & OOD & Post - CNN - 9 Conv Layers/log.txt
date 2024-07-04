@@ -1,0 +1,104 @@
+2024-07-04 17:46:44,727 - Starting run.
+2024-07-04 17:46:44,727 - Logger setup correctly.
+2024-07-04 17:46:44,728 - Seed set to 1.
+2024-07-04 17:46:44,755 - Log filepath: results/Adv & OOD & Post - CNN - 9 Conv Layers/log.txt.
+2024-07-04 17:46:44,755 - Data dir: ../data.
+2024-07-04 17:46:44,755 - Dataset: MNIST
+2024-07-04 17:46:44,756 - Number of dataloader workers: 8
+2024-07-04 17:46:44,756 - Network: CNN
+2024-07-04 17:46:44,756 - Computation device: cuda:0
+2024-07-04 17:46:44,756 - Loading dataset from "../data".
+2024-07-04 17:46:44,966 - Dataset loaded.
+2024-07-04 17:46:44,966 - Initializing CNN model.
+2024-07-04 17:46:45,116 - Model initialized.
+2024-07-04 17:46:45,116 - Showing model structure:
+2024-07-04 17:46:45,116 - ConvolutionalNeuralNetwork(
+  (conv_net): Sequential(
+    (init_conv): Conv2d(1, 64, kernel_size=(3, 3), stride=(1, 1))
+    (conv_block_1): ConvolutionalBlock(
+      (block_layers): Sequential(
+        (conv_1): Conv2d(64, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+        (bn_1): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (act_1): ReLU()
+        (conv_2): Conv2d(64, 128, kernel_size=(3, 3), stride=(1, 1), padding=same, bias=False)
+        (bn_2): BatchNorm2d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (act_2): ReLU()
+        (pool): MaxPool2d(kernel_size=3, stride=2, padding=1, dilation=1, ceil_mode=False)
+      )
+    )
+    (conv_block_2): ConvolutionalBlock(
+      (block_layers): Sequential(
+        (conv_1): Conv2d(128, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+        (bn_1): BatchNorm2d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (act_1): ReLU()
+        (conv_2): Conv2d(128, 256, kernel_size=(3, 3), stride=(1, 1), padding=same, bias=False)
+        (bn_2): BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (act_2): ReLU()
+        (pool): MaxPool2d(kernel_size=3, stride=2, padding=1, dilation=1, ceil_mode=False)
+      )
+    )
+    (conv_block_3): ConvolutionalBlock(
+      (block_layers): Sequential(
+        (conv_1): Conv2d(256, 256, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+        (bn_1): BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (act_1): ReLU()
+        (conv_2): Conv2d(256, 512, kernel_size=(3, 3), stride=(1, 1), padding=same, bias=False)
+        (bn_2): BatchNorm2d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (act_2): ReLU()
+        (pool): MaxPool2d(kernel_size=3, stride=2, padding=1, dilation=1, ceil_mode=False)
+      )
+    )
+    (conv_block_4): ConvolutionalBlock(
+      (block_layers): Sequential(
+        (conv_1): Conv2d(512, 512, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+        (bn_1): BatchNorm2d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (act_1): ReLU()
+        (conv_2): Conv2d(512, 512, kernel_size=(3, 3), stride=(1, 1), padding=same, bias=False)
+        (bn_2): BatchNorm2d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (act_2): ReLU()
+        (pool_hook): AdaptiveMaxPool2d(output_size=2)
+      )
+    )
+  )
+  (fc): MultiLayerPerceptron(
+    (layers): Sequential(
+      (linear_1): Linear(in_features=2048, out_features=1024, bias=False)
+      (bn_1): BatchNorm1d(1024, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (act_1): ReLU()
+      (linear_2): Linear(in_features=1024, out_features=1024, bias=False)
+      (bn_2): BatchNorm1d(1024, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (act_2): ReLU()
+      (last_linear): Linear(in_features=1024, out_features=10, bias=False)
+    )
+  )
+)
+2024-07-04 17:46:45,116 - Initializing AdamW optimizer.
+2024-07-04 17:46:45,117 - Optimizer initialized.
+2024-07-04 17:46:45,121 - Loading model from "/home/aboetti/DeepLearning/Tests/Lab4 - Ex 2.2/results/Adv & OOD - CNN - 9 Conv Layers/model.pth.tar".
+2024-07-04 17:46:45,209 - Model loaded.
+2024-07-04 17:46:45,209 - Testing.
+2024-07-04 17:46:45,209 - Starting testing on test set...
+2024-07-04 17:46:47,324 -   Test Time: 2.113
+2024-07-04 17:46:47,324 -   Test Loss: 0.02126414
+2024-07-04 17:46:47,324 -   Test MulticlassAccuracy: 99.3902
+2024-07-04 17:46:47,324 -   Test MulticlassPrecision: 99.4028
+2024-07-04 17:46:47,324 -   Test MulticlassRecall: 99.3902
+2024-07-04 17:46:47,324 - Finished testing.
+2024-07-04 17:46:48,144 - Testing on OOD dataset.
+2024-07-04 17:46:48,144 - Starting testing on OOD test set...
+2024-07-04 17:46:49,014 -   Test Time: 0.868
+2024-07-04 17:46:49,014 -   Test Loss: 5.46976166
+2024-07-04 17:46:49,014 -   Test MulticlassAccuracy: 10.2300
+2024-07-04 17:46:49,014 -   Test MulticlassPrecision: 12.0010
+2024-07-04 17:46:49,014 -   Test MulticlassRecall: 10.2300
+2024-07-04 17:46:49,014 - Finished testing.
+2024-07-04 17:46:51,320 - Applying ODINPostprocessor postprocessing method for OOD detection...
+2024-07-04 17:48:47,507 - Finished postprocessing with odin method.
+2024-07-04 17:48:47,507 - Applying MaxLogitsPostprocessor postprocessing method with CEA for OOD detection...
+2024-07-04 17:48:51,962 - Finished postprocessing with maxlogits_cea method with CEA.
+2024-07-04 17:48:51,962 - Applying MaxSoftmaxPostprocessor postprocessing method with CEA for OOD detection...
+2024-07-04 17:48:55,950 - Finished postprocessing with maxsoftmax_cea method with CEA.
+2024-07-04 17:48:55,950 - Applying ODINPostprocessor postprocessing method with CEA for OOD detection...
+2024-07-04 17:52:42,752 - Finished postprocessing with odin_cea method with CEA.
+2024-07-04 17:52:42,752 - Finished run.
+2024-07-04 17:52:42,752 - Closing experiment.

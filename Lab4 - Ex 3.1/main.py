@@ -590,38 +590,40 @@ def main(args, cfg, wb, run_name):
         # save_results(cfg['out_path'], results, 'test')
         plot_results(idx_label_scores, cfg['out_path'], 'test', dataset.train_set.classes, metrics=results)
 
-        # Testing model on adversarial examples...
-        if adv_cfg:
-            logger.info('Testing on adversarial examples.')
-            logger.info('Starting testing on adversarial test set with multiple epsilon values...')
 
-            for i, eps in enumerate(np.arange(1, 11)):
-                logger.info(f'Epsilon set to {eps}.')
-                adv_cfg.update({'epsilon': eps})
+    # Testing model on adversarial examples...
+    if cfg['test_adversarial']:
+        logger.info('Testing on adversarial examples.')
+        logger.info('Starting testing on adversarial test set with multiple epsilon values...')
 
-                adv_test_loss, adv_test_metrics, adv_test_time, _, adv_idx_label_scores = evaluate(
-                    test_loader,
-                    model,
-                    criterion,
-                    metric_collection,
-                    device,
-                    logger,
-                    False,  # validation
-                    scaler,
-                    adv_cfg,
-                )
-                logger.info(f'Finished testing for eps set to {eps}.')
+        for i, eps in enumerate(np.arange(1, 11)):
+            logger.info(f'Epsilon set to {eps}.')
+            adv_cfg.update({'epsilon': eps})
 
-                results = {
-                    'time': adv_test_time,
-                    'loss': adv_test_loss,
-                    'accuracy': adv_test_metrics['MulticlassAccuracy'],
-                    'precision': adv_test_metrics['MulticlassPrecision'],
-                    'recall': adv_test_metrics['MulticlassRecall'],
-                    'scores': adv_idx_label_scores,
-                }
-                # save_results(cfg['out_path'], results, 'test_adversarial')
-                plot_results(adv_idx_label_scores, cfg['out_path'], 'test_adversarial', dataset.train_set.classes, metrics=results, eps=eps)
+            adv_test_loss, adv_test_metrics, adv_test_time, _, adv_idx_label_scores = evaluate(
+                test_loader,
+                model,
+                criterion,
+                metric_collection,
+                device,
+                logger,
+                False,  # validation
+                scaler,
+                adv_cfg,
+            )
+            logger.info(f'Finished testing for eps set to {eps}.')
+
+            results = {
+                'time': adv_test_time,
+                'loss': adv_test_loss,
+                'accuracy': adv_test_metrics['MulticlassAccuracy'],
+                'precision': adv_test_metrics['MulticlassPrecision'],
+                'recall': adv_test_metrics['MulticlassRecall'],
+                'scores': adv_idx_label_scores,
+            }
+            # save_results(cfg['out_path'], results, 'test_adversarial')
+            plot_results(adv_idx_label_scores, cfg['out_path'], 'test_adversarial', dataset.train_set.classes, metrics=results, eps=eps)
+            if cfg['test']:
                 plot_results(idx_label_scores, cfg['out_path'], 'adv', ood_idx_label_scores=adv_idx_label_scores, eps=eps)
 
 
@@ -645,69 +647,65 @@ def main(args, cfg, wb, run_name):
     
 
     # Other testing...
-    if cfg['test'] and cfg['problem'] is not None:
-        if cfg['problem'] == 'OOD':
-            logger.info('Testing on OOD dataset.')
-            _, _, ood_test_loader, _ = ood_dataset.loaders(train=False, **dataloader_kw)
+    if cfg['test_ood']:
+        logger.info('Testing on OOD dataset.')
+        _, _, ood_test_loader, _ = ood_dataset.loaders(train=False, **dataloader_kw)
 
-            logger.info('Starting testing on OOD test set...')
-            ood_test_loss, ood_test_metrics, ood_test_time, _, ood_idx_label_scores = evaluate(ood_test_loader, model, criterion, metric_collection, device, logger, validation=False)
-            logger.info('Finished testing.')
+        logger.info('Starting testing on OOD test set...')
+        ood_test_loss, ood_test_metrics, ood_test_time, _, ood_idx_label_scores = evaluate(ood_test_loader, model, criterion, metric_collection, device, logger, validation=False)
+        logger.info('Finished testing.')
 
-            results = {
-                'time': ood_test_time,
-                'loss': ood_test_loss,
-                'accuracy': ood_test_metrics['MulticlassAccuracy'],
-                'precision': ood_test_metrics['MulticlassPrecision'],
-                'recall': ood_test_metrics['MulticlassRecall'],
-                'scores': ood_idx_label_scores,
-            }
-            # save_results(cfg['out_path'], results, 'test_ood')
-            plot_results(ood_idx_label_scores, cfg['out_path'], 'test_ood', ood_dataset.train_set.classes, metrics=results)
-            plot_results(idx_label_scores, cfg['out_path'], 'ood', ood_idx_label_scores=ood_idx_label_scores)
+        results = {
+            'time': ood_test_time,
+            'loss': ood_test_loss,
+            'accuracy': ood_test_metrics['MulticlassAccuracy'],
+            'precision': ood_test_metrics['MulticlassPrecision'],
+            'recall': ood_test_metrics['MulticlassRecall'],
+            'scores': ood_idx_label_scores,
+        }
+        # save_results(cfg['out_path'], results, 'test_ood')
+        plot_results(ood_idx_label_scores, cfg['out_path'], 'test_ood', ood_dataset.train_set.classes, metrics=results)
+        plot_results(idx_label_scores, cfg['out_path'], 'ood', ood_idx_label_scores=ood_idx_label_scores)
 
-            postprocess_kw = dict(criterion=criterion, scaler=scaler, device=device, adv_cfg=adv_cfg)
+        postprocess_kw = dict(criterion=criterion, scaler=scaler, device=device, adv_cfg=adv_cfg)
 
-            if cfg['postprocess']:                
-                for method_name in cfg['postprocess']:
-                    logger.info(f'Applying {method_name} postprocessing method for OOD detection...')
-                    method_class = getattr(ood, method_name)
-                    method_name = f"{method_name.lower().replace('postprocessor', '')}"
+        if cfg['postprocess']:                
+            for method_name in cfg['postprocess']:
+                logger.info(f'Applying {method_name} postprocessing method for OOD detection...')
+                method_class = getattr(ood, method_name)
+                method_name = f"{method_name.lower().replace('postprocessor', '')}"
 
-                    if 'odin' in method_name and cfg['odin_gridsearch']:
-                        for T in np.arange(0, 1000, 200):
-                            for eps in np.arange(0, 10, 2):
-                                method = method_class(T, eps)
-                                id_label_scores, ood_label_scores = get_ood_scores(model, test_loader, ood_test_loader, method.postprocess, **postprocess_kw)
-                                plot_results(id_label_scores, cfg['out_path'], 'ood', ood_idx_label_scores=ood_label_scores, postprocess=f'{method_name}-{T}-{eps}')
-                    else:
-                        method = method_class()
-                        id_label_scores, ood_label_scores = get_ood_scores(model, test_loader, ood_test_loader, method.postprocess, **postprocess_kw)
-                        plot_results(id_label_scores, cfg['out_path'], 'ood', ood_idx_label_scores=ood_label_scores, postprocess=method_name)
-                    logger.info(f'Finished postprocessing with {method_name} method.')
-                
-            if cfg['cea']:                
-                for method_name in cfg['cea_postprocess']:
-                    logger.info(f'Applying {method_name} postprocessing method with CEA for OOD detection...')
-                    method_class = getattr(ood, method_name)
-                    method_name = f"{method_name.lower().replace('postprocessor', '')}" + 'cea'
+                if 'odin' in method_name and cfg['odin_gridsearch']:
+                    for T in np.arange(0, 1000, 200):
+                        for eps in np.arange(0, 10, 2):
+                            method = method_class(T, eps)
+                            id_label_scores, ood_label_scores = get_ood_scores(model, test_loader, ood_test_loader, method.postprocess, **postprocess_kw)
+                            plot_results(id_label_scores, cfg['out_path'], 'ood', ood_idx_label_scores=ood_label_scores, postprocess=f'{method_name}-{T}-{eps}')
+                else:
+                    method = method_class()
+                    id_label_scores, ood_label_scores = get_ood_scores(model, test_loader, ood_test_loader, method.postprocess, **postprocess_kw)
+                    plot_results(id_label_scores, cfg['out_path'], 'ood', ood_idx_label_scores=ood_label_scores, postprocess=method_name)
+                logger.info(f'Finished postprocessing with {method_name} method.')
+            
+        if cfg['cea']:                
+            for method_name in cfg['cea_postprocess']:
+                logger.info(f'Applying {method_name} postprocessing method with CEA for OOD detection...')
+                method_class = getattr(ood, method_name)
+                method_name = f"{method_name.lower().replace('postprocessor', '')}" + '_cea'
 
-                    if 'odin' in method_name and cfg['cea_odin_gridsearch']:
-                        for T in np.arange(0, 1000, 200):
-                            for eps in np.arange(0, 10, 2):
-                                method = method_class(T, eps)
-                                cea = CEA(model, method, val_loader, criterion, scaler, adv_cfg, device, cfg['cea']['percentile_top'], cfg['cea']['addition_coef'])
-                                id_label_scores, ood_label_scores = get_ood_scores(model, test_loader, ood_test_loader, cea.postprocess, **postprocess_kw)
-                                plot_results(id_label_scores, cfg['out_path'], 'ood', ood_idx_label_scores=ood_label_scores, postprocess=f'{method_name}-{T}-{eps}')
-                    else:
-                        method = method_class()
-                        cea = CEA(model, method, val_loader, criterion, scaler, adv_cfg, device, cfg['cea']['percentile_top'], cfg['cea']['addition_coef'])
-                        id_label_scores, ood_label_scores = get_ood_scores(model, test_loader, ood_test_loader, cea.postprocess, **postprocess_kw)
-                        plot_results(id_label_scores, cfg['out_path'], 'ood', ood_idx_label_scores=ood_label_scores, postprocess=method_name)
-                    logger.info(f'Finished postprocessing with {method_name} method with CEA.')
-
-        else:
-            raise NotImplementedError()
+                if 'odin' in method_name and cfg['cea_odin_gridsearch']:
+                    for T in np.arange(0, 1000, 200):
+                        for eps in np.arange(0, 10, 2):
+                            method = method_class(T, eps)
+                            cea = CEA(model, method, val_loader, criterion, scaler, adv_cfg, device, cfg['cea']['percentile_top'], cfg['cea']['addition_coef'])
+                            id_label_scores, ood_label_scores = get_ood_scores(model, test_loader, ood_test_loader, cea.postprocess, **postprocess_kw)
+                            plot_results(id_label_scores, cfg['out_path'], 'ood', ood_idx_label_scores=ood_label_scores, postprocess=f'{method_name}-{T}-{eps}')
+                else:
+                    method = method_class()
+                    cea = CEA(model, method, val_loader, criterion, scaler, adv_cfg, device, cfg['cea']['percentile_top'], cfg['cea']['addition_coef'])
+                    id_label_scores, ood_label_scores = get_ood_scores(model, test_loader, ood_test_loader, cea.postprocess, **postprocess_kw)
+                    plot_results(id_label_scores, cfg['out_path'], 'ood', ood_idx_label_scores=ood_label_scores, postprocess=method_name)
+                logger.info(f'Finished postprocessing with {method_name} method with CEA.')
 
 
     if cfg['explain_gradients']:

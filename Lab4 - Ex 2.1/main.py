@@ -22,6 +22,7 @@ from model import ConvolutionalNeuralNetwork, EarlyStopping
 from utils import *
 from xai import *
 from ood import *
+import ood
 from adversarial import *
 from plot_utils import *
 
@@ -68,7 +69,7 @@ def setup_seed(cfg, logger):
         torch.cuda.manual_seed(seed)
         torch.cuda.manual_seed_all(seed)  # For Multi-GPU, exception safe (https://github.com/pytorch/pytorch/issues/108341)
         # https://pytorch.org/docs/stable/generated/torch.use_deterministic_algorithms.html#torch.use_deterministic_algorithms
-        torch.use_deterministic_algorithms(True, warn_only=True)
+        torch.use_deterministic_algorithms(cfg['deterministic'], warn_only=True)
         torch.backends.cudnn.benchmark = cfg['cuda_benchmark']
         torch.backends.cudnn.deterministic = True
         logger.info('Seed set to %d.' % seed)
@@ -230,7 +231,9 @@ def train(
             optimizer.zero_grad(set_to_none=True)  # https://pytorch.org/docs/stable/generated/torch.optim.Optimizer.zero_grad.html
             with torch.cuda.amp.autocast():  # https://pytorch.org/docs/stable/amp.html
                 if adv_cfg:
+                    model.eval()
                     delta = attack(model, inputs, labels, scaler=scaler, **adv_cfg)
+                    model.train()
                     if adv_add:
                         outputs = model(inputs)
                         outputs_adv = model(inputs + delta)
@@ -516,7 +519,12 @@ def main(args, cfg, wb, run_name):
         adv_imgs_path = f"{cfg['out_path']}/imgs_adv_samples"
         create_dirs_if_not_exist(adv_imgs_path)
 
-        model.train()
+        M, N = 3, 6
+
+        # From https://github.com/bethgelab/foolbox/issues/74
+        # If model is in train mode, dropout and batch norm will constantly change the network and make finding an adversary quite difficult
+        # model.train()
+        model.eval()
 
         for batch in test_loader:
             inputs, labels, idx = batch
@@ -525,8 +533,6 @@ def main(args, cfg, wb, run_name):
             break
         
         before = inputs.clone().detach()
-
-        M, N = 3, 6
 
         outputs = model(inputs)
         imgs = inv(inputs)
@@ -548,7 +554,7 @@ def main(args, cfg, wb, run_name):
             for i in range(M):
                 for j in range(N):
                     # diff = diffs_inv[i*N+j][0].permute(1,2,0).detach().cpu().numpy()
-                    diff = diffs_inv[i*N+j][0].detach().cpu().numpy()
+                    diff = diffs_inv[i*N+j][0].cpu().numpy()
                     ax[i][j].imshow(diff, cmap="gray")
                     plt.setp('Diff')
                     ax[i][j].set_axis_off()
@@ -558,7 +564,7 @@ def main(args, cfg, wb, run_name):
 
             diffs_flat = diffs.flatten()
             plt.figure()
-            plt.hist(diffs_flat.detach().cpu())
+            plt.hist(diffs_flat.cpu().numpy())
             plt.title('Diffs')
             plt.savefig(f'{adv_imgs_path}/diffs_hist_{k}.png')
             plt.close()
@@ -660,25 +666,45 @@ def main(args, cfg, wb, run_name):
             plot_results(ood_idx_label_scores, cfg['out_path'], 'test_ood', ood_dataset.train_set.classes, metrics=results)
             plot_results(idx_label_scores, cfg['out_path'], 'ood', ood_idx_label_scores=ood_idx_label_scores)
 
+            postprocess_kw = dict(criterion=criterion, scaler=scaler, device=device, adv_cfg=adv_cfg)
+
             if cfg['postprocess']:                
                 for method_name in cfg['postprocess']:
-                    method_class = getattr(adversarial, method_name)
-                    method = method_class()
+                    logger.info(f'Applying {method_name} postprocessing method for OOD detection...')
+                    method_class = getattr(ood, method_name)
                     method_name = f"{method_name.lower().replace('postprocessor', '')}"
-                    id_label_scores, ood_label_scores = get_ood_scores(model, test_loader, ood_test_loader, method.postprocess, device)
-                    plot_results(id_label_scores, cfg['out_path'], 'ood', ood_idx_label_scores=ood_label_scores, postprocess=method_name)
+
+                    if 'odin' in method_name and cfg['odin_gridsearch']:
+                        for T in np.arange(0, 1000, 200):
+                            for eps in np.arange(0, 10, 2):
+                                method = method_class(T, eps)
+                                id_label_scores, ood_label_scores = get_ood_scores(model, test_loader, ood_test_loader, method.postprocess, **postprocess_kw)
+                                plot_results(id_label_scores, cfg['out_path'], 'ood', ood_idx_label_scores=ood_label_scores, postprocess=f'{method_name}-{T}-{eps}')
+                    else:
+                        method = method_class()
+                        id_label_scores, ood_label_scores = get_ood_scores(model, test_loader, ood_test_loader, method.postprocess, **postprocess_kw)
+                        plot_results(id_label_scores, cfg['out_path'], 'ood', ood_idx_label_scores=ood_label_scores, postprocess=method_name)
+                    logger.info(f'Finished postprocessing with {method_name} method.')
                 
-            if cfg['cea']:
-                if cfg['postprocess'] is None or not cfg['postprocess']:
-                    raise ValueError('CEA postprocessing method was selected but no postprocessing method was chosen.')
-                
-                for method_name in cfg['postprocess']:
-                    method_class = getattr(adversarial, method_name)
-                    method = method_class()
-                    method_name = f"{method_name.lower().replace('postprocessor', '')}" + 'cea'
-                    cea = CEA(model, method, val_loader, device, cfg['cea']['percentile_top'], cfg['cea']['addition_coef'])
-                    id_label_scores, ood_label_scores = get_ood_scores(model, test_loader, ood_test_loader, cea.postprocess, device)
-                    plot_results(id_label_scores, cfg['out_path'], 'ood', ood_idx_label_scores=ood_label_scores, postprocess=method_name)
+            if cfg['cea']:                
+                for method_name in cfg['cea_postprocess']:
+                    logger.info(f'Applying {method_name} postprocessing method with CEA for OOD detection...')
+                    method_class = getattr(ood, method_name)
+                    method_name = f"{method_name.lower().replace('postprocessor', '')}" + '_cea'
+
+                    if 'odin' in method_name and cfg['cea_odin_gridsearch']:
+                        for T in np.arange(0, 1000, 200):
+                            for eps in np.arange(0, 10, 2):
+                                method = method_class(T, eps)
+                                cea = CEA(model, method, val_loader, criterion, scaler, adv_cfg, device, cfg['cea']['percentile_top'], cfg['cea']['addition_coef'])
+                                id_label_scores, ood_label_scores = get_ood_scores(model, test_loader, ood_test_loader, cea.postprocess, **postprocess_kw)
+                                plot_results(id_label_scores, cfg['out_path'], 'ood', ood_idx_label_scores=ood_label_scores, postprocess=f'{method_name}-{T}-{eps}')
+                    else:
+                        method = method_class()
+                        cea = CEA(model, method, val_loader, criterion, scaler, adv_cfg, device, cfg['cea']['percentile_top'], cfg['cea']['addition_coef'])
+                        id_label_scores, ood_label_scores = get_ood_scores(model, test_loader, ood_test_loader, cea.postprocess, **postprocess_kw)
+                        plot_results(id_label_scores, cfg['out_path'], 'ood', ood_idx_label_scores=ood_label_scores, postprocess=method_name)
+                    logger.info(f'Finished postprocessing with {method_name} method with CEA.')
 
         else:
             raise NotImplementedError()

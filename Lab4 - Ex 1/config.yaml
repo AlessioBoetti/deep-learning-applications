@@ -20,6 +20,7 @@ config:
   seed: 1
   device: "cuda:0"
   cuda_benchmark: True
+  deterministic: True
 
   # Paths and dirs
   data_dir: "../data"
@@ -99,6 +100,7 @@ config:
     # alpha: 10
     # normalize: True
   adversarial_add: True
+  show_adv_imgs: False
 
   xai: False
   explain_gradients: False

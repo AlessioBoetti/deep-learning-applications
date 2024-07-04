@@ -1,7 +1,7 @@
 #### Weight & Biases settings
 
 wandb:
-  name: "Test - Adv & OOD & ODIN - CNN - 9 Conv Layers"
+  name: "Adv & OOD & Post - CNN - 9 Conv Layers"
   resume: False
   job_type: "OOD"
   group: "Exercise 3.1"
@@ -12,7 +12,8 @@ wandb:
   - "OOD"
   - "Adv"
   - "ODIN"
-  notes: "Out of distribution detection with adversarial training and ODIN postprocessor."
+  - "CEA"
+  notes: "Out of distribution detection with adversarial training and postprocessing."
 
 
 #### Experiment settings
@@ -22,7 +23,7 @@ config:
   seed: 1
   device: "cuda:0"
   cuda_benchmark: True
-  deterministic: False
+  deterministic: True
 
   # Paths and dirs
   data_dir: "../data"
@@ -69,12 +70,14 @@ config:
   
   pretrain: False
   pretest: False
-  train: True
+  train: False
   test: True
-  test_original: True
+  test_original: False
+  test_adversarial: False
+  test_ood: True
 
   training:
-    n_epochs: 1
+    n_epochs: 150
     eval_interval: 1
     checkpoint_every: 1
     clip_grads: False
@@ -95,8 +98,8 @@ config:
   postprocess: ["ODINPostprocessor"]
   odin_gridsearch: True
 
-  cea_postprocess: ["MaxLogitsPostprocessor", "MaxSoftmaxPostprocessor"]
-  cea_odin_gridsearch: False
+  cea_postprocess: ["MaxLogitsPostprocessor", "MaxSoftmaxPostprocessor", "ODINPostprocessor"]
+  cea_odin_gridsearch: True
   cea:
     percentile_top: 99
     addition_coef: 1
