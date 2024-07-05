@@ -31,7 +31,7 @@ config:
 
   model_type: "CNN"
   model:
-    in_channels: 1
+    in_channels: 3
     depth: 9
     output_size: 10
     want_shortcut: False
@@ -43,7 +43,7 @@ config:
 
   dataset:
     dataset_type: "Vision"
-    dataset_name: "MNIST"
+    dataset_name: "CIFAR10"
     val_size: 0.2
     val_shuffle: True
     normalize: True
@@ -70,9 +70,12 @@ config:
   pretest: False
   train: False
   test: True
-  test_original: True
+  test_original: False
   test_adversarial: True
-  test_ood: True
+  alpha_range: [1, 11]
+  test_ood: False
+  show_adv_imgs: True
+  show_alpha_range: [0, 11]
 
   training:
     n_epochs: 150
@@ -94,10 +97,14 @@ config:
     use_sampler: True
   
   postprocess: ["ODINPostprocessor"]
-  odin_gridsearch: True
+  odin_gridsearch:
+  odin_temperatures: [0, 1000, 200]
+  odin_alphas: [0, 10, 2]
 
   cea_postprocess: ["MaxLogitsPostprocessor", "MaxSoftmaxPostprocessor", "ODINPostprocessor"]
   cea_odin_gridsearch: True
+  cea_odin_temperatures: [0, 1000, 200]
+  cea_odin_alphas: [0, 10, 2]
   cea:
     percentile_top: 99
     addition_coef: 1
@@ -106,10 +113,12 @@ config:
     epsilon: 8
     alpha: 10
     normalize: True
-    target: 0
+    normalize_params: False
+    target: 5
     target_type: "OVR"
+    steps: 1
   adversarial_add: True
-  show_adv_imgs: True
+  
 
   xai: False
   explain_gradients: False

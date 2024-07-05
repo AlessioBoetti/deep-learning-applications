@@ -36,8 +36,6 @@ class ODINPostprocessor():
             temperature += 1e-7
         if noise == 0.0:
             noise += 0.001
-        else:
-            noise = noise / 255.
         self.temperature = temperature
         self.noise = noise
 
@@ -66,7 +64,7 @@ class ODINPostprocessor():
         # # Adding small perturbations to images
         # adv_inputs = torch.add(inputs.detach(), gradient, alpha=-self.noise)  # torch.add(input, other, alpha): adds other, scaled by alpha, to input.
         
-        adv_cfg.update({'temperature': self.temperature, 'epsilon': self.noise})
+        adv_cfg.update({'temperature': self.temperature, 'alpha': self.noise, 'fast': False})
         delta = attack(model, inputs, labels, scaler=scaler, **adv_cfg)
         adv_inputs = inputs + delta
 
@@ -134,24 +132,24 @@ class CEA():
             
             # model.fc.layers.act_2.register_forward_hook(get_activation(hook_name))
 
-            with torch.no_grad() if not isinstance(self.processor, ODINPostprocessor) else nullcontext() as context:
-                for batch in loader:
-                    inputs, labels, idx = batch
-                    inputs = inputs.to(device, non_blocking=True)
-                    labels = labels.to(device, non_blocking=True)
+            for batch in loader:
+                inputs, labels, idx = batch
+                inputs = inputs.to(device, non_blocking=True)
+                labels = labels.to(device, non_blocking=True)
 
-                    # outputs = model(inputs)
-                    # activations_list.append(activation[hook_name])
-                    # activation[hook_name] = None
-
+                # outputs = model(inputs)
+                # activations_list.append(activation[hook_name])
+                # activation[hook_name] = None
+                
+                with torch.no_grad():
                     x = model.conv_net(inputs)
                     x = x.view(x.size(0), -1)
                     x = model.fc.layers.act_1(model.fc.layers.bn_1(model.fc.layers.linear_1(x)))
                     act = model.fc.layers.act_2(model.fc.layers.bn_2(model.fc.layers.linear_2(x)))
-                    activations_list.append(act.detach().cpu())
+                activations_list.append(act.detach().cpu())
 
-                    _, original_score = self.processor.postprocess(model, inputs, labels, criterion, scaler, adv_cfg)
-                    original_scores.append(original_score)
+                _, original_score = self.processor.postprocess(model, inputs, labels, criterion, scaler, adv_cfg)
+                original_scores.append(original_score)
 
             self.activations_list = np.concatenate(activations_list, axis=0)
             self.set_threshold()

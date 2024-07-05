@@ -34,28 +34,43 @@ def l_2_update(delta, x, alpha, epsilon, lower_limit, upper_limit):
     return delta.data
 
 
-def criterion_fn(criterion, outputs, y):
+def criterion_loss(outputs, y, criterion):
     loss = criterion(outputs, y)
     return loss
 
 
-def targeted_loss_ovo(outputs, y, y_targ):
+def targeted_loss(outputs, y_target, criterion, device):
+    y_target = torch.tensor(y_target, device=device).unsqueeze(0).expand(outputs.shape[0])
+    loss = -criterion(outputs, y_target)
+    return loss
+
+
+def targeted_loss_ovo(outputs, y, y_target, criterion, device):
     """
         Maximize the loss of the true label and minimize the loss of the alternative label.
         But since max(loss_target - loss_true) = max(output_true - output_target), we invert the signs, so we
         maximize the target class logits and minimize the true class logits. 
     """
-    loss = (outputs[:, y_targ] - outputs.gather(1, y[:, None])[:, 0]).sum()
+    # loss = (outputs[:, y_target] - outputs.gather(1, y[:, None])[:, 0]).sum()
+    y_target = torch.tensor(y_target, device=device).unsqueeze(0).expand(outputs.shape[0])
+    loss = criterion(outputs, y) - criterion(outputs, y_target)
     return loss
 
 
-def targeted_loss_ovr(outputs, y_targ, y=None):
+def targeted_loss_ovr(outputs, y_target, criterion, n_classes, device):
     """
         Maximize the loss of the true label and minimize the loss of all other labels.
         But since max(loss_other - loss_true) = max(output_true - output_other), we invert the signs, so we
         maximize the target class logits and minimize the logits of all other classes.
     """
-    loss = 2*outputs[:, y_targ].sum() - outputs.sum()
+    # loss = 2*outputs[:, y_target].sum() - outputs.sum()
+
+    y_target_t = torch.tensor(y_target, device=device).unsqueeze(0).expand(outputs.shape[0])
+    loss = -criterion(outputs, y_target_t)
+    for i in np.arange(n_classes):
+        if i != y_target:
+            i = torch.tensor(i, device=device).unsqueeze(0).expand(outputs.shape[0])
+            loss += criterion(outputs, i)
     return loss
 
 
@@ -66,6 +81,7 @@ def attack(
     epsilon: float, 
     alpha: float, 
     normalize: bool, 
+    normalize_params: bool,
     criterion, 
     scaler, 
     device, 
@@ -74,21 +90,22 @@ def attack(
     l_2: bool = False, 
     dataset_name: str = None, 
     fast: bool = True, 
-    target=None, 
-    target_type: str = 'OVO', 
+    fast_init: bool = True,
+    target: int = None, 
+    target_type: str = None, 
     restarts: int = 1, 
-    n_steps: int = 1, 
+    steps: int = 1, 
     randomize: bool = True, 
-    mask = False, 
+    mask: bool = False, 
     until_success: bool = False,
     temperature: float = None,
     ):
 
     """
-        If l_inf = True, restarts = 1, n_steps = 1 --> FGSM
-        If restarts = 1, n_steps > 1               --> PGD
-        If l_inf = True, restarts = 1, n_steps > 1 --> PGD with l_inf norm
-        If l_2 = True, restarts = 1, n_steps > 1   --> PGD with l_2 norm
+        If l_inf = True, restarts = 1, steps = 1 --> FGSM
+        If restarts = 1, steps > 1               --> PGD
+        If l_inf = True, restarts = 1, steps > 1 --> PGD with l_inf norm
+        If l_2 = True, restarts = 1, steps > 1   --> PGD with l_2 norm
         
         If ..., randomize = True --> FGSM/PGD with randomization
         If ..., restarts > 1     --> FGSM/PGD with multiple restarts
@@ -129,28 +146,37 @@ def attack(
         epsilon = 8 / 255.  # epsilon default value is 8 for CIFAR10 (from https://github.com/locuslab/fast_adversarial/blob/master/CIFAR10/train_fgsm.py)
         alpha = 10 / 255.  # alpha default value is 10 for CIFAR10 (from https://github.com/locuslab/fast_adversarial/blob/master/CIFAR10/train_fgsm.py)
         randomize = True
+        fast_init = True
+    else:
+        epsilon = epsilon / 255.
+        alpha = alpha / 255.
 
+    dataset_name = dataset_name.lower().replace(' ', '')
+    if dataset_name == 'mnist':
+        n_classes = 10
+        input_dims = 1
+        mean = torch.tensor(mnist_mean, device=device).view(1, 1, 1)
+        std = torch.tensor(mnist_std, device=device).view(1, 1, 1)
+    elif dataset_name == 'cifar10':
+        n_classes = 10
+        input_dims = 3
+        mean = torch.tensor(cifar10_mean, device=device).view(3, 1, 1)
+        std = torch.tensor(cifar10_std, device=device).view(3, 1, 1)
+    else:
+        raise NotImplementedError()
+    
     if normalize:
-        dataset_name = dataset_name.lower().replace(' ', '')
-        if dataset_name == 'mnist':
-            mean = torch.tensor(mnist_mean, device=device).view(1, 1, 1)
-            std = torch.tensor(mnist_std, device=device).view(1, 1, 1)
-            input_dims = 1
-        elif dataset_name == 'cifar10':
-            mean = torch.tensor(cifar10_mean, device=device).view(3, 1, 1)
-            std = torch.tensor(cifar10_std, device=device).view(3, 1, 1)
-            input_dims = 3
-        else:
-            raise NotImplementedError()
-        
-        epsilon = epsilon / std
-        alpha = alpha / std
-
-        # used for scaling model input images into [0, 1] range
         lower_limit = ((0 - mean)/ std)
         upper_limit = ((1 - mean)/ std)
     else:
         lower_limit, upper_limit = 0, 1
+
+    if normalize and normalize_params:
+        epsilon = epsilon / std
+        alpha = alpha / std
+    else:
+        epsilon = epsilon / torch.ones_like(std)
+        alpha = alpha / torch.ones_like(std)
 
     update_fn_kw = dict(alpha=alpha, epsilon=epsilon)
     if l_inf:
@@ -163,18 +189,22 @@ def attack(
         update_fn_kw.update({'x': x})
     
     if not randomize and restarts > 1:
-        logger.warning(f'PGD randomization was set to False, but restarts was set to more than 1. Setting randomization to True.')
+        logger.warning(f'Randomization was set to False, but restarts was set to more than 1. Setting randomization to True.')
         randomize = True
 
     if target:
+        loss_fn_kw = dict(y_target=target, criterion=criterion, device=device)
         if target_type == 'OVO':  # faster but less consistent
             loss_fn = targeted_loss_ovo
+            loss_fn_kw.update({'y': y})
         elif target_type == 'OVR':  # slower but more consistent
             loss_fn = targeted_loss_ovr
-        loss_fn_kw = dict(y=y, y_targ=target)
+            loss_fn_kw.update({'n_classes': n_classes})
+        else:
+            loss_fn = targeted_loss
     else:
-        loss_fn = criterion_fn
-        loss_fn_kw = dict(criterion=criterion, y=y)
+        loss_fn = criterion_loss
+        loss_fn_kw = dict(y=y, criterion=criterion)
     
     if restarts > 1:
         max_loss = torch.zeros(y.shape[0], device=device)
@@ -183,7 +213,7 @@ def attack(
     for _ in range(restarts):
         delta = torch.zeros_like(x, device=device)
         if randomize:
-            if fast:
+            if fast_init:
                 for dim in np.arange(input_dims):
                     delta[:, dim, :, :] = delta[:, dim, :, :].uniform_(-epsilon[dim].item(), epsilon[dim].item())
             else:
@@ -209,7 +239,7 @@ def attack(
                 if temperature:
                     outputs = outputs / temperature
         else:
-            for _ in np.arange(n_steps):
+            for _ in np.arange(steps):
                 outputs = model(x + delta)  # outputs = model(x + delta[:x.size(0)])
                 if temperature:
                     outputs = outputs / temperature
@@ -268,22 +298,37 @@ def draw_loss(model, x, y, criterion, epsilon, device):
     surf = ax.plot_surface(Xi, Yi, Zi, rstride=1, cstride=1, linewidth=0, antialiased=True, facecolors=rgb)
 
 
-def plot_images(inputs, labels, outputs, M, N, out_path, classes, adv: bool = False, eps=None, n=''):
+def plot_images(inputs, labels, outputs, M, N, out_path, classes, adv: bool = False, alpha=None, diff: bool = False, n=''):
     
     f, ax = plt.subplots(M, N, sharex=True, sharey=True, figsize=(25, 25))
     for i in range(M):
         for j in range(N):
-            # img = inputs[i*N+j][0].permute(1,2,0).detach().cpu().numpy()
-            img = inputs[i*N+j][0].detach().cpu().numpy()
-            ax[i][j].imshow(img, cmap="gray")
-            title_prefix = f"Eps {eps} - " if eps else ""
-            title_string = "{}Pred: {}".format(title_prefix, classes[outputs[i*N+j].max(dim=0)[1]])
-            title = ax[i][j].set_title(title_string)
-            plt.setp(title, color=('g' if outputs[i*N+j].max(dim=0)[1] == labels[i*N+j] else 'r'))
+            if inputs.shape[1] > 1:
+                img = inputs[i*N+j].permute(1, 2, 0).detach().cpu().numpy()
+                ax[i][j].imshow((img * 255).astype(np.uint8))
+            else:
+                img = inputs[i*N+j][0].detach().cpu().numpy()
+                ax[i][j].imshow(img, cmap="gray")
+            if alpha and not diff:
+                title_string = "Pred: {}".format(classes[outputs[i*N+j].max(dim=0)[1]])
+                title = ax[i][j].set_title(title_string, size=20)
+                plt.setp(title, color=('g' if outputs[i*N+j].max(dim=0)[1] == labels[i*N+j] else 'r'))
+            else:
+                title_string = "True: {}".format(classes[labels[i*N+j]])
+                title = ax[i][j].set_title(title_string, size=20)
             ax[i][j].set_axis_off()
+    if alpha and not diff:
+        suptitle = f"Corrupted images - alpha (eps): {alpha}"
+    elif diff:
+        suptitle = "Diffs"
+    else:
+        suptitle = 'Original images'
+    plt.suptitle(suptitle, size=20)
     plt.tight_layout()
     if adv:
         plt.savefig(f'{out_path}/corrupted_images{n}.png')
+    elif diff:
+        plt.savefig(f'{out_path}/diffs{n}.png')
     else:
         plt.savefig(f'{out_path}/sample_images{n}.png')
     plt.close()
