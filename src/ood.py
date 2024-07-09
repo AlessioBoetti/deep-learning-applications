@@ -68,7 +68,8 @@ class ODINPostprocessor():
         delta = attack(model, inputs, labels, scaler=scaler, **adv_cfg)
         adv_inputs = inputs + delta
 
-        outputs = model(adv_inputs)
+        with torch.no_grad():
+            outputs = model(adv_inputs)
         outputs = outputs / self.temperature
 
         # Calculating the confidence after adding perturbations

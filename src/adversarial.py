@@ -12,11 +12,10 @@ mnist_std = (0.3081)
 cifar10_mean = (0.49139968, 0.48215827, 0.44653124)
 cifar10_std = (0.24703233, 0.24348505, 0.26158768)
 
-fashionmnist_mean = (0.5)
-fashionmnist_std = (0.5)
+fashionmnist_mean = (0.485, 0.456, 0.406)  # coming from ImageNet values since it has millions of images
+fashionmnist_std = (0.229, 0.224, 0.225)
 
-# SVHN mean and std come from ImageNet since it has millions of images
-svhn_mean = (0.485, 0.456, 0.406)
+svhn_mean = (0.485, 0.456, 0.406)  # coming from ImageNet values since it has millions of images
 svhn_std = (0.229, 0.224, 0.225)
 
 
@@ -162,23 +161,23 @@ def attack(
     if dataset_name == 'mnist':
         n_classes = 10
         input_dims = 1
-        mean = torch.tensor(mnist_mean, device=device).view(1, 1, 1)
-        std = torch.tensor(mnist_std, device=device).view(1, 1, 1)
+        mean = torch.tensor(mnist_mean, device=device).view(input_dims, 1, 1)
+        std = torch.tensor(mnist_std, device=device).view(input_dims, 1, 1)
     elif dataset_name == 'cifar10':
         n_classes = 10
         input_dims = 3
-        mean = torch.tensor(cifar10_mean, device=device).view(3, 1, 1)
-        std = torch.tensor(cifar10_std, device=device).view(3, 1, 1)
+        mean = torch.tensor(cifar10_mean, device=device).view(input_dims, 1, 1)
+        std = torch.tensor(cifar10_std, device=device).view(input_dims, 1, 1)
     elif dataset_name == 'fashionmnist':
         n_classes = 10
         input_dims = 1
-        mean = torch.tensor(fashionmnist_mean, device=device).view(3, 1, 1)
-        std = torch.tensor(fashionmnist_std, device=device).view(3, 1, 1)
+        mean = torch.tensor(fashionmnist_mean, device=device).view(input_dims, 1, 1)
+        std = torch.tensor(fashionmnist_std, device=device).view(input_dims, 1, 1)
     elif dataset_name == 'svhn':
         n_classes = 10
         input_dims = 3
-        mean = torch.tensor(svhn_mean, device=device).view(3, 1, 1)
-        std = torch.tensor(svhn_std, device=device).view(3, 1, 1)
+        mean = torch.tensor(svhn_mean, device=device).view(input_dims, 1, 1)
+        std = torch.tensor(svhn_std, device=device).view(input_dims, 1, 1)
     else:
         raise NotImplementedError()
     
@@ -315,7 +314,7 @@ def draw_loss(model, x, y, criterion, epsilon, device):
     surf = ax.plot_surface(Xi, Yi, Zi, rstride=1, cstride=1, linewidth=0, antialiased=True, facecolors=rgb)
 
 
-def plot_images(inputs, labels, outputs, M, N, out_path, classes, adv: bool = False, alpha=None, diff: bool = False, n=''):
+def plot_images(inputs, labels, outputs, M, N, out_path, classes, adv: bool = False, alpha: int = None, diff: bool = False, n: str = ''):
     
     f, ax = plt.subplots(M, N, sharex=True, sharey=True, figsize=(25, 25))
     for i in range(M):

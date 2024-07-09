@@ -7,7 +7,6 @@ import time
 import random
 from typing import Union, List
 import gc
-from contextlib import nullcontext
 
 import yaml
 import numpy as np
@@ -18,7 +17,7 @@ from tqdm import tqdm
 import torch
 import torch.nn as nn
 
-from model import ConvolutionalNeuralNetwork, EarlyStopping
+from model import ConvolutionalNeuralNetwork
 from utils import *
 from xai import *
 from ood import *
@@ -375,6 +374,24 @@ def train(
     return model, results
 
 
+def test(loader, model, criterion, metrics, device, logger, dataset, name, scaler=None, adv_cfg=None, alpha: int = None):
+    loss, metrics, total_time, _, idx_label_scores = evaluate(loader, model, criterion, metrics, device, logger, validation=False, scaler=scaler, adv_cfg=adv_cfg)
+    log_str = f'Finished testing with alpha set to {alpha}' if alpha else 'Finished testing.'
+    logger.info(log_str)
+
+    results = {
+        'time': total_time,
+        'loss': loss,
+        'accuracy': metrics['MulticlassAccuracy'],
+        'precision': metrics['MulticlassPrecision'],
+        'recall': metrics['MulticlassRecall'],
+        'scores': idx_label_scores,
+    }
+    # save_results(cfg['out_path'], results, name)
+    plot_results(idx_label_scores, cfg['out_path'], name, dataset.train_set.classes, metrics=results, eps=alpha)
+    return idx_label_scores
+
+
 def main(args, cfg, wb, run_name):
     
     cfg = setup_folders(args, cfg, run_name)
@@ -534,14 +551,16 @@ def main(args, cfg, wb, run_name):
         
         before = inputs.clone().detach()
 
-        outputs = model(inputs)
+        with torch.no_grad():
+            outputs = model(inputs)
         imgs = inv(inputs)
         plot_images(imgs, labels, outputs, M, N, adv_imgs_path, classes)
 
         for alpha in np.arange(*cfg['show_alpha_range']):
             adv_cfg.update({'alpha': alpha, 'fast': False})
             delta = attack(model, inputs, labels, scaler=scaler, **adv_cfg)
-            outputs = model(inputs + delta)
+            with torch.no_grad():
+                outputs = model(inputs + delta)
             adv_imgs = inv(inputs + delta)
             plot_images(adv_imgs, labels, outputs, M, N, adv_imgs_path, classes, adv=True, alpha=alpha, n=f'_{alpha}')
 
@@ -565,19 +584,14 @@ def main(args, cfg, wb, run_name):
     if cfg['test']:
         logger.info('Testing.')
         logger.info('Starting testing on test set...')
-        test_loss, test_metrics, test_time, _, idx_label_scores = evaluate(test_loader, model, criterion, metric_collection, device, logger, validation=False)
-        logger.info('Finished testing.')
+        idx_label_scores = test(test_loader, model, criterion, metric_collection, device, logger, dataset, 'test')
 
-        results = {
-            'time': test_time,
-            'loss': test_loss,
-            'accuracy': test_metrics['MulticlassAccuracy'],
-            'precision': test_metrics['MulticlassPrecision'],
-            'recall': test_metrics['MulticlassRecall'],
-            'scores': idx_label_scores,
-        }
-        # save_results(cfg['out_path'], results, 'test')
-        plot_results(idx_label_scores, cfg['out_path'], 'test', dataset.train_set.classes, metrics=results)
+
+    # Testing model on original dataset...
+    if cfg['test_original']:
+        logger.info('Testing on original dataset.')
+        logger.info('Starting testing on original (not transformed) test set...')
+        org_idx_label_scores = test(org_test_loader, model, criterion, metric_collection, device, logger, dataset, 'test_original')
 
 
     # Testing model on adversarial examples...
@@ -588,52 +602,10 @@ def main(args, cfg, wb, run_name):
         for alpha in np.arange(*cfg['alpha_range']):
             logger.info(f'Alpha set to {alpha}.')
             adv_cfg.update({'alpha': alpha, 'fast': False})
-
-            adv_test_loss, adv_test_metrics, adv_test_time, _, adv_idx_label_scores = evaluate(
-                test_loader,
-                model,
-                criterion,
-                metric_collection,
-                device,
-                logger,
-                False,  # validation
-                scaler,
-                adv_cfg,
-            )
-            logger.info(f'Finished testing for alpha set to {alpha}.')
-
-            results = {
-                'time': adv_test_time,
-                'loss': adv_test_loss,
-                'accuracy': adv_test_metrics['MulticlassAccuracy'],
-                'precision': adv_test_metrics['MulticlassPrecision'],
-                'recall': adv_test_metrics['MulticlassRecall'],
-                'scores': adv_idx_label_scores,
-            }
-            # save_results(cfg['out_path'], results, 'test_adversarial')
-            plot_results(adv_idx_label_scores, cfg['out_path'], 'test_adversarial', dataset.train_set.classes, metrics=results, eps=alpha)
+            adv_idx_label_scores = test(org_test_loader, model, criterion, metric_collection, device, logger, dataset, 'test_adversarial', scaler, adv_cfg, alpha)
             if cfg['test']:
                 plot_results(idx_label_scores, cfg['out_path'], 'adv', ood_idx_label_scores=adv_idx_label_scores, eps=alpha)
 
-
-    # Testing model on original dataset...
-    if cfg['test_original']:
-        logger.info('Testing on original dataset.')
-        logger.info('Starting testing on original (not transformed) test set...')
-        org_test_loss, org_test_metrics, org_test_time, _, org_idx_label_scores = evaluate(org_test_loader, model, criterion, metric_collection, device, logger, validation=False)
-        logger.info('Finished testing.')
-
-        results = {
-            'time': org_test_time,
-            'loss': org_test_loss,
-            'accuracy': org_test_metrics['MulticlassAccuracy'],
-            'precision': org_test_metrics['MulticlassPrecision'],
-            'recall': org_test_metrics['MulticlassRecall'],
-            'scores': org_idx_label_scores,
-        }
-        # save_results(cfg['out_path'], results, 'test_original')
-        plot_results(org_idx_label_scores, cfg['out_path'], 'test_original', dataset.train_set.classes, metrics=results)
-    
 
     # Other testing...
     if cfg['test_ood']:
@@ -641,20 +613,9 @@ def main(args, cfg, wb, run_name):
         _, _, ood_test_loader, _ = ood_dataset.loaders(train=False, **dataloader_kw)
 
         logger.info('Starting testing on OOD test set...')
-        ood_test_loss, ood_test_metrics, ood_test_time, _, ood_idx_label_scores = evaluate(ood_test_loader, model, criterion, metric_collection, device, logger, validation=False)
-        logger.info('Finished testing.')
-
-        results = {
-            'time': ood_test_time,
-            'loss': ood_test_loss,
-            'accuracy': ood_test_metrics['MulticlassAccuracy'],
-            'precision': ood_test_metrics['MulticlassPrecision'],
-            'recall': ood_test_metrics['MulticlassRecall'],
-            'scores': ood_idx_label_scores,
-        }
-        # save_results(cfg['out_path'], results, 'test_ood')
-        plot_results(ood_idx_label_scores, cfg['out_path'], 'test_ood', ood_dataset.train_set.classes, metrics=results)
-        plot_results(idx_label_scores, cfg['out_path'], 'ood', ood_idx_label_scores=ood_idx_label_scores)
+        ood_idx_label_scores = test(ood_test_loader, model, criterion, metric_collection, device, logger, dataset, 'test_ood')
+        if cfg['test']:
+            plot_results(idx_label_scores, cfg['out_path'], 'ood', ood_idx_label_scores=ood_idx_label_scores)
 
         postprocess_kw = dict(criterion=criterion, scaler=scaler, device=device, adv_cfg=adv_cfg)
 

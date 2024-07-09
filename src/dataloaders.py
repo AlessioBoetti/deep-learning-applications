@@ -342,13 +342,15 @@ class MySVHN(SVHN):
         self.classes = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
 
 
-    def __getitem__(self, index):
-        """Override the original method of the SVHN class.
-        Args:
-            index (int): Index
-        Returns:
-            triple: (image, target, index) where target is index of the target class.
+    def __getitem__(self, index) -> Tuple[Any, Any, Any]:
         """
+            Override the original method of the SVHN class.
+            Args:
+                index (int): Index
+            Returns:
+                triple: (image, target, index) where target is index of the target class.
+        """
+        
         img, target = self.data[index], int(self.labels[index])
 
         # doing this so that it is consistent with all other datasets
@@ -527,10 +529,10 @@ class FashionMNIST_Dataset(BaseDataset):
         use_sampler: bool = True,
         multiclass: bool = None,  # TODO: Implement from DL PW
         ):
-
+        
         super().__init__()
         self.root = root
-        self.norm_stats = [(0.5,), (0.5,)]
+        self.norm_stats = [(0.485, 0.456, 0.406), (0.229, 0.224, 0.225)]  # coming from ImageNet values since it has millions of images
 
         if problem is not None:
             self.problem = problem.lower().replace(' ', '')
@@ -548,7 +550,7 @@ class FashionMNIST_Dataset(BaseDataset):
         
         transform, basic_transform, target_transform = self._get_transforms(
             img_size=img_size, 
-            augment=augment, 
+            augment=False, 
             normalize=self.norm_stats if normalize else False, 
             gcn=gcn, 
             gcn_minmax=gcn_minmax, 
@@ -590,7 +592,7 @@ class SVHN_Dataset(BaseDataset):
     ):
         super().__init__()
         self.root = root
-        self.norm_stats = [(0.485, 0.456, 0.406), (0.229, 0.224, 0.225)]  # mean and std coming from ImageNet since it has millions of images
+        self.norm_stats = [(0.485, 0.456, 0.406), (0.229, 0.224, 0.225)]  # coming from ImageNet values since it has millions of images
 
         if problem is not None:
             self.problem = problem.lower().replace(' ', '')
@@ -608,8 +610,8 @@ class SVHN_Dataset(BaseDataset):
         
         transform, basic_transform, target_transform = self._get_transforms(
             img_size=img_size, 
-            augment=augment, 
-            normalize=self.norm_stats if normalize else False,
+            augment=False, 
+            normalize=self.norm_stats if normalize else False, 
             gcn=gcn, 
             gcn_minmax=gcn_minmax, 
             normal_class=normal_class,
