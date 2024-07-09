@@ -1,0 +1,162 @@
+2024-07-08 11:02:57,426 - Starting run.
+2024-07-08 11:02:57,426 - Logger setup correctly.
+2024-07-08 11:02:57,428 - Seed set to 1.
+2024-07-08 11:02:57,458 - Log filepath: results/Target Adv Images (Adv) - CNN - 9 Conv Layers/log.txt.
+2024-07-08 11:02:57,458 - Data dir: ../data.
+2024-07-08 11:02:57,458 - Dataset: CIFAR10
+2024-07-08 11:02:57,458 - Number of dataloader workers: 8
+2024-07-08 11:02:57,458 - Network: CNN
+2024-07-08 11:02:57,458 - Computation device: cuda:0
+2024-07-08 11:02:57,458 - Loading dataset from "../data".
+2024-07-08 11:03:04,662 - Dataset loaded.
+2024-07-08 11:03:04,662 - Initializing CNN model.
+2024-07-08 11:03:04,830 - Model initialized.
+2024-07-08 11:03:04,830 - Showing model structure:
+2024-07-08 11:03:04,830 - ConvolutionalNeuralNetwork(
+  (conv_net): Sequential(
+    (init_conv): Conv2d(3, 64, kernel_size=(3, 3), stride=(1, 1))
+    (conv_block_1): ConvolutionalBlock(
+      (block_layers): Sequential(
+        (conv_1): Conv2d(64, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+        (bn_1): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (act_1): ReLU()
+        (conv_2): Conv2d(64, 128, kernel_size=(3, 3), stride=(1, 1), padding=same, bias=False)
+        (bn_2): BatchNorm2d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (act_2): ReLU()
+        (pool): MaxPool2d(kernel_size=3, stride=2, padding=1, dilation=1, ceil_mode=False)
+      )
+    )
+    (conv_block_2): ConvolutionalBlock(
+      (block_layers): Sequential(
+        (conv_1): Conv2d(128, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+        (bn_1): BatchNorm2d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (act_1): ReLU()
+        (conv_2): Conv2d(128, 256, kernel_size=(3, 3), stride=(1, 1), padding=same, bias=False)
+        (bn_2): BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (act_2): ReLU()
+        (pool): MaxPool2d(kernel_size=3, stride=2, padding=1, dilation=1, ceil_mode=False)
+      )
+    )
+    (conv_block_3): ConvolutionalBlock(
+      (block_layers): Sequential(
+        (conv_1): Conv2d(256, 256, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+        (bn_1): BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (act_1): ReLU()
+        (conv_2): Conv2d(256, 512, kernel_size=(3, 3), stride=(1, 1), padding=same, bias=False)
+        (bn_2): BatchNorm2d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (act_2): ReLU()
+        (pool): MaxPool2d(kernel_size=3, stride=2, padding=1, dilation=1, ceil_mode=False)
+      )
+    )
+    (conv_block_4): ConvolutionalBlock(
+      (block_layers): Sequential(
+        (conv_1): Conv2d(512, 512, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+        (bn_1): BatchNorm2d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (act_1): ReLU()
+        (conv_2): Conv2d(512, 512, kernel_size=(3, 3), stride=(1, 1), padding=same, bias=False)
+        (bn_2): BatchNorm2d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        (act_2): ReLU()
+        (pool_hook): AdaptiveMaxPool2d(output_size=2)
+      )
+    )
+  )
+  (fc): MultiLayerPerceptron(
+    (layers): Sequential(
+      (linear_1): Linear(in_features=2048, out_features=1024, bias=False)
+      (bn_1): BatchNorm1d(1024, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (act_1): ReLU()
+      (linear_2): Linear(in_features=1024, out_features=1024, bias=False)
+      (bn_2): BatchNorm1d(1024, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (act_2): ReLU()
+      (last_linear): Linear(in_features=1024, out_features=10, bias=False)
+    )
+  )
+)
+2024-07-08 11:03:04,831 - Initializing AdamW optimizer.
+2024-07-08 11:03:04,831 - Optimizer initialized.
+2024-07-08 11:03:04,836 - Loading model from "/home/aboetti/DeepLearning/Tests/Lab4 - Ex 2.2/results/Adv & OOD - CNN - 9 Conv Layers/model.pth.tar".
+2024-07-08 11:03:04,922 - Model loaded.
+2024-07-08 11:03:04,922 - Plotting original and adversarial images...
+2024-07-08 11:04:01,992 - Finished plotting images.
+2024-07-08 11:04:01,992 - Testing.
+2024-07-08 11:04:01,992 - Starting testing on test set...
+2024-07-08 11:04:03,231 -   Test Time: 1.237
+2024-07-08 11:04:03,231 -   Test Loss: 0.96999596
+2024-07-08 11:04:03,231 -   Test MulticlassAccuracy: 75.7100
+2024-07-08 11:04:03,231 -   Test MulticlassPrecision: 75.5937
+2024-07-08 11:04:03,231 -   Test MulticlassRecall: 75.7100
+2024-07-08 11:04:03,231 - Finished testing.
+2024-07-08 11:04:04,050 - Testing on adversarial examples.
+2024-07-08 11:04:04,050 - Starting testing on adversarial test set with multiple alpha values...
+2024-07-08 11:04:04,050 - Alpha set to 1.
+2024-07-08 11:04:06,696 -   Adv Test Time: 2.644
+2024-07-08 11:04:06,696 -   Adv Test Loss: 0.93920601
+2024-07-08 11:04:06,696 -   Adv Test MulticlassAccuracy: 75.6000
+2024-07-08 11:04:06,697 -   Adv Test MulticlassPrecision: 75.6035
+2024-07-08 11:04:06,697 -   Adv Test MulticlassRecall: 75.6000
+2024-07-08 11:04:06,697 - Finished testing for alpha set to 1.
+2024-07-08 11:04:09,216 - Alpha set to 2.
+2024-07-08 11:04:11,724 -   Adv Test Time: 2.506
+2024-07-08 11:04:11,724 -   Adv Test Loss: 0.92047498
+2024-07-08 11:04:11,724 -   Adv Test MulticlassAccuracy: 75.3500
+2024-07-08 11:04:11,724 -   Adv Test MulticlassPrecision: 75.5554
+2024-07-08 11:04:11,724 -   Adv Test MulticlassRecall: 75.3500
+2024-07-08 11:04:11,724 - Finished testing for alpha set to 2.
+2024-07-08 11:04:14,033 - Alpha set to 3.
+2024-07-08 11:04:16,766 -   Adv Test Time: 2.731
+2024-07-08 11:04:16,766 -   Adv Test Loss: 0.91253196
+2024-07-08 11:04:16,766 -   Adv Test MulticlassAccuracy: 74.8000
+2024-07-08 11:04:16,766 -   Adv Test MulticlassPrecision: 75.2335
+2024-07-08 11:04:16,766 -   Adv Test MulticlassRecall: 74.8000
+2024-07-08 11:04:16,766 - Finished testing for alpha set to 3.
+2024-07-08 11:04:19,082 - Alpha set to 4.
+2024-07-08 11:04:21,590 -   Adv Test Time: 2.506
+2024-07-08 11:04:21,590 -   Adv Test Loss: 0.91291002
+2024-07-08 11:04:21,590 -   Adv Test MulticlassAccuracy: 74.2900
+2024-07-08 11:04:21,590 -   Adv Test MulticlassPrecision: 75.0425
+2024-07-08 11:04:21,590 -   Adv Test MulticlassRecall: 74.2900
+2024-07-08 11:04:21,590 - Finished testing for alpha set to 4.
+2024-07-08 11:04:24,094 - Alpha set to 5.
+2024-07-08 11:04:26,624 -   Adv Test Time: 2.528
+2024-07-08 11:04:26,624 -   Adv Test Loss: 0.91971972
+2024-07-08 11:04:26,624 -   Adv Test MulticlassAccuracy: 73.4700
+2024-07-08 11:04:26,624 -   Adv Test MulticlassPrecision: 74.5713
+2024-07-08 11:04:26,624 -   Adv Test MulticlassRecall: 73.4700
+2024-07-08 11:04:26,624 - Finished testing for alpha set to 5.
+2024-07-08 11:04:28,908 - Alpha set to 6.
+2024-07-08 11:04:31,426 -   Adv Test Time: 2.516
+2024-07-08 11:04:31,426 -   Adv Test Loss: 0.93195757
+2024-07-08 11:04:31,426 -   Adv Test MulticlassAccuracy: 72.7200
+2024-07-08 11:04:31,426 -   Adv Test MulticlassPrecision: 74.1484
+2024-07-08 11:04:31,426 -   Adv Test MulticlassRecall: 72.7200
+2024-07-08 11:04:31,426 - Finished testing for alpha set to 6.
+2024-07-08 11:04:33,926 - Alpha set to 7.
+2024-07-08 11:04:36,483 -   Adv Test Time: 2.555
+2024-07-08 11:04:36,483 -   Adv Test Loss: 0.94751978
+2024-07-08 11:04:36,483 -   Adv Test MulticlassAccuracy: 71.7600
+2024-07-08 11:04:36,483 -   Adv Test MulticlassPrecision: 73.5111
+2024-07-08 11:04:36,483 -   Adv Test MulticlassRecall: 71.7600
+2024-07-08 11:04:36,483 - Finished testing for alpha set to 7.
+2024-07-08 11:04:38,811 - Alpha set to 8.
+2024-07-08 11:04:41,548 -   Adv Test Time: 2.735
+2024-07-08 11:04:41,548 -   Adv Test Loss: 0.96420045
+2024-07-08 11:04:41,548 -   Adv Test MulticlassAccuracy: 71.0600
+2024-07-08 11:04:41,548 -   Adv Test MulticlassPrecision: 73.0620
+2024-07-08 11:04:41,548 -   Adv Test MulticlassRecall: 71.0600
+2024-07-08 11:04:41,548 - Finished testing for alpha set to 8.
+2024-07-08 11:04:43,843 - Alpha set to 9.
+2024-07-08 11:04:46,365 -   Adv Test Time: 2.520
+2024-07-08 11:04:46,365 -   Adv Test Loss: 0.98222551
+2024-07-08 11:04:46,365 -   Adv Test MulticlassAccuracy: 70.4900
+2024-07-08 11:04:46,365 -   Adv Test MulticlassPrecision: 72.7043
+2024-07-08 11:04:46,365 -   Adv Test MulticlassRecall: 70.4900
+2024-07-08 11:04:46,365 - Finished testing for alpha set to 9.
+2024-07-08 11:04:48,906 - Alpha set to 10.
+2024-07-08 11:04:51,430 -   Adv Test Time: 2.522
+2024-07-08 11:04:51,430 -   Adv Test Loss: 0.99907100
+2024-07-08 11:04:51,430 -   Adv Test MulticlassAccuracy: 69.7200
+2024-07-08 11:04:51,430 -   Adv Test MulticlassPrecision: 72.1703
+2024-07-08 11:04:51,430 -   Adv Test MulticlassRecall: 69.7200
+2024-07-08 11:04:51,430 - Finished testing for alpha set to 10.
+2024-07-08 11:04:53,730 - Finished run.
+2024-07-08 11:04:53,730 - Closing experiment.

@@ -8,7 +8,7 @@ from PIL import Image
 import torch
 import torchvision.transforms as transforms
 from torch.utils.data import Dataset, DataLoader, Subset, SubsetRandomSampler
-from torchvision.datasets import MNIST, FashionMNIST, CIFAR10, ImageFolder, DatasetFolder
+from torchvision.datasets import MNIST, FashionMNIST, CIFAR10, SVHN, ImageFolder, DatasetFolder
 
 from huggingface_hub import hf_hub_download
 from transformers import AutoTokenizer
@@ -204,11 +204,17 @@ class BaseDataset(object):
         val_shuffle: bool = None, 
         val_shuffle_seed: int = None,
         use_sampler: bool = None,
+        is_svhn: bool = False,
         ):
 
-        self.train_set = MyDataset(root=self.root, train=True, download=True, transform=transform, target_transform=target_transform)
-        self.test_set = MyDataset(root=self.root, train=False, download=True, transform=transform, target_transform=target_transform)
-        self.org_test_set = MyDataset(root=self.root, train=False, download=True, transform=basic_transform, target_transform=target_transform)
+        if is_svhn:
+            self.train_set = MyDataset(root=self.root, split='train', download=True, transform=transform, target_transform=target_transform)
+            self.test_set = MyDataset(root=self.root, split='test', download=True, transform=transform, target_transform=target_transform)
+            self.org_test_set = MyDataset(root=self.root, split='test', download=True, transform=basic_transform, target_transform=target_transform)
+        else:
+            self.train_set = MyDataset(root=self.root, train=True, download=True, transform=transform, target_transform=target_transform)
+            self.test_set = MyDataset(root=self.root, train=False, download=True, transform=transform, target_transform=target_transform)
+            self.org_test_set = MyDataset(root=self.root, train=False, download=True, transform=basic_transform, target_transform=target_transform)
 
         if self.problem is not None:
             if self.problem == 'ood':
@@ -217,7 +223,10 @@ class BaseDataset(object):
                     self.train_set = Subset(self.train_set, self.train_idx_normal)
             
         if val_size:
-            self.val_set = MyDataset(root=self.root, train=True, download=True, transform=transform, target_transform=target_transform)
+            if is_svhn:
+                self.val_set = MyDataset(root=self.root, split='train', download=True, transform=transform, target_transform=target_transform)
+            else:
+                self.val_set = MyDataset(root=self.root, train=True, download=True, transform=transform, target_transform=target_transform)
             # TODO: If we are doing OD, the train set may not have OOD data. If this is the case, to include OOD data in the val set
             # we should select n_samples from val_set, but if val_set is a copy of the full train_set, n_samples is bigger than reduced train_set!
             n_samples = len(self.train_set)
@@ -285,6 +294,66 @@ class MyCIFAR10(CIFAR10):
         # doing this so that it is consistent with all other datasets
         # to return a PIL Image
         img = Image.fromarray(img)
+
+        if self.transform is not None:
+            img = self.transform(img)
+
+        if self.target_transform is not None:
+            target = self.target_transform(target)
+
+        return img, target, index  # only line changed
+
+
+class MyFashionMNIST(FashionMNIST):
+    """Torchvision FashionMNIST class with patch of __getitem__ method to also return the index of a data sample."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def __getitem__(self, index) -> Tuple[Any, Any, Any]:
+        """
+            Override the original method of the FashionMNIST class.
+            Args:
+                index (int): Index
+            Returns:
+                triple: (image, target, index) where target is index of the target class.
+        """
+        
+        img, target = self.data[index], self.targets[index]
+
+        # doing this so that it is consistent with all other datasets
+        # to return a PIL Image
+        img = Image.fromarray(img.numpy(), mode='L')
+
+        if self.transform is not None:
+            img = self.transform(img)
+
+        if self.target_transform is not None:
+            target = self.target_transform(target)
+
+        return img, target, index  # only line changed
+
+
+class MySVHN(SVHN):
+    """Torchvision SVHN class with patch of __getitem__ method to also return the index of a data sample."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.classes = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
+
+
+    def __getitem__(self, index):
+        """Override the original method of the SVHN class.
+        Args:
+            index (int): Index
+        Returns:
+            triple: (image, target, index) where target is index of the target class.
+        """
+        img, target = self.data[index], int(self.labels[index])
+
+        # doing this so that it is consistent with all other datasets
+        # to return a PIL Image
+        img = Image.fromarray(np.transpose(img, (1, 2, 0)))
 
         if self.transform is not None:
             img = self.transform(img)
@@ -402,15 +471,15 @@ class CIFAR10_Dataset(BaseDataset):
         if gcn:
             # Pre-computed min and max values (after applying GCN) from train data per class
             min_max = [(-28.94083453598571, 13.802961825439636),
-                    (-6.681770233365245, 9.158067708230273),
-                    (-34.924463588638204, 14.419298165027628),
-                    (-10.599172931391799, 11.093187820377565),
-                    (-11.945022995801637, 10.628045447867583),
-                    (-9.691969487694928, 8.948326776180823),
-                    (-9.174940012342555, 13.847014686472365),
-                    (-6.876682005899029, 12.282371383343161),
-                    (-15.603507135507172, 15.2464923804279),
-                    (-6.132882973622672, 8.046098172351265)]
+                       (-6.681770233365245, 9.158067708230273),
+                       (-34.924463588638204, 14.419298165027628),
+                       (-10.599172931391799, 11.093187820377565),
+                       (-11.945022995801637, 10.628045447867583),
+                       (-9.691969487694928, 8.948326776180823),
+                       (-9.174940012342555, 13.847014686472365),
+                       (-6.876682005899029, 12.282371383343161),
+                       (-15.603507135507172, 15.2464923804279),
+                       (-6.132882973622672, 8.046098172351265)]
         else:
             min_max = None
 
@@ -438,37 +507,68 @@ class CIFAR10_Dataset(BaseDataset):
         )
 
 
-class MyFashionMNIST(FashionMNIST):
-    """Torchvision MNIST class with patch of __getitem__ method to also return the index of a data sample."""
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-    def __getitem__(self, index) -> Tuple[Any, Any, Any]:
-        """
-            Override the original method of the MNIST class.
-            Args:
-                index (int): Index
-            Returns:
-                triple: (image, target, index) where target is index of the target class.
-        """
-        
-        img, target = self.data[index], self.targets[index]
-
-        # doing this so that it is consistent with all other datasets
-        # to return a PIL Image
-        img = Image.fromarray(img.numpy(), mode='L')
-
-        if self.transform is not None:
-            img = self.transform(img)
-
-        if self.target_transform is not None:
-            target = self.target_transform(target)
-
-        return img, target, index  # only line changed
-
-
 class FashionMNIST_Dataset(BaseDataset):
+    def __init__(
+        self, 
+        root: str,
+        problem: str = None,
+        n_classes: int = 2,
+        normal_class: Union[int, List[int]] = None,
+        total_classes: int = 10,
+        img_size: int = None,
+        normalize: bool = False,
+        gcn: str = None,   # 'l1' oppure 'l2'
+        gcn_minmax: bool = False,
+        augment: bool = False,
+        val_size: float = None,
+        val_mix: bool = False,
+        val_shuffle: bool = True,
+        val_shuffle_seed: int = 1,
+        use_sampler: bool = True,
+        multiclass: bool = None,  # TODO: Implement from DL PW
+        ):
+
+        super().__init__()
+        self.root = root
+        self.norm_stats = [(0.5,), (0.5,)]
+
+        if problem is not None:
+            self.problem = problem.lower().replace(' ', '')
+            if self.problem == 'ood':
+                if normal_class is not None:
+                    self._setup_in_out_classes(n_classes, normal_class, total_classes)
+            else:
+                raise NotImplementedError(f'Problem {problem} is not valid. Only Outlier Detection is implemented.')
+
+        if gcn:
+            # Pre-computed min and max values (after applying GCN) from train data per class
+            min_max = None
+        else:
+            min_max = None
+        
+        transform, basic_transform, target_transform = self._get_transforms(
+            img_size=img_size, 
+            augment=augment, 
+            normalize=self.norm_stats if normalize else False, 
+            gcn=gcn, 
+            gcn_minmax=gcn_minmax, 
+            normal_class=normal_class,
+        )
+
+        self._setup_splits(
+            MyFashionMNIST, 
+            transform, 
+            basic_transform, 
+            target_transform, 
+            val_size, 
+            val_mix, 
+            val_shuffle, 
+            val_shuffle_seed, 
+            use_sampler,
+        )
+
+
+class SVHN_Dataset(BaseDataset):
     def __init__(
         self, 
         root: str,
@@ -490,6 +590,7 @@ class FashionMNIST_Dataset(BaseDataset):
     ):
         super().__init__()
         self.root = root
+        self.norm_stats = [(0.485, 0.456, 0.406), (0.229, 0.224, 0.225)]  # mean and std coming from ImageNet since it has millions of images
 
         if problem is not None:
             self.problem = problem.lower().replace(' ', '')
@@ -508,14 +609,14 @@ class FashionMNIST_Dataset(BaseDataset):
         transform, basic_transform, target_transform = self._get_transforms(
             img_size=img_size, 
             augment=augment, 
-            normalize=[(0.5,), (0.5,)] if normalize else False, 
+            normalize=self.norm_stats if normalize else False,
             gcn=gcn, 
             gcn_minmax=gcn_minmax, 
             normal_class=normal_class,
         )
 
         self._setup_splits(
-            MyFashionMNIST, 
+            MySVHN, 
             transform, 
             basic_transform, 
             target_transform, 
@@ -524,6 +625,7 @@ class FashionMNIST_Dataset(BaseDataset):
             val_shuffle, 
             val_shuffle_seed, 
             use_sampler,
+            is_svhn=True,
         )
 
 

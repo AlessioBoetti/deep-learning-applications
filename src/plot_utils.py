@@ -144,9 +144,9 @@ def plot_results(idx_label_scores, out_path: str, split: str = None, classes = N
         y_true_id, y_pred_id, logit_scores_id, max_logit_scores_id, softmax_scores_id, max_softmax_scores_id = extract_results(idx_label_scores, T)
 
     if eps:
-        img_path = f'{out_path}/imgs_adv/eps_{eps}'
+        img_path = f'{out_path}/plots_adv/eps_{eps}'
     else:
-        img_path = f'{out_path}/imgs'
+        img_path = f'{out_path}/plots'
     create_dirs_if_not_exist(img_path)
 
     if ood_idx_label_scores is None:

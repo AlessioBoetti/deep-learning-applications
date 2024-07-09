@@ -12,6 +12,13 @@ mnist_std = (0.3081)
 cifar10_mean = (0.49139968, 0.48215827, 0.44653124)
 cifar10_std = (0.24703233, 0.24348505, 0.26158768)
 
+fashionmnist_mean = (0.5)
+fashionmnist_std = (0.5)
+
+# SVHN mean and std come from ImageNet since it has millions of images
+svhn_mean = (0.485, 0.456, 0.406)
+svhn_std = (0.229, 0.224, 0.225)
+
 
 def gradient_update(delta, x, alpha, epsilon):
     return (delta + x.shape[0]*alpha*delta.grad.data).clamp(-epsilon, epsilon)
@@ -162,6 +169,16 @@ def attack(
         input_dims = 3
         mean = torch.tensor(cifar10_mean, device=device).view(3, 1, 1)
         std = torch.tensor(cifar10_std, device=device).view(3, 1, 1)
+    elif dataset_name == 'fashionmnist':
+        n_classes = 10
+        input_dims = 1
+        mean = torch.tensor(fashionmnist_mean, device=device).view(3, 1, 1)
+        std = torch.tensor(fashionmnist_std, device=device).view(3, 1, 1)
+    elif dataset_name == 'svhn':
+        n_classes = 10
+        input_dims = 3
+        mean = torch.tensor(svhn_mean, device=device).view(3, 1, 1)
+        std = torch.tensor(svhn_std, device=device).view(3, 1, 1)
     else:
         raise NotImplementedError()
     

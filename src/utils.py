@@ -9,7 +9,7 @@ import torch.optim as optim
 import torch.nn as nn
 import torchmetrics
 
-from dataloaders import MNIST_Dataset, CIFAR10_Dataset, FashionMNIST_Dataset, NLP_Dataset
+from dataloaders import *
 from model import Lion, EarlyStopping
 
 
@@ -121,6 +121,8 @@ def load_dataset(
             dataset = CIFAR10_Dataset(**dataset_kw)
         if dataset_name == 'fashionmnist':
             dataset = FashionMNIST_Dataset(**dataset_kw)
+        if dataset_name == 'svhn':
+            dataset = SVHN_Dataset(**dataset_kw)
         # if dataset_name == 'mvtec':
         #     dataset = MVTEC_Dataset(**dataset_kw)
     
