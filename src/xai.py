@@ -8,7 +8,14 @@ import torch.nn.functional as F
 import torchvision.transforms as T
 
 
-# From https://github.com/utkuozbulak/pytorch-cnn-visualizations
+# References:
+# - CAM: http://cnnlocalization.csail.mit.edu/
+# - GitHub CAM: https://github.com/zhoubolei/CAM
+
+# - Grad-CAM: https://arxiv.org/pdf/1512.04150.pdf
+# - GitHub Grad-CAM: https://github.com/utkuozbulak/pytorch-cnn-visualizations
+
+
 
 def format_np_output(np_arr):
     """
@@ -86,41 +93,6 @@ def save_gradient_images(gradient, output_path, file_name):
     save_image(gradient, path_to_file)
 
 
-class VanillaBackprop():
-    """
-        Produces gradients generated with vanilla back propagation from the image
-    """
-    def __init__(self, model):
-        self.model = model
-        self.gradients = None
-        self.model.eval()
-        # Hook the first layer to get the gradient
-        self.hook_layers()
-
-    def hook_layers(self):
-        def hook_function(module, grad_in, grad_out):
-            self.gradients = grad_in[0]
-
-        # Register hook to the first layer
-        first_layer = list(self.model.features._modules.items())[0][1]
-        first_layer.register_backward_hook(hook_function)
-
-    def generate_gradients(self, input_img, target_class):
-        # Forward
-        model_output = self.model(input_img)
-        # Zero grads
-        self.model.zero_grad()
-        # Target for backprop
-        one_hot_output = torch.FloatTensor(1, model_output.size()[-1]).zero_()
-        one_hot_output[0][target_class] = 1
-        # Backward pass
-        model_output.backward(gradient=one_hot_output)
-        # Convert Pytorch variable to numpy array
-        # [0] to get rid of the first channel (1,3,224,224)
-        gradients_as_arr = self.gradients.data.numpy()[0]
-        return gradients_as_arr
-
-
 def apply_colormap_on_image(org_img, activation, colormap_name):
     """
         Apply heatmap on image
@@ -163,27 +135,68 @@ def save_class_activation_images(org_img, activation_map, filepath):
     save_image(activation_map, filepath + '_activation_grayscale.png')
 
 
+class VanillaBackprop():
+    # From https://github.com/utkuozbulak/pytorch-cnn-visualizations/blob/master/src/vanilla_backprop.py
+    """
+        Produces gradients generated with vanilla back propagation from the image
+    """
+    def __init__(self, model):
+        self.model = model
+        self.gradients = None
+        self.model.eval()
+        # Hook the first layer to get the gradient
+        self.hook_layers()
+
+    def hook_layers(self):
+        def hook_function(module, grad_in, grad_out):
+            self.gradients = grad_in[0]
+
+        # Register hook to the first layer
+        first_layer = list(self.model.features._modules.items())[0][1]
+        first_layer.register_backward_hook(hook_function)
+
+    def generate_gradients(self, input_img, target_class):
+        # Forward
+        model_output = self.model(input_img)
+        # Zero grads
+        self.model.zero_grad()
+        # Target for backprop
+        one_hot_output = torch.FloatTensor(1, model_output.size()[-1]).zero_()
+        one_hot_output[0][target_class] = 1
+        # Backward pass
+        model_output.backward(gradient=one_hot_output)
+        # Convert Pytorch variable to numpy array
+        # [0] to get rid of the first channel (1,3,224,224)
+        gradients_as_arr = self.gradients.data.numpy()[0]
+        return gradients_as_arr
+
+
 class ClassActivationMapping_ORG:
     # From https://github.com/zhoubolei/CAM/blob/master/pytorch_CAM.py
-    def __init__(self, model):
+    def __init__(self, model, target_layer=None):
         self.model = model
         self.features_blobs = []
         # Put model in evaluation mode
         self.model.eval()
         # Hook the first layer to get the gradient
-        self.hook_layers()
+        self.hook_layers(target_layer)
     
-    def hook_layers(self):
+    def hook_layers(self, target_layer):
         def hook_function(module, input, output):
             self.features_blobs.append(output.data.cpu().numpy())
 
         # Register hook to the first layer
-        last_layer = list(self.model.features._modules.items())[-1][1]   # Originally [0][1]
-        last_layer.register_forward_hook(hook_function)
+        self.model.conv_net.register_forward_hook(hook_function)
+        # self.model._modules.get(target_layer).register_forward_hook(hook_function)
+        # last_layer = list(self.model.features._modules.items())[-1][1]   # Originally [0][1]
+        # last_layer.register_forward_hook(hook_function)
     
-    def return_cam(feature_conv, weight_softmax, class_idx):
+    def return_cam(self, feature_conv, weight_softmax, class_idx, input_img, upsample: bool = False):
         # generate the class activation maps upsample to 256x256
-        size_upsample = (256, 256)
+        if upsample:
+            size_upsample = (256, 256)
+        else:
+            size_upsample = (input_img.shape[2], input_img.shape[3])
         bz, nc, h, w = feature_conv.shape
         output_cam = []
         for idx in class_idx:
@@ -193,23 +206,24 @@ class ClassActivationMapping_ORG:
             cam_img = cam / np.max(cam)
             cam_img = np.uint8(255 * cam_img)
             # output_cam.append(cv2.resize(cam_img, size_upsample))
+            cam_img = np.uint8(Image.fromarray(cam_img).resize((size_upsample[0], size_upsample[1]), Image.LANCZOS))/255
             output_cam.append(cam_img)
         return output_cam
     
-    def generate_cam(self, input_img):
+    def generate_cam(self, input_img, device=None, target_class=None):
         params = list(self.model.parameters())
         weight_softmax = np.squeeze(params[-2].data.numpy())
+        input_img.requires_grad = True
         logit = self.model(input_img)
         h_x = F.softmax(logit, dim=1).data.squeeze()
         probs, idx = h_x.sort(0, True)
         probs = probs.numpy()
         idx = idx.numpy()
-        cams = self.return_cam(self.features_blobs[0], weight_softmax, [idx[0]])
+        cams = self.return_cam(self.features_blobs[0], weight_softmax, [idx[0]], input_img)
         return cams
 
 
 class ClassActivationMapping:
-    # From https://arxiv.org/pdf/1512.04150.pdf
     # From https://github.com/utkuozbulak/pytorch-cnn-visualizations/blob/master/src/gradcam.py
     def __init__(self, model, target_layer):
         self.model = model
