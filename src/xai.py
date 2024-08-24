@@ -220,6 +220,11 @@ class ClassActivationMapping_ORG:
         probs = probs.numpy()
         idx = idx.numpy()
         cams = self.return_cam(self.features_blobs[0], weight_softmax, [idx[0]], input_img)
+        # img = cv2.imread('test.jpg')
+        # height, width, _ = img.shape
+        # heatmap = cv2.applyColorMap(cv2.resize(cams[0],(width, height)), cv2.COLORMAP_JET)
+        # result = heatmap * 0.3 + img * 0.5
+        # cv2.imwrite('CAM.jpg', result)
         return cams
 
 
