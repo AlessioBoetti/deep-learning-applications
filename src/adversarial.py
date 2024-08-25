@@ -41,11 +41,17 @@ def l_2_update(delta, x, alpha, epsilon, lower_limit, upper_limit):
 
 
 def criterion_loss(outputs, y, criterion):
+    """
+        Maximize the loss of the true label.
+    """
     loss = criterion(outputs, y)
     return loss
 
 
 def targeted_loss(outputs, y_target, criterion, device):
+    """
+        Minimize the loss of the target label.
+    """
     y_target = torch.tensor(y_target, device=device).unsqueeze(0).expand(outputs.shape[0])
     loss = -criterion(outputs, y_target)
     return loss
@@ -53,7 +59,7 @@ def targeted_loss(outputs, y_target, criterion, device):
 
 def targeted_loss_ovo(outputs, y, y_target, criterion, device):
     """
-        Maximize the loss of the true label and minimize the loss of the alternative label.
+        Minimize the loss of the target label and maximize the loss of the true label.
         But since max(loss_target - loss_true) = max(output_true - output_target), we invert the signs, so we
         maximize the target class logits and minimize the true class logits. 
     """
@@ -65,7 +71,7 @@ def targeted_loss_ovo(outputs, y, y_target, criterion, device):
 
 def targeted_loss_ovr(outputs, y_target, criterion, n_classes, device):
     """
-        Maximize the loss of the true label and minimize the loss of all other labels.
+        Minimize the loss of the target label and maximize the loss of all other labels.
         But since max(loss_other - loss_true) = max(output_true - output_other), we invert the signs, so we
         maximize the target class logits and minimize the logits of all other classes.
     """

@@ -128,6 +128,11 @@ $\alpha_{k}^{c} = \frac{1}{Z}\sum_{i}\sum_{j}\frac{{\partial}y^{c}}{{\partial}A_
 
 where the two summations are the Global Average Pooling mechanism, the derivative represents the gradient backpropagation, $k$ is the index of the activation map in the last convolutional layer, and $c$ is the class of interest.
 
+Then we multiply each activation map by its importance score (i.e. alpha) and sum the values. To only consider the pixels that have a positive influence on the score of the class of interest, a ReLU nonlinearity is also applied:
+
+$ \mathcal{L}^{c} = ReLU(\sum_{k}\alpha_{k}^{c}A^{k})$
+
+
 In the results folder of the lab exercise the grad-cam heatmaps can be found.
 Unfortunately the heatmaps didn't come out enough complex.
 
@@ -202,7 +207,7 @@ Objective: Peruse the [text classification datasets on Hugging Face](https://hug
 
 I chose [DistilRoBERTa](https://huggingface.co/distilbert/distilroberta-base) as LLM for the exercise. DistilRoBERTa is a small LLM but can learn powerful and complex representations rivaling with other BERT-like models.
 
-I fine-tuned the model on the [Yelp Review Full](https://huggingface.co/datasets/Yelp/yelp_review_full) text classification dataset. The model
+I fine-tuned the model on the [Yelp Review Full](https://huggingface.co/datasets/Yelp/yelp_review_full) text classification dataset. 
 
 Every epoch of the training of DistilRoBERTa took several minutes, and looking for ways to speed up the training, I also fine-tuned the model using the [LoRA](https://arxiv.org/abs/2106.09685) method, which however did not speed up the training as much as expected.
 
@@ -212,7 +217,7 @@ Results on the test set:
 | DistilRoBERTa | **2.289** | 5.322% | **42.748%** | 5.322% |
 | DistilRoBERTa + LoRA | 2.291  | **8.945%**  |  36.040%  | **8.945%**|
 
-Surprisingly, when fine-tuning both models, the best epoch registered was the first (they both stopped due to early stopping after a few epochs). However the precision performance on the validation set had an increasing trend. Since the early stopping was measured on the accuracy on the validation set, this could mean that the accuracy may not be the best metric to assess the model performance (see images below). Also, the early stopping was set to a low value (20 epochs) due to the long time taken by a single training epoch.
+Surprisingly, when fine-tuning both models, the best epoch registered was the first (they both stopped after a few epochs due to early stopping). However the precision performance on the validation set had an increasing trend. Since the early stopping was measured on the accuracy on the validation set, this could mean that the accuracy may not be the best metric to assess the model performance (see images below). Also, the early stopping was set to a low value (20 epochs) due to the long time taken by a single training epoch.
 
 <p align="center">
   <img src="./imgs/val_acc_roberta.png"/>
@@ -289,27 +294,113 @@ In this second exercise we will experiment with enhancing our base model to be (
 #### Exercise 2.1: Implement FGSM and Generate Adversarial Examples
 Objective: Implement FGSM and generate some *adversarial examples* using your trained ID model. Evaluate these samples qualitatively and quantitatively. Evaluate how dependent on $\varepsilon$ the quality of these samples are. 
 
-Using the model from the previous exercise, I performed [Randomized FGSM](https://arxiv.org/abs/2001.03994)
+Using the model from the previous exercise, I performed a [randomized (fast) FGSM](https://arxiv.org/abs/2001.03994) attack:
 > Fast is better than free: Revisiting adversarial training, Eric Wong, Leslie Rice, J. Zico Kolter. 2020
 
-to obtain corrupted images for various values of $\varepsilon$. In the lab exercise [result folder](./Lab4%20-%20Ex%202.1/results/Adv%20Images%20-%20CNN%20-%209%20Conv%20Layers/) the corrupted images ($\varepsilon = 0$ means no attack) and their difference from the original images can be found.
+to obtain corrupted images for various values of $\varepsilon$. 
+
+In the lab exercise [result folder](./Lab4%20-%20Ex%202.1/results/Adv%20Images%20-%20CNN%20-%209%20Conv%20Layers/) the corrupted images ($\varepsilon = 0$ means no attack, thus original images) and their difference from the original images can be found.
 
 In the same folder there are the result plots created when treating adversarial images (for various values of $\varepsilon$) as OOD samples for the NON adversarially trained model.
 
-Here are the results:
+Here are the results on various test sets:
+| Dataset |  Epsilon ($\varepsilon$)|  Loss  | Accuracy | Precision | Recall |
+| :-----: | :-------:               | :----: | :------: | :-------: | :----: |
+| CIFAR10 | 0 (*original test set*) | 1.026  | 76.960%  |  76.796%  | 76.960%|
+| CIFAR10 | $1/255$                 | 1.998  | 62.440%  |  62.228%  | 62.440%|
+| CIFAR10 | $2/255$                 | 3.129  | 49.540%  |  49.566%  | 49.540%|
+| CIFAR10 | $3/255$                 | 4.246  | 40.240%  |  40.548%  | 40.240%|
+| CIFAR10 | $4/255$                 | 5.272  | 32.460%  |  33.040%  | 32.460%|
+| CIFAR10 | $5/255$                 | 6.180  | 26.910%  |  27.729%  | 26.910%|
+| CIFAR10 | $6/255$                 | 6.955  | 22.630%  |  23.610%  | 22.630%|
+| CIFAR10 | $7/255$                 | 7.605  | 19.610%  |  20.615%  | 19.610%|
+| CIFAR10 | $8/255$                 | 8.142  | 17.520%  |  18.523%  | 17.520%|
+| CIFAR10 | $9/255$                 | 8.582  | 15.680%  |  16.669%  | 15.680%|
+| CIFAR10 | $10/255$                | 8.932  | 14.540%  |  15.512%  | 14.540%|
 
-
-
-
-
-
-
+As we can see from the table, the performance decreases when $\varepsilon$ increases, showing how corrupted images are more difficult to classify correctly.
 
 
 #### Exercise 2.2: Augment Training with Adversarial Examples
 Objective: Use your implementation of FGSM to augment your training dataset with adversarial samples. Ideally, you should implement this data augmentation *on the fly* so that the adversarial samples are always generated using the current model. Evaluate whether the model is more (or less) robust to ID samples using your OOD detection pipeline and metrics you implemented in Exercise 1.
+
+I trained the 9 Conv Layer CNN with $\varepsilon = 10/255$ and tested it on the CIFAR10 uncorrupted test set. However, out of curiosity, I tested the model on a corrupted CIFAR10 test set. More specifically, when testing the model, I attacked the CIFAR10 test images using the already adversarially trained model, to see if another attack would have decreased further the model performance.
+
+Here are the results on the test sets:
+| Dataset |  Epsilon ($\varepsilon$)|  Loss  | Accuracy | Precision | Recall |
+| :-----: | :-------:               | :----: | :------: | :-------: | :----: |
+| CIFAR10 | 0 (*original test set*) | 1.008  | 75.780%  |  75.596%  | 75.780%|
+| CIFAR10 | $1/255$                 | 1.163  | 72.990%  |  72.780%  | 72.990%|
+| CIFAR10 | $2/255$                 | 1.320  | 70.270%  |  70.017%  | 70.270%|
+| CIFAR10 | $3/255$                 | 1.473  | 67.770%  |  67.488%  | 67.770%|
+| CIFAR10 | $4/255$                 | 1.622  | 65.370%  |  65.077%  | 65.370%|
+| CIFAR10 | $5/255$                 | 1.763  | 63.250%  |  62.985%  | 63.250%|
+| CIFAR10 | $6/255$                 | 1.896  | 61.300%  |  61.008%  | 61.300%|
+| CIFAR10 | $7/255$                 | 2.020  | 59.740%  |  59.404%  | 59.740%|
+| CIFAR10 | $8/255$                 | 2.132  | 58.250%  |  57.936%  | 58.250%|
+| CIFAR10 | $9/255$                 | 2.231  | 57.030%  |  56.731%  | 57.030%|
+| CIFAR10 | $10/255$                | 2.318  | 55.950%  |  55.714%  | 55.950%|
+
+The model performance on the CIFAR10 uncorrupted test set decreased of 1.20 percentage points, remaining thus quite stable. The robustness of the model came at the cost of a little decrease of performance. 
+Also, the attack on the adversarially trained model decreased the performance, however not so drastically as when applied on the original model.
+
+Let's see the plots showing CIFAR10 as ID and SVHN as OOD sets.
+
+ID confusion matrix:
+<p align="center">
+  <img src="./Lab4 - Ex 2.2/results/Adv & OOD - CNN - 9 Conv Layers/plots/confusion_matrix_test.png"/>
+</p>
+
+OOD confusion matrix:
+<p align="center">
+  <img src="./Lab4 - Ex 2.2/results/Adv & OOD - CNN - 9 Conv Layers/plots/confusion_matrix_test_ood.png"/>
+</p>
+
+Comparing these two confusion matrices with the ones from exercise 1, we can see that the ID performance remained quite stable (the model predicted correctly some classes and less correctly other classes), while the OOD performance varied somewhat. In particula, the model seemed more uncertain, predicting with higher frequency other classes (especially 2) in addition to  0, 3, 5 and 8 (whose frequency dropped a bit, especially class 3). 
+
+<p align="center">
+  <img src="./Lab4 - Ex 2.2/results/Adv & OOD - CNN - 9 Conv Layers/plots/ood_max_softmax_precision_recall_curve_id.png"/>
+</p>
+<p align="center">
+  <img src="./Lab4 - Ex 2.2/results/Adv & OOD - CNN - 9 Conv Layers/plots/ood_max_softmax_precision_recall_curve_ood.png"/>
+</p>
+<p align="center">
+  <img src="./Lab4 - Ex 2.2/results/Adv & OOD - CNN - 9 Conv Layers/plots/ood_max_softmax_roc_curve.png"/>
+</p>
+<p align="center">
+  <img src="./Lab4 - Ex 2.2/results/Adv & OOD - CNN - 9 Conv Layers/plots/ood_max_softmax_scores_histogram.png"/>
+</p>
+<p align="center">
+  <img src="./Lab4 - Ex 2.2/results/Adv & OOD - CNN - 9 Conv Layers/plots/ood_max_softmax_scores_plot.png"/>
+</p>
+
+The AUPR score and the AUC ROC score increased a little, and the number of model confidence on the OOD set decreased a bit (less scores with value equal to 1).
+
+On the lab result folder the plots showing CIFAR10 as ID and CIFAR10 corrupted as OOD sets can be found.
+
 ### Exercise 3: Wildcard
 #### Exercise 3.1: Implement ODIN for OOD Detection
 Notes: ODIN is a very simple approach, and you can already start experimenting by implementing a temperature hyperparameter in your base model and doing a grid search on $T$ and $\varepsilon$.
+
+I performed three experiments: 
+1. First, I added ODIN postprocessing method to the exercise 1 OOD detection pipeline (ID test set: CIFAR10, OOD test set: SVHN). I run the experiment with different values of $T$ and $\varepsilon$. In particular, $T \in \{0, 200, 400, 600, 800, 1000\}$, while $\varepsilon \in \{0, 2, 4, 6, 8\}$
+2. Then I added ODIN to the adversarially trained model (ID test set: CIFAR10, OOD test set: SVHN). 
+3. Finally I also applied [CEA](https://arxiv.org/abs/2405.12658) method (see below) after the classic Maximum Softmax Probability method (MSP) and after ODIN postprocessing method ($T \in \{0, 200, 400, 600, 800, 1000\}$, $\varepsilon \in \{0, 2, 4, 6, 8\}$)  for both the original model and the adversarially trained model.
+> [Mitigating Overconfidence in Out-of-Distribution Detection by Capturing Extreme Activations](https://arxiv.org/abs/2405.12658), Mohammad Azizmalayeri, Ameen Abu-Hanna, Giovanni Cinà. 2024
+
+The plots of experiment 1 can be found [here](./Lab4%20-%20Ex%203.1/results/OOD%20&%20Post%20-%20CNN%20-%209%20Conv%20Layers/plots/postprocess/), under the name <code>ood_odin-<$T$>-<$\varepsilon$>_...</code>
+
+The plots of experiment 2 can be found [here](./Lab4%20-%20Ex%203.1/results/Adv%20&%20OOD%20&%20Post%20-%20CNN%20-%209%20Conv%20Layers/plots/postprocess/), under the name <code>ood_odin-<$T$>-<$\varepsilon$>_...</code>
+
+The plots of experiment 3 can be found [here (original)](./Lab4%20-%20Ex%203.1/results/OOD%20&%20Post%20-%20CNN%20-%209%20Conv%20Layers/plots/postprocess/) and [here (adversarial)](./Lab4%20-%20Ex%203.1/results/Adv%20&%20OOD%20&%20Post%20-%20CNN%20-%209%20Conv%20Layers/plots/postprocess/), under the names <code>ood_maxsoftmax_cea_...</code> and <code>ood_odin_cea-<$T$>-<$\varepsilon$>_...</code>
+
 #### Exercise 3.3: Experiment with Targeted Adversarial Attacks
 Objective: Implement the targeted Fast Gradient Sign Method to generate adversarial samples that *imitate* samples from a specific class. Evaluate your adversarial samples qualitatively and quantitatively.
+
+I applied targeted FGSM on both the original model of exercise 1 and the adversarially trained model of exercise 2.2 in order to generate the images. The targeted FGSM was applied in 3 different ways:
+- Standard: minimizing the loss of the target label
+- One-vs-One (OVO): minimizing the loss of the target label while at the same time maximizing the loss of the true label.
+- One-vs-Rest (OVR): minimizing the loss of the target label while at the same time maximizing the loss of all other labels.
+
+This resulted in a total of 6 experiments.
+The adversarial images and their difference from the original images can be found in the lab exercise result folder, inside the <code>imgs_adv_samples</code> subfolders of every experiment.
