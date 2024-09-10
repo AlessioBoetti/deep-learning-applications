@@ -89,19 +89,19 @@ Then I tried adding Residual Connections, aka Skip Connections, to try to stabil
 
 Link to W&B report for ResNets with various depth: https://api.wandb.ai/links/alessio-boetti/s802vpyf
 
-As we can see both from the table and the report, the residual connections helped stabilize the training: they didn't support the assumption that deeper is better, but helped achieve nearly the same performance even when depth was increased.
+As we can see both from the table and the report, the residual connections first of all helped stabilize the training: they helped achieve nearly the same performance even when depth was increased. They didn't strongly support the assumption that deeper is better though, as the performance increased for deeper ResNets by small improvements.
 
 It's interesting to note from the table though that adding skip connections to the 9 ConvLayer CNN, resulting in 9 ConvLayer ResNet, decreased a little the performance. This could be due to chance, and to check this more trainings could be run varying the seed.
 
-However this pattern is also found throughout the training phase, when assessing the model on the validation set, as shown in the following two images:
+However this pattern is also found throughout the training phase, when assessing the model on the validation set, as shown in the following image:
 
 <p align="center">
   <img src="./imgs/val_acc_cnn_vs_resnet_9.png"/>
 </p>
 
-<p align="center">
+<!-- <p align="center">
   <img src="./imgs/val_acc_cnn_vs_resnet_17.png"/>
-</p>
+</p> -->
 
 This could be due to the following:
 - Residual connections add unnecessary complexity for a shallow CNN where the vanishing gradient problem is not so relevant.
@@ -110,7 +110,7 @@ This could be due to the following:
 
 It should also be noted that the deepest ResNet (49 conv layers) is still worse than shallow CNNs (9 and 17 conv layers):
 <p align="center">
-  <img src="./imgs/val_acc_shallow_cnns_vs_deep_resnet.png"/>
+  <img src="./imgs/val_acc_shallowest_cnn_vs_deepest_resnet.png"/>
 </p>
 
 ### Exercise 2: Choose at Least One
@@ -149,7 +149,7 @@ Results on validation set:
 | Dante's Inferno | 3.651  |
 
 <p align="center">
-  <img src="./imgs/gpt_dante_val_performance.png"/>
+  <img src="./imgs/dantegpt_val_performance.png"/>
 </p>
 
 From the above image we can clearly see the model overfits quite soon (on 5000 epochs).
@@ -192,7 +192,7 @@ Here the generated output in Dante's style (1000 tokens):
 > quando la brina in su la terra e lassa,
 >   si leva, giacendo l
 
-The output doesn't make sense in italian, but it's clearly recognizable as a text with an antique style. The way syllables are concatenated gives a quite impressive result. 
+The output doesn't make sense in italian, but it's clearly recognizable as a text with an antique style. The way syllables and punctuation are concatenated gives a quite impressive result. 
 
 It's also worth noting the sequence of two-line paragraphs, and even the insertion of double quotes <<>>, meaning the model learned to capture the structural connection between a spoken phrase and other parts of the text.
 
@@ -279,7 +279,13 @@ As we can see from the confusion matrices, when predicting the class for OOD ima
   <img src="./Lab4 - Ex 1/results/OOD - CNN - 9 Conv Layers/plots/ood_max_softmax_roc_curve.png"/>
 </p>
 <p align="center">
+  <img src="./Lab4 - Ex 1/results/OOD - CNN - 9 Conv Layers/plots/ood_max_logit_scores_histogram.png"/>
+</p>
+<p align="center">
   <img src="./Lab4 - Ex 1/results/OOD - CNN - 9 Conv Layers/plots/ood_max_softmax_scores_histogram.png"/>
+</p>
+<p align="center">
+  <img src="./Lab4 - Ex 1/results/OOD - CNN - 9 Conv Layers/plots/ood_max_logit_scores_plot.png"/>
 </p>
 <p align="center">
   <img src="./Lab4 - Ex 1/results/OOD - CNN - 9 Conv Layers/plots/ood_max_softmax_scores_plot.png"/>
@@ -303,20 +309,20 @@ In the lab exercise [result folder](./Lab4%20-%20Ex%202.1/results/Adv%20Images%2
 
 In the same folder there are the result plots created when treating adversarial images (for various values of $\varepsilon$) as OOD samples for the NON adversarially trained model.
 
-Here are the results on various test sets:
-| Dataset |  Epsilon ($\varepsilon$)|  Loss  | Accuracy | Precision | Recall |
-| :-----: | :-------:               | :----: | :------: | :-------: | :----: |
-| CIFAR10 | 0 (*original test set*) | 1.026  | 76.960%  |  76.796%  | 76.960%|
-| CIFAR10 | $1/255$                 | 1.998  | 62.440%  |  62.228%  | 62.440%|
-| CIFAR10 | $2/255$                 | 3.129  | 49.540%  |  49.566%  | 49.540%|
-| CIFAR10 | $3/255$                 | 4.246  | 40.240%  |  40.548%  | 40.240%|
-| CIFAR10 | $4/255$                 | 5.272  | 32.460%  |  33.040%  | 32.460%|
-| CIFAR10 | $5/255$                 | 6.180  | 26.910%  |  27.729%  | 26.910%|
-| CIFAR10 | $6/255$                 | 6.955  | 22.630%  |  23.610%  | 22.630%|
-| CIFAR10 | $7/255$                 | 7.605  | 19.610%  |  20.615%  | 19.610%|
-| CIFAR10 | $8/255$                 | 8.142  | 17.520%  |  18.523%  | 17.520%|
-| CIFAR10 | $9/255$                 | 8.582  | 15.680%  |  16.669%  | 15.680%|
-| CIFAR10 | $10/255$                | 8.932  | 14.540%  |  15.512%  | 14.540%|
+Here are the results on various CIFAR10 test sets:
+|  Epsilon ($\varepsilon$)|  Loss  | Accuracy | Precision | Recall |
+| :-------:               | :----: | :------: | :-------: | :----: |
+| **0 (*original test set*)** | **1.026**  | **76.960%**  |  **76.796%**  | **76.960%**|
+| $1/255$                 | 1.998  | 62.440%  |  62.228%  | 62.440%|
+| $2/255$                 | 3.129  | 49.540%  |  49.566%  | 49.540%|
+| $3/255$                 | 4.246  | 40.240%  |  40.548%  | 40.240%|
+| $4/255$                 | 5.272  | 32.460%  |  33.040%  | 32.460%|
+| $5/255$                 | 6.180  | 26.910%  |  27.729%  | 26.910%|
+| $6/255$                 | 6.955  | 22.630%  |  23.610%  | 22.630%|
+| $7/255$                 | 7.605  | 19.610%  |  20.615%  | 19.610%|
+| $8/255$                 | 8.142  | 17.520%  |  18.523%  | 17.520%|
+| $9/255$                 | 8.582  | 15.680%  |  16.669%  | 15.680%|
+| $10/255$                | 8.932  | 14.540%  |  15.512%  | 14.540%|
 
 As we can see from the table, the performance decreases when $\varepsilon$ increases, showing how corrupted images are more difficult to classify correctly.
 
@@ -324,27 +330,27 @@ As we can see from the table, the performance decreases when $\varepsilon$ incre
 #### Exercise 2.2: Augment Training with Adversarial Examples
 Objective: Use your implementation of FGSM to augment your training dataset with adversarial samples. Ideally, you should implement this data augmentation *on the fly* so that the adversarial samples are always generated using the current model. Evaluate whether the model is more (or less) robust to ID samples using your OOD detection pipeline and metrics you implemented in Exercise 1.
 
-I trained the 9 Conv Layer CNN with $\varepsilon = 10/255$ and tested it on the CIFAR10 uncorrupted test set. However, out of curiosity, I tested the model on a corrupted CIFAR10 test set. More specifically, when testing the model, I attacked the CIFAR10 test images using the already adversarially trained model, to see if another attack would have decreased further the model performance.
+I trained the 9 Conv Layer CNN with a loss composed of "clean" loss and adversarial loss with $\varepsilon = 10/255$ and tested it on the CIFAR10 uncorrupted test set. However, out of curiosity, I also tested the model on a corrupted CIFAR10 test set (for several $\varepsilon$ values). More specifically, when testing the model in this way, I attacked the CIFAR10 test images using the already adversarially trained model, to see if another attack would have decreased further the model performance.
 
-Here are the results on the test sets:
-| Dataset |  Epsilon ($\varepsilon$)|  Loss  | Accuracy | Precision | Recall |
-| :-----: | :-------:               | :----: | :------: | :-------: | :----: |
-| CIFAR10 | 0 (*original test set*) | 1.008  | 75.780%  |  75.596%  | 75.780%|
-| CIFAR10 | $1/255$                 | 1.163  | 72.990%  |  72.780%  | 72.990%|
-| CIFAR10 | $2/255$                 | 1.320  | 70.270%  |  70.017%  | 70.270%|
-| CIFAR10 | $3/255$                 | 1.473  | 67.770%  |  67.488%  | 67.770%|
-| CIFAR10 | $4/255$                 | 1.622  | 65.370%  |  65.077%  | 65.370%|
-| CIFAR10 | $5/255$                 | 1.763  | 63.250%  |  62.985%  | 63.250%|
-| CIFAR10 | $6/255$                 | 1.896  | 61.300%  |  61.008%  | 61.300%|
-| CIFAR10 | $7/255$                 | 2.020  | 59.740%  |  59.404%  | 59.740%|
-| CIFAR10 | $8/255$                 | 2.132  | 58.250%  |  57.936%  | 58.250%|
-| CIFAR10 | $9/255$                 | 2.231  | 57.030%  |  56.731%  | 57.030%|
-| CIFAR10 | $10/255$                | 2.318  | 55.950%  |  55.714%  | 55.950%|
+Here are the results on the CIFAR10 test sets:
+|  Epsilon ($\varepsilon$)|  Loss  | Accuracy | Precision | Recall |
+| :-------:               | :----: | :------: | :-------: | :----: |
+| **0 (*original test set*)** | **1.008**  | **75.780%**  |  **75.596%**  | **75.780%**|
+| $1/255$                 | 1.163  | 72.990%  |  72.780%  | 72.990%|
+| $2/255$                 | 1.320  | 70.270%  |  70.017%  | 70.270%|
+| $3/255$                 | 1.473  | 67.770%  |  67.488%  | 67.770%|
+| $4/255$                 | 1.622  | 65.370%  |  65.077%  | 65.370%|
+| $5/255$                 | 1.763  | 63.250%  |  62.985%  | 63.250%|
+| $6/255$                 | 1.896  | 61.300%  |  61.008%  | 61.300%|
+| $7/255$                 | 2.020  | 59.740%  |  59.404%  | 59.740%|
+| $8/255$                 | 2.132  | 58.250%  |  57.936%  | 58.250%|
+| $9/255$                 | 2.231  | 57.030%  |  56.731%  | 57.030%|
+| $10/255$                | 2.318  | 55.950%  |  55.714%  | 55.950%|
 
-The model performance on the CIFAR10 uncorrupted test set decreased of 1.20 percentage points, remaining thus quite stable. The robustness of the model came at the cost of a little decrease of performance. 
-Also, the attack on the adversarially trained model decreased the performance, however not so drastically as when applied on the original model.
+The model performance on the CIFAR10 original test set decreased of 1.20 percentage points, remaining thus quite stable. The robustness of the model came at the cost of a little decrease of performance. 
+Also, the attack on the adversarially trained model decreased the performance, however not so drastically as when applied to the original model.
 
-Let's see the plots showing CIFAR10 as ID and SVHN as OOD sets.
+Let's see the plots showing original CIFAR10 as ID and SVHN as OOD sets.
 
 ID confusion matrix:
 <p align="center">
@@ -356,7 +362,7 @@ OOD confusion matrix:
   <img src="./Lab4 - Ex 2.2/results/Adv & OOD - CNN - 9 Conv Layers/plots/confusion_matrix_test_ood.png"/>
 </p>
 
-Comparing these two confusion matrices with the ones from exercise 1, we can see that the ID performance remained quite stable (the model predicted correctly some classes and less correctly other classes), while the OOD performance varied somewhat. In particula, the model seemed more uncertain, predicting with higher frequency other classes (especially 2) in addition to  0, 3, 5 and 8 (whose frequency dropped a bit, especially class 3). 
+Comparing these two confusion matrices with the ones from exercise 1, we can see that the ID performance remained quite stable, while the OOD performance varied somewhat. In particular, the model seemed more uncertain, predicting with higher frequency other classes (especially 2) in addition to  0, 3, 5 and 8 (whose frequency dropped a bit, especially class 3). 
 
 <p align="center">
   <img src="./Lab4 - Ex 2.2/results/Adv & OOD - CNN - 9 Conv Layers/plots/ood_max_softmax_precision_recall_curve_id.png"/>
@@ -368,13 +374,19 @@ Comparing these two confusion matrices with the ones from exercise 1, we can see
   <img src="./Lab4 - Ex 2.2/results/Adv & OOD - CNN - 9 Conv Layers/plots/ood_max_softmax_roc_curve.png"/>
 </p>
 <p align="center">
+  <img src="./Lab4 - Ex 2.2/results/Adv & OOD - CNN - 9 Conv Layers/plots/ood_max_logit_scores_histogram.png"/>
+</p>
+<p align="center">
   <img src="./Lab4 - Ex 2.2/results/Adv & OOD - CNN - 9 Conv Layers/plots/ood_max_softmax_scores_histogram.png"/>
+</p>
+<p align="center">
+  <img src="./Lab4 - Ex 2.2/results/Adv & OOD - CNN - 9 Conv Layers/plots/ood_max_logit_scores_plot.png"/>
 </p>
 <p align="center">
   <img src="./Lab4 - Ex 2.2/results/Adv & OOD - CNN - 9 Conv Layers/plots/ood_max_softmax_scores_plot.png"/>
 </p>
 
-The AUPR score and the AUC ROC score increased a little, and the number of model confidence on the OOD set decreased a bit (less scores with value equal to 1).
+The AUPR score and the AUC ROC score increased a little, and the number of model confidence on the OOD set decreased a bit (less softmax scores with value equal to 1).
 
 On the lab result folder the plots showing CIFAR10 as ID and CIFAR10 corrupted as OOD sets can be found.
 
@@ -383,16 +395,17 @@ On the lab result folder the plots showing CIFAR10 as ID and CIFAR10 corrupted a
 Notes: ODIN is a very simple approach, and you can already start experimenting by implementing a temperature hyperparameter in your base model and doing a grid search on $T$ and $\varepsilon$.
 
 I performed three experiments: 
-1. First, I added ODIN postprocessing method to the exercise 1 OOD detection pipeline (ID test set: CIFAR10, OOD test set: SVHN). I run the experiment with different values of $T$ and $\varepsilon$. In particular, $T \in \{0, 200, 400, 600, 800, 1000\}$, while $\varepsilon \in \{0, 2, 4, 6, 8\}$
+1. First, I added ODIN postprocessing method to the exercise 1 OOD detection pipeline (ID test set: CIFAR10, OOD test set: SVHN). I ran the experiment with different values of $T$ and $\varepsilon$. In particular, $T \in \lbrace0, 200, 400, 600, 800, 1000\rbrace$, while $\varepsilon \in \lbrace0, 2, 4, 6, 8\rbrace$
 2. Then I added ODIN to the adversarially trained model (ID test set: CIFAR10, OOD test set: SVHN). 
-3. Finally I also applied [CEA](https://arxiv.org/abs/2405.12658) method (see below) after the classic Maximum Softmax Probability method (MSP) and after ODIN postprocessing method ($T \in \{0, 200, 400, 600, 800, 1000\}$, $\varepsilon \in \{0, 2, 4, 6, 8\}$)  for both the original model and the adversarially trained model.
+3. Finally I also applied [CEA](https://arxiv.org/abs/2405.12658) method (see below) after the classic Maximum Softmax Probability method (MSP) and after ODIN postprocessing method ($T \in \lbrace0, 200, 400, 600, 800, 1000\rbrace$, $\varepsilon \in \lbrace0, 2, 4, 6, 8\rbrace$)  for both the original model and the adversarially trained model.
 > [Mitigating Overconfidence in Out-of-Distribution Detection by Capturing Extreme Activations](https://arxiv.org/abs/2405.12658), Mohammad Azizmalayeri, Ameen Abu-Hanna, Giovanni Cinà. 2024
 
-The plots of experiment 1 can be found [here](./Lab4%20-%20Ex%203.1/results/OOD%20&%20Post%20-%20CNN%20-%209%20Conv%20Layers/plots/postprocess/), under the name <code>ood_odin-<$T$>-<$\varepsilon$>_...</code>
+The plots of experiment 1 can be found [here](./Lab4%20-%20Ex%203.1/results/OOD%20&%20Post%20-%20CNN%20-%209%20Conv%20Layers/plots/postprocess/), under the name <code>ood_odin-\<$T$\>-\<$\varepsilon$\>_...</code>
 
-The plots of experiment 2 can be found [here](./Lab4%20-%20Ex%203.1/results/Adv%20&%20OOD%20&%20Post%20-%20CNN%20-%209%20Conv%20Layers/plots/postprocess/), under the name <code>ood_odin-<$T$>-<$\varepsilon$>_...</code>
 
-The plots of experiment 3 can be found [here (original)](./Lab4%20-%20Ex%203.1/results/OOD%20&%20Post%20-%20CNN%20-%209%20Conv%20Layers/plots/postprocess/) and [here (adversarial)](./Lab4%20-%20Ex%203.1/results/Adv%20&%20OOD%20&%20Post%20-%20CNN%20-%209%20Conv%20Layers/plots/postprocess/), under the names <code>ood_maxsoftmax_cea_...</code> and <code>ood_odin_cea-<$T$>-<$\varepsilon$>_...</code>
+The plots of experiment 2 can be found [here](./Lab4%20-%20Ex%203.1/results/Adv%20&%20OOD%20&%20Post%20-%20CNN%20-%209%20Conv%20Layers/plots/postprocess/), under the name <code>ood_odin-\<$T$\>-\<$\varepsilon$\>_...</code>
+
+The plots of experiment 3 can be found [here (original)](./Lab4%20-%20Ex%203.1/results/OOD%20&%20Post%20-%20CNN%20-%209%20Conv%20Layers/plots/postprocess/) and [here (adversarial)](./Lab4%20-%20Ex%203.1/results/Adv%20&%20OOD%20&%20Post%20-%20CNN%20-%209%20Conv%20Layers/plots/postprocess/), under the names <code>ood_maxsoftmax_cea_...</code> and <code>ood_odin_cea-\<$T$\>-\<$\varepsilon$\>_...</code>
 
 #### Exercise 3.3: Experiment with Targeted Adversarial Attacks
 Objective: Implement the targeted Fast Gradient Sign Method to generate adversarial samples that *imitate* samples from a specific class. Evaluate your adversarial samples qualitatively and quantitatively.
