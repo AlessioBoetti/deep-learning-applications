@@ -400,12 +400,12 @@ I performed three experiments:
 3. Finally I also applied [CEA](https://arxiv.org/abs/2405.12658) method (see below) after the classic Maximum Softmax Probability method (MSP) and after ODIN postprocessing method ($T \in \lbrace0, 200, 400, 600, 800, 1000\rbrace$, $\varepsilon \in \lbrace0, 2, 4, 6, 8\rbrace$)  for both the original model and the adversarially trained model.
 > [Mitigating Overconfidence in Out-of-Distribution Detection by Capturing Extreme Activations](https://arxiv.org/abs/2405.12658), Mohammad Azizmalayeri, Ameen Abu-Hanna, Giovanni Cinà. 2024
 
-The plots of experiment 1 can be found [here](./Lab4%20-%20Ex%203.1/results/OOD%20&%20Post%20-%20CNN%20-%209%20Conv%20Layers/plots/postprocess/), under the name <code>ood_odin-\<$T$\>-\<$\varepsilon$\>_...</code>
+The plots of experiment 1 can be found [here](./Lab4%20-%20Ex%203.1/results/OOD%20&%20Post%20-%20CNN%20-%209%20Conv%20Layers/plots/postprocess/), under the name <code>ood_odin-\<T\>-\<ε\>_...</code>
 
 
-The plots of experiment 2 can be found [here](./Lab4%20-%20Ex%203.1/results/Adv%20&%20OOD%20&%20Post%20-%20CNN%20-%209%20Conv%20Layers/plots/postprocess/), under the name <code>ood_odin-\<$T$\>-\<$\varepsilon$\>_...</code>
+The plots of experiment 2 can be found [here](./Lab4%20-%20Ex%203.1/results/Adv%20&%20OOD%20&%20Post%20-%20CNN%20-%209%20Conv%20Layers/plots/postprocess/), under the name <code>ood_odin-\<T\>-\<ε\>_...</code>
 
-The plots of experiment 3 can be found [here (original)](./Lab4%20-%20Ex%203.1/results/OOD%20&%20Post%20-%20CNN%20-%209%20Conv%20Layers/plots/postprocess/) and [here (adversarial)](./Lab4%20-%20Ex%203.1/results/Adv%20&%20OOD%20&%20Post%20-%20CNN%20-%209%20Conv%20Layers/plots/postprocess/), under the names <code>ood_maxsoftmax_cea_...</code> and <code>ood_odin_cea-\<$T$\>-\<$\varepsilon$\>_...</code>
+The plots of experiment 3 can be found [here (original)](./Lab4%20-%20Ex%203.1/results/OOD%20&%20Post%20-%20CNN%20-%209%20Conv%20Layers/plots/postprocess/) and [here (adversarial)](./Lab4%20-%20Ex%203.1/results/Adv%20&%20OOD%20&%20Post%20-%20CNN%20-%209%20Conv%20Layers/plots/postprocess/), under the names <code>ood_maxsoftmax_cea_...</code> and <code>ood_odin_cea-\<T\>-\<ε\>_...</code>
 
 #### Exercise 3.3: Experiment with Targeted Adversarial Attacks
 Objective: Implement the targeted Fast Gradient Sign Method to generate adversarial samples that *imitate* samples from a specific class. Evaluate your adversarial samples qualitatively and quantitatively.
