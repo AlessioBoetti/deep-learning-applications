@@ -29,6 +29,10 @@ def plot_scores(scores_id, scores_ood, out_path, split, scores_type, T=1):
     plt.figure()
     plt.hist(scores_id, density=True, alpha=0.5, bins=25, label='ID')
     plt.hist(scores_ood, density=True, alpha=0.5, bins=25, label='OOD')
+    plt.legend(['ID', 'OOD'])
+    plt.xlabel('Score values')
+    plt.ylabel('Frequency')
+    
     plt.suptitle(suptitle)
     plt.title(title)
     plt.savefig(f'{filename}_histogram.png')
@@ -37,6 +41,9 @@ def plot_scores(scores_id, scores_ood, out_path, split, scores_type, T=1):
     plt.figure()
     plt.plot(sorted(scores_id), label='ID')
     plt.plot(sorted(scores_ood), label='OOD')
+    plt.legend(['ID', 'OOD'])
+    plt.xlabel('Count')
+    plt.ylabel('Score values')
     plt.suptitle(suptitle)
     plt.title(title)
     plt.savefig(f'{filename}_plot.png')
@@ -143,10 +150,7 @@ def plot_results(idx_label_scores, out_path: str, split: str = None, classes = N
     if not postprocess:
         y_true_id, y_pred_id, logit_scores_id, max_logit_scores_id, softmax_scores_id, max_softmax_scores_id = extract_results(idx_label_scores, T)
 
-    if eps:
-        img_path = f'{out_path}/plots_adv/eps_{eps}'
-    else:
-        img_path = f'{out_path}/plots'
+    img_path = f'{out_path}/plots_adv/eps_{eps}' if eps else f'{out_path}/plots'
     create_dirs_if_not_exist(img_path)
 
     if ood_idx_label_scores is None:
