@@ -34,8 +34,8 @@ class ODINPostprocessor():
     def __init__(self, temperature: float = 1000.0, noise: float = 0.0014):
         if temperature == 0.0:
             temperature += 1e-7
-        if noise == 0.0:
-            noise += 0.001
+        # if noise == 0.0:
+        #     noise += 0.001
         self.temperature = temperature
         self.noise = noise
 
@@ -64,9 +64,12 @@ class ODINPostprocessor():
         # # Adding small perturbations to images
         # adv_inputs = torch.add(inputs.detach(), gradient, alpha=-self.noise)  # torch.add(input, other, alpha): adds other, scaled by alpha, to input.
         
-        adv_cfg.update({'temperature': self.temperature, 'alpha': self.noise, 'fast': False})
-        delta = attack(model, inputs, labels, scaler=scaler, **adv_cfg)
-        adv_inputs = inputs + delta
+        if self.noise != 0.0:
+            adv_cfg.update({'temperature': self.temperature, 'alpha': self.noise, 'fast': False})
+            delta = attack(model, inputs, labels, scaler=scaler, **adv_cfg)
+            adv_inputs = inputs + delta
+        else:
+            adv_inputs = inputs
 
         with torch.no_grad():
             outputs = model(adv_inputs)

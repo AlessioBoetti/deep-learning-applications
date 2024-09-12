@@ -665,8 +665,8 @@ def main(args, cfg, wb, run_name):
                 method_name = f"{method_name.lower().replace('postprocessor', '')}"
 
                 if 'odin' in method_name and cfg['odin_gridsearch']:
-                    for T in np.arange(*cfg['odin_temperatures']):
-                        for alpha in np.arange(*cfg['odin_alphas']):
+                    for T in cfg['odin_temperatures']:
+                        for alpha in cfg['odin_alphas']:
                             method = method_class(T, alpha)
                             id_label_scores, ood_label_scores = get_ood_scores(model, test_loader, ood_test_loader, method.postprocess, **postprocess_kw)
                             plot_results(id_label_scores, cfg['out_path'], 'ood', ood_idx_label_scores=ood_label_scores, postprocess=f'{method_name}-{T}-{alpha}')
@@ -683,8 +683,8 @@ def main(args, cfg, wb, run_name):
                 method_name = f"{method_name.lower().replace('postprocessor', '')}" + '_cea'
 
                 if 'odin' in method_name and cfg['cea_odin_gridsearch']:
-                    for T in np.arange(*cfg['cea_odin_temperatures']):
-                        for alpha in np.arange(*cfg['cea_odin_alphas']):
+                    for T in cfg['cea_odin_temperatures']:
+                        for alpha in cfg['cea_odin_alphas']:
                             method = method_class(T, alpha)
                             cea = CEA(model, method, val_loader, criterion, scaler, adv_cfg, device, cfg['cea']['percentile_top'], cfg['cea']['addition_coef'])
                             id_label_scores, ood_label_scores = get_ood_scores(model, test_loader, ood_test_loader, cea.postprocess, **postprocess_kw)

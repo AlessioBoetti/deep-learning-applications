@@ -1,7 +1,7 @@
 #### Weight & Biases settings
 
 wandb:
-  name: "Target Adv - CNN - 9 Conv Layers"
+  name: "Target OVR Adv Images (ID) - CNN - 9 Conv Layers - Test"
   resume: False
   job_type: "Adv"
   group: "Exercise 3.3"
@@ -19,9 +19,9 @@ wandb:
 config:
   # Machine
   seed: 1
-  device: "cuda:0"
+  device: "cuda:1"
   cuda_benchmark: True
-  deterministic: True
+  deterministic: False
 
   # Paths and dirs
   data_dir: "../data"
@@ -68,9 +68,9 @@ config:
   
   pretrain: False
   pretest: False
-  train: True
+  train: False
   test: True
-  test_original: True
+  test_original: False
   test_adversarial: True
   alpha_range: [1, 11]
   test_ood: False
@@ -115,7 +115,7 @@ config:
     normalize: True
     normalize_params: False
     target: 5
-    target_type: null
+    target_type: "OVR"
   adversarial_add: True
 
   xai: False

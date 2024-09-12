@@ -1,7 +1,7 @@
 #### Weight & Biases settings
 
 wandb:
-  name: "Adv Images - CNN - 9 Conv Layers"
+  name: "Adv Images - CNN - 9 Conv Layers - Test"
   resume: False
   job_type: "Adv"
   group: "Exercise 2.1"

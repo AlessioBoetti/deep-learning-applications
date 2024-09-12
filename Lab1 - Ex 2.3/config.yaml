@@ -1,7 +1,7 @@
 #### Weight & Biases settings
 
 wandb:
-  name: "GradCAM - ResNet - 49 Conv Layers"
+  name: "GradCAM - CNN - 9 Conv Layers - Test"
   resume: False
   job_type: "XAI"
   group: "Exercise 2.3"
@@ -18,7 +18,7 @@ wandb:
 config:
   # Machine
   seed: 1
-  device: "cuda:0"
+  device: "cuda:1"
   cuda_benchmark: True
 
   # Paths and dirs
@@ -27,12 +27,12 @@ config:
   log_file: "log.txt"
   # hf_cache_dir: "../hf"
 
-  model_type: "ResNet"
+  model_type: "CNN"
   model:
     in_channels: 3
-    depth: 49
+    depth: 9
     output_size: 10
-    want_shortcut: True
+    want_shortcut: False
     activation: "ReLU"
     fc_activation: "ReLU"
     pool_type: "maxpool"
