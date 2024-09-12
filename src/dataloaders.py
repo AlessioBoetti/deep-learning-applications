@@ -665,12 +665,12 @@ class TextClassificationDataset(Dataset):
             else:
                 df = load_dataset(dataset_name, split=split, cache_dir=data_dir)
                 df = df.to_pandas()
+                dataset_name = dataset_name.replace('/', '_')
                 df.to_csv(f'{data_dir}/{dataset_name}_{split}.csv', index=False)
         
         df = df.fillna('')
         df = df.astype(str)
-        df['text'] = df['text'].str.lower()
-        df['text'] = df['text'].str.replace(r'\n', ' ')
+        df['text'] = df['text'].str.lower().replace(r'\n', ' ')
         df['label'] = df['label'].astype(int)
 
         for idx in df.index:

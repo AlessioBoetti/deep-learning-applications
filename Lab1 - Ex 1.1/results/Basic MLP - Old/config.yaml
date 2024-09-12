@@ -1,19 +1,15 @@
 #### Weight & Biases settings
 
 wandb:
-  name: "DistilRoBERTa - Yelp"
+  name: "Basic MLP"
   resume: False
-  job_type: "Fine-Tuning"
-  group: "Exercise 3.1"
-  project: "University - DLA - Lab 2"
+  job_type: "Train-Test"
+  group: "Exercise 1.1"
+  project: "University - DLA - Lab 1"
   tags: 
-  - "DistilRoBERTa"
-  - "BERT"
-  - "NLP"
+  - "MLP"
   - "Base"
-  - "PEFT"
-  - "LoRA"
-  notes: "Fine-tuning DistilRoBERTa on an NLP dataset."
+  notes: "First attempt at training a basic MLP on MNIST dataset."
 
 
 #### Experiment settings
@@ -22,45 +18,36 @@ config:
   # Machine
   seed: 1
   device: "cuda:0"
-  cuda_benchmark: False
+  cuda_benchmark: True
 
   # Paths and dirs
   data_dir: "../data"
   results_dir: "results"
   log_file: "log.txt"
-  hf_cache_dir: "../hf"
+  # hf_cache_dir: "../hf"
 
-  model_type: "BERT"
+  model_type: "MLP"
   model:
-    model_name: "distilroberta-base"
-    output_size: 10
-    init_mode: "xavier"
-    init_dist: "normal"
-    device_map: "auto"
-    freeze_model_base: False
-    peft:
-      method: null  # "LoRA"
-      r: 4
-      alpha: 8
-      dropout: 0.1
-      rslora: True
+    input_size: 784  # 28*28 (MNIST size)
+    n_hidden_layers: 2
+    hidden_layer_sizes: [400, 150]
+    output_size: 10  # Number of output classes
+    activation: "ReLU"
+    batch_norm: True
+    dropout: 0.2  # If not using dropout, set this to null (null is the YAML equivalent for None)
+    flatten_input: True
 
   criterion: "CrossEntropyLoss"
 
   dataset:
-    dataset_type: "TextClassification"
-    dataset_name: "yelp_review_full"  # stanfordnlp/imdb
-    filename: null
-    train_set_name: "train"
-    test_set_name: "test"
-    val_set_name: null
+    dataset_type: "Vision"
+    dataset_name: "MNIST"
     val_size: 0.2
-    padding_side: 'right'
-    trunc_side: 'right'
-    max_token_len: 128
     val_shuffle: True
+    normalize: True
+    augment: False
     use_sampler: True
-  
+
   dataloader:
     num_workers: 8
     batch_size: 256
@@ -69,25 +56,26 @@ config:
 
   optimizer_name: "AdamW"  # Lion, Adam, SGD, Adamax, Adadelta, RMSProp ecc. (https://pytorch.org/docs/stable/optim.html)
   optimizer:
-    lr: 0.00005
+    lr: 0.001
     weight_decay: 0.01
     amsgrad: True
-  
+
   scheduler_name: "OneCycleLR"  # MultiStepLR
   scheduler: 
-    max_lr: 0.0001
-  
+    max_lr: 0.01
+      
   pretrain: False
   pretest: False
   train: True
   test: True
+  test_original: True
 
   training:
-    n_epochs: 500
+    n_epochs: 150
     eval_interval: 1
     checkpoint_every: 1
     clip_grads: False
-    patience: 20
+    patience: 30
 
 
   # Goals

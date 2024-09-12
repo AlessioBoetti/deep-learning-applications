@@ -49,5 +49,5 @@ def generate_text(
 
 if __name__ == '__main__':
     setup_seed(1)
-    prompt = "Thanks for all the"
+    prompt = "Peter Piper picked a peck of pickled peppers."
     generate_text(prompt)

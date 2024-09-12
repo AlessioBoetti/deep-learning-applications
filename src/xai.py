@@ -262,9 +262,20 @@ class ClassActivationMapping:
         #         x.register_hook(self.save_gradient)
         #         conv_output = x
 
-        x = self.model.conv_net(x)
-        x.register_hook(self.save_gradient)
-        conv_output = x
+        total_blocks = len(self.model.conv_net._modules.keys())
+        for i, (block_pos, block) in enumerate(self.model.conv_net._modules.items()):
+            if i == total_blocks - 1:
+                for layer_pos, layer in block.block_layers._modules.items():
+                    x = layer(x)
+                    if layer_pos == 'act_2':
+                        x.register_hook(self.save_gradient)
+                        conv_output = x
+            else:
+                x = block(x)
+
+        # x = self.model.conv_net(x)
+        # x.register_hook(self.save_gradient)
+        # conv_output = x
         return conv_output, x
 
 

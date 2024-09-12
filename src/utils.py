@@ -188,9 +188,9 @@ def save_results(path, results: dict, prefix: str, suffix: str = 'results'):
 def get_metrics(cfg, wb, device):
     # From https://lightning.ai/docs/torchmetrics/stable/pages/overview.html#metriccollection
     metric_collection = torchmetrics.MetricCollection([
-        torchmetrics.classification.MulticlassAccuracy(num_classes=cfg['output_size']).to(device=device),
-        torchmetrics.classification.MulticlassPrecision(num_classes=cfg['output_size']).to(device=device),
-        torchmetrics.classification.MulticlassRecall(num_classes=cfg['output_size']).to(device=device),
+        torchmetrics.classification.MulticlassAccuracy(num_classes=cfg['output_size'], average='micro').to(device=device),
+        torchmetrics.classification.MulticlassPrecision(num_classes=cfg['output_size'], average='macro').to(device=device),
+        torchmetrics.classification.MulticlassRecall(num_classes=cfg['output_size'], average='macro').to(device=device),
     ])
     
     # From https://docs.wandb.ai/guides/technical-faq/metrics-and-performance#can-i-log-metrics-on-two-different-time-scales-for-example-i-want-to-log-training-accuracy-per-batch-and-validation-accuracy-per-epoch

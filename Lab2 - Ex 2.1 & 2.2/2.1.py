@@ -17,5 +17,5 @@ def main(text):
 
 
 if __name__ == "__main__":
-    text = "Hello World!"
+    text = "Why did the transformer go to Hugging Face? It needed a little attention!"
     main(text)

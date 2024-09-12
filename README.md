@@ -55,9 +55,9 @@ Objective: Implement a *simple* Multilayer Perceptron to classify the 10 digits 
 Results on test set:
 |    Dataset    |  Loss  | Accuracy | Precision | Recall |
 |   :-------:   | :----: | :------: | :-------: | :----: |
-|     MNIST     | 0.055  | 98.547%  |  98.552%  | 98.547%|
+|     MNIST     | 0.055  | 98.590%  |  98.587%  | 98.577%|
 
-Link to W&B report for MLP: https://api.wandb.ai/links/alessio-boetti/u5g4pltw
+Link to W&B report for MLP: https://api.wandb.ai/links/alessio-boetti/qcepp0cs
 
 
 #### Exercise 1.2: Rinse and Repeat
@@ -200,6 +200,27 @@ It's also worth noting the sequence of two-line paragraphs, and even the inserti
 ### Exercise 2: Working with Real LLMs
 Objective: In this exercise we will see how to use the [Hugging Face](https://huggingface.co/) model and dataset ecosystem to access a *huge* variety of pre-trained transformer models. Instantiate the `GPT2Tokenizer` and experiment with encoding text into integer tokens. Compare the length of input with the encoded sequence length. Then instantiate a pre-trained `GPT2LMHeadModel` and use the [`generate()`](https://huggingface.co/docs/transformers/v4.27.2/en/main_classes/text_generation#transformers.GenerationMixin.generate) method to generate text from a prompt.
 
+I performed some experiments on encoding with two input phrases.
+
+First phrase:
+- Input: "Hello World!"
+- Input text length: 2
+- Encoded text length: 3
+- Decoded text: "Hello World!"
+
+Second phrase:
+- Input: "Why did the transformer go to Hugging Face? It needed a little attention!"
+- Input text length: 13
+- Encoded text length: 16
+- Decoded text: "Why did the transformer go to Hugging Face? It needed a little attention!"
+
+Then, regarding the generation experiments:
+- Prompt: "Thanks for all the"
+- Generated text: "Thanks for all the hard work. I'm excited to hear from you guys! (Thanks for reading)"
+
+- Prompt: "Peter Piper picked a peck of pickled peppers."
+- Generated text: "Peter Piper picked a peck of pickled peppers. He was going to make a pot of them and put them in the fridge for an hour and a half. When he finished, he walked away and picked the peppers, put them in the fridge"
+
 
 ### Exercise 3: Reusing Pre-trained LLMs
 #### Exercise 3.1: Training a Text Classifier
@@ -208,31 +229,38 @@ Objective: Peruse the [text classification datasets on Hugging Face](https://hug
 I chose [DistilRoBERTa](https://huggingface.co/distilbert/distilroberta-base) as LLM for the exercise. DistilRoBERTa is a small LLM but can learn powerful and complex representations rivaling with other BERT-like models.
 
 I fine-tuned the model on the [Yelp Review Full](https://huggingface.co/datasets/Yelp/yelp_review_full) text classification dataset. 
+The fine-tuning was performed end-to-end, like the BERT paper suggests, using a cross-entropy loss.
 
-Every epoch of the training of DistilRoBERTa took several minutes, and looking for ways to speed up the training, I also fine-tuned the model using the [LoRA](https://arxiv.org/abs/2106.09685) method, which however did not speed up the training as much as expected.
+I also fine-tuned DistilRoBERTa on the smaller [Stanford IMDB](https://huggingface.co/datasets/stanfordnlp/imdb) text classification dataset, again end-to-end with a cross-entropy loss.
 
-Results on the test set:
-|    Model          |  Loss  | Accuracy | Precision | Recall |
-|   :-----:         | :----: | :------: | :-------: | :----: |
-| DistilRoBERTa | **2.289** | 5.322% | **42.748%** | 5.322% |
-| DistilRoBERTa + LoRA | 2.291  | **8.945%**  |  36.040%  | **8.945%**|
+Results on the test sets:
+|    Dataset          |  Loss  | Accuracy | Precision | Recall |
+|   :------:          | :----: | :------: | :-------: | :----: |
+| Yelp Review Full    | 2.290  | 10.326%  | 42.139%   | 5.163% |
+| Stanford IMDB       | 2.303  | 16.576%  |  16.834%  | 3.315% |
 
-Surprisingly, when fine-tuning both models, the best epoch registered was the first (they both stopped after a few epochs due to early stopping). However the precision performance on the validation set had an increasing trend. Since the early stopping was measured on the accuracy on the validation set, this could mean that the accuracy may not be the best metric to assess the model performance (see images below). Also, the early stopping was set to a low value (20 epochs) due to the long time taken by a single training epoch.
+The test set performances, as we can see from the table, are very low, maybe due to not optimal hyperparameters. However given the scope of the exercise and the time required to fine-tune the model, hyperopt was not performed.
+
+Surprisingly, when fine-tuning both models, the best epoch registered on the validation set was early in the training stage: on the Yelp dataset, the 8th epoch was the best based on validation accuracy, while for the IMDB dataset the 1st epoch was the best based on validation accuracy (they both stopped after a few epochs due to early stopping). 
+
+For the model fine-tuned on the Yelp dataset, while the accuracy and recall on the validation set were stagnant, the precision performance on the validation set however had an increasing trend. Since the early stopping was measured on the accuracy on the validation set, this could mean that the accuracy may not be the best metric to assess the model performance (see images below). Also, the early stopping was set to a low value (20 epochs) due to the long time taken by a single training epoch.
+
+Maybe using the F1 score as target for early stopping could have been a better choice, maybe leading to better overall performance.
 
 <p align="center">
-  <img src="./imgs/val_acc_roberta.png"/>
+  <img src="./imgs/val_acc_roberta_yelp.png"/>
 </p>
 
 <p align="center">
-  <img src="./imgs/val_prec_roberta.png"/>
+  <img src="./imgs/val_prec_roberta_yelp.png"/>
 </p>
 
 <p align="center">
-  <img src="./imgs/val_acc_roberta_w_lora.png"/>
+  <img src="./imgs/val_acc_roberta_imdb.png"/>
 </p>
 
 <p align="center">
-  <img src="./imgs/val_prec_roberta_w_lora.png"/>
+  <img src="./imgs/val_prec_roberta_imdb.png"/>
 </p>
 
 

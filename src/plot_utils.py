@@ -175,7 +175,8 @@ def plot_results(idx_label_scores, out_path: str, split: str = None, classes = N
                 'softmax_auc_roc_ovr': roc_auc_score(y_true_id, softmax_scores_id, multi_class='ovr'),
                 'softmax_auc_roc_ovo': roc_auc_score(y_true_id, softmax_scores_id, multi_class='ovo'),
             }
-        save_results(out_path, metrics, split, suffix='metrics')
+        suffix = f'{eps}_metrics' if eps else 'metrics'
+        save_results(out_path, metrics, split, suffix=suffix)
 
     else:
         if not postprocess:
