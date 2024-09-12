@@ -1,18 +1,18 @@
-2024-06-25 17:59:44,893 - Starting run.
-2024-06-25 17:59:44,893 - Logger setup correctly.
-2024-06-25 17:59:44,894 - Seed set to 1.
-2024-06-25 17:59:44,902 - Log filepath: results/GradCAM - ResNet - 9 Conv Layers/log.txt.
-2024-06-25 17:59:44,902 - Data dir: ../data.
-2024-06-25 17:59:44,902 - Dataset: CIFAR10
-2024-06-25 17:59:44,902 - Number of dataloader workers: 8
-2024-06-25 17:59:44,902 - Network: ResNet
-2024-06-25 17:59:44,902 - Computation device: cuda:0
-2024-06-25 17:59:44,902 - Loading dataset from "../data".
-2024-06-25 17:59:47,604 - Dataset loaded.
-2024-06-25 17:59:47,604 - Initializing ResNet model.
-2024-06-25 17:59:47,900 - Model initialized.
-2024-06-25 17:59:47,901 - Showing model structure:
-2024-06-25 17:59:47,901 - ConvolutionalNeuralNetwork(
+2024-09-12 19:41:01,608 - Starting run.
+2024-09-12 19:41:01,608 - Logger setup correctly.
+2024-09-12 19:41:01,609 - Seed set to 1.
+2024-09-12 19:41:01,835 - Log filepath: results/GradCAM - ResNet - 9 Conv Layers/log.txt.
+2024-09-12 19:41:01,835 - Data dir: ../data.
+2024-09-12 19:41:01,835 - Dataset: CIFAR10
+2024-09-12 19:41:01,835 - Number of dataloader workers: 8
+2024-09-12 19:41:01,835 - Network: ResNet
+2024-09-12 19:41:01,835 - Computation device: cuda:1
+2024-09-12 19:41:01,835 - Loading dataset from "../data".
+2024-09-12 19:41:04,537 - Dataset loaded.
+2024-09-12 19:41:04,538 - Initializing ResNet model.
+2024-09-12 19:41:04,819 - Model initialized.
+2024-09-12 19:41:04,819 - Showing model structure:
+2024-09-12 19:41:04,819 - ConvolutionalNeuralNetwork(
   (conv_net): Sequential(
     (init_conv): Conv2d(3, 64, kernel_size=(3, 3), stride=(1, 1))
     (conv_block_1): ConvolutionalBlock(
@@ -87,11 +87,11 @@
     )
   )
 )
-2024-06-25 17:59:47,901 - Initializing AdamW optimizer.
-2024-06-25 17:59:47,902 - Optimizer initialized.
-2024-06-25 17:59:47,959 - Loading model from "../Lab1 - Ex 1.2/results/ResNet - 9 Conv Layers/model.pth.tar".
-2024-06-25 17:59:48,235 - Model loaded.
-2024-06-25 17:59:48,235 - Explaining model predictions with Class Activation Mappings...
-2024-06-25 17:59:51,915 - Finished explaining predictions with Class Activation Mappings..
-2024-06-25 17:59:51,915 - Finished run.
-2024-06-25 17:59:51,915 - Closing experiment.
+2024-09-12 19:41:04,820 - Initializing AdamW optimizer.
+2024-09-12 19:41:04,820 - Optimizer initialized.
+2024-09-12 19:41:04,825 - Loading model from "/data01/dl24aleboe/DLA/Lab1 - Ex 1.2/results/ResNet - 9 Conv Layers - Test/model.pth.tar".
+2024-09-12 19:41:04,930 - Model loaded.
+2024-09-12 19:41:04,930 - Explaining model predictions with Class Activation Mappings...
+2024-09-12 19:41:06,759 - Finished explaining predictions with Class Activation Mappings..
+2024-09-12 19:41:06,759 - Finished run.
+2024-09-12 19:41:06,759 - Closing experiment.

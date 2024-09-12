@@ -18,8 +18,9 @@ wandb:
 config:
   # Machine
   seed: 1
-  device: "cuda:0"
+  device: "cuda:1"
   cuda_benchmark: True
+  deterministic: False
 
   # Paths and dirs
   data_dir: "../data"

@@ -1,7 +1,7 @@
 #### Weight & Biases settings
 
 wandb:
-  name: "Adv & OOD - CNN - 9 Conv Layers"
+  name: "Adv & OOD - CNN - 9 Conv Layers - Test"
   resume: False
   job_type: "OOD"
   group: "Exercise 2.2"
@@ -21,7 +21,7 @@ config:
   seed: 1
   device: "cuda:0"
   cuda_benchmark: True
-  deterministic: True
+  deterministic: False
 
   # Paths and dirs
   data_dir: "../data"

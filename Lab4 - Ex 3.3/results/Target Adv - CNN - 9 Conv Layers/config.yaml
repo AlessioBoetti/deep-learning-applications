@@ -1,7 +1,7 @@
 #### Weight & Biases settings
 
 wandb:
-  name: "Target Adv - CNN - 9 Conv Layers"
+  name: "Target Adv - CNN - 9 Conv Layers - Test"
   resume: False
   job_type: "Adv"
   group: "Exercise 3.3"
@@ -19,9 +19,9 @@ wandb:
 config:
   # Machine
   seed: 1
-  device: "cuda:0"
+  device: "cuda:1"
   cuda_benchmark: True
-  deterministic: True
+  deterministic: False
 
   # Paths and dirs
   data_dir: "../data"

@@ -1,18 +1,18 @@
-2024-07-07 18:39:58,852 - Starting run.
-2024-07-07 18:39:58,852 - Logger setup correctly.
-2024-07-07 18:39:58,854 - Seed set to 1.
-2024-07-07 18:39:58,882 - Log filepath: results/Adv Images - CNN - 9 Conv Layers/log.txt.
-2024-07-07 18:39:58,883 - Data dir: ../data.
-2024-07-07 18:39:58,883 - Dataset: CIFAR10
-2024-07-07 18:39:58,883 - Number of dataloader workers: 8
-2024-07-07 18:39:58,883 - Network: CNN
-2024-07-07 18:39:58,883 - Computation device: cuda:0
-2024-07-07 18:39:58,883 - Loading dataset from "../data".
-2024-07-07 18:40:06,104 - Dataset loaded.
-2024-07-07 18:40:06,105 - Initializing CNN model.
-2024-07-07 18:40:06,266 - Model initialized.
-2024-07-07 18:40:06,266 - Showing model structure:
-2024-07-07 18:40:06,266 - ConvolutionalNeuralNetwork(
+2024-09-12 19:51:43,477 - Starting run.
+2024-09-12 19:51:43,477 - Logger setup correctly.
+2024-09-12 19:51:43,478 - Seed set to 1.
+2024-09-12 19:51:43,705 - Log filepath: results/Adv Images - CNN - 9 Conv Layers/log.txt.
+2024-09-12 19:51:43,705 - Data dir: ../data.
+2024-09-12 19:51:43,705 - Dataset: CIFAR10
+2024-09-12 19:51:43,705 - Number of dataloader workers: 8
+2024-09-12 19:51:43,705 - Network: CNN
+2024-09-12 19:51:43,705 - Computation device: cuda:0
+2024-09-12 19:51:43,705 - Loading dataset from "../data".
+2024-09-12 19:51:51,545 - Dataset loaded.
+2024-09-12 19:51:51,546 - Initializing CNN model.
+2024-09-12 19:51:51,821 - Model initialized.
+2024-09-12 19:51:51,821 - Showing model structure:
+2024-09-12 19:51:51,821 - ConvolutionalNeuralNetwork(
   (conv_net): Sequential(
     (init_conv): Conv2d(3, 64, kernel_size=(3, 3), stride=(1, 1))
     (conv_block_1): ConvolutionalBlock(
@@ -72,99 +72,99 @@
     )
   )
 )
-2024-07-07 18:40:06,266 - Initializing AdamW optimizer.
-2024-07-07 18:40:06,267 - Optimizer initialized.
-2024-07-07 18:40:06,271 - Loading model from "/home/aboetti/DeepLearning/Tests/Lab4 - Ex 1/results/OOD - CNN - 9 Conv Layers/model.pth.tar".
-2024-07-07 18:40:06,357 - Model loaded.
-2024-07-07 18:40:06,357 - Plotting original and adversarial images...
-2024-07-07 18:41:03,581 - Finished plotting images.
-2024-07-07 18:41:03,581 - Testing.
-2024-07-07 18:41:03,581 - Starting testing on test set...
-2024-07-07 18:41:04,860 -   Test Time: 1.278
-2024-07-07 18:41:04,860 -   Test Loss: 1.02564059
-2024-07-07 18:41:04,861 -   Test MulticlassAccuracy: 76.9600
-2024-07-07 18:41:04,861 -   Test MulticlassPrecision: 76.7960
-2024-07-07 18:41:04,861 -   Test MulticlassRecall: 76.9600
-2024-07-07 18:41:04,861 - Finished testing.
-2024-07-07 18:41:05,673 - Testing on adversarial examples.
-2024-07-07 18:41:05,673 - Starting testing on adversarial test set with multiple alpha values...
-2024-07-07 18:41:05,673 - Alpha set to 1.
-2024-07-07 18:41:08,248 -   Adv Test Time: 2.572
-2024-07-07 18:41:08,248 -   Adv Test Loss: 1.99868582
-2024-07-07 18:41:08,248 -   Adv Test MulticlassAccuracy: 62.4400
-2024-07-07 18:41:08,248 -   Adv Test MulticlassPrecision: 62.2275
-2024-07-07 18:41:08,248 -   Adv Test MulticlassRecall: 62.4400
-2024-07-07 18:41:08,248 - Finished testing for alpha set to 1.
-2024-07-07 18:41:10,742 - Alpha set to 2.
-2024-07-07 18:41:13,161 -   Adv Test Time: 2.418
-2024-07-07 18:41:13,162 -   Adv Test Loss: 3.12912807
-2024-07-07 18:41:13,162 -   Adv Test MulticlassAccuracy: 49.5400
-2024-07-07 18:41:13,162 -   Adv Test MulticlassPrecision: 49.5656
-2024-07-07 18:41:13,162 -   Adv Test MulticlassRecall: 49.5400
-2024-07-07 18:41:13,162 - Finished testing for alpha set to 2.
-2024-07-07 18:41:15,453 - Alpha set to 3.
-2024-07-07 18:41:18,091 -   Adv Test Time: 2.636
-2024-07-07 18:41:18,091 -   Adv Test Loss: 4.24576645
-2024-07-07 18:41:18,091 -   Adv Test MulticlassAccuracy: 40.2400
-2024-07-07 18:41:18,091 -   Adv Test MulticlassPrecision: 40.5483
-2024-07-07 18:41:18,091 -   Adv Test MulticlassRecall: 40.2400
-2024-07-07 18:41:18,091 - Finished testing for alpha set to 3.
-2024-07-07 18:41:20,379 - Alpha set to 4.
-2024-07-07 18:41:22,810 -   Adv Test Time: 2.429
-2024-07-07 18:41:22,810 -   Adv Test Loss: 5.27162797
-2024-07-07 18:41:22,810 -   Adv Test MulticlassAccuracy: 32.4600
-2024-07-07 18:41:22,810 -   Adv Test MulticlassPrecision: 33.0404
-2024-07-07 18:41:22,810 -   Adv Test MulticlassRecall: 32.4600
-2024-07-07 18:41:22,810 - Finished testing for alpha set to 4.
-2024-07-07 18:41:25,322 - Alpha set to 5.
-2024-07-07 18:41:27,758 -   Adv Test Time: 2.434
-2024-07-07 18:41:27,758 -   Adv Test Loss: 6.18038092
-2024-07-07 18:41:27,758 -   Adv Test MulticlassAccuracy: 26.9100
-2024-07-07 18:41:27,758 -   Adv Test MulticlassPrecision: 27.7292
-2024-07-07 18:41:27,758 -   Adv Test MulticlassRecall: 26.9100
-2024-07-07 18:41:27,758 - Finished testing for alpha set to 5.
-2024-07-07 18:41:30,052 - Alpha set to 6.
-2024-07-07 18:41:32,466 -   Adv Test Time: 2.412
-2024-07-07 18:41:32,466 -   Adv Test Loss: 6.95505959
-2024-07-07 18:41:32,466 -   Adv Test MulticlassAccuracy: 22.6300
-2024-07-07 18:41:32,466 -   Adv Test MulticlassPrecision: 23.6096
-2024-07-07 18:41:32,466 -   Adv Test MulticlassRecall: 22.6300
-2024-07-07 18:41:32,466 - Finished testing for alpha set to 6.
-2024-07-07 18:41:34,958 - Alpha set to 7.
-2024-07-07 18:41:37,393 -   Adv Test Time: 2.433
-2024-07-07 18:41:37,393 -   Adv Test Loss: 7.60454857
-2024-07-07 18:41:37,393 -   Adv Test MulticlassAccuracy: 19.6100
-2024-07-07 18:41:37,393 -   Adv Test MulticlassPrecision: 20.6151
-2024-07-07 18:41:37,393 -   Adv Test MulticlassRecall: 19.6100
-2024-07-07 18:41:37,393 - Finished testing for alpha set to 7.
-2024-07-07 18:41:39,682 - Alpha set to 8.
-2024-07-07 18:41:42,313 -   Adv Test Time: 2.630
-2024-07-07 18:41:42,314 -   Adv Test Loss: 8.14178668
-2024-07-07 18:41:42,314 -   Adv Test MulticlassAccuracy: 17.5200
-2024-07-07 18:41:42,314 -   Adv Test MulticlassPrecision: 18.5229
-2024-07-07 18:41:42,314 -   Adv Test MulticlassRecall: 17.5200
-2024-07-07 18:41:42,314 - Finished testing for alpha set to 8.
-2024-07-07 18:41:44,607 - Alpha set to 9.
-2024-07-07 18:41:47,055 -   Adv Test Time: 2.446
-2024-07-07 18:41:47,055 -   Adv Test Loss: 8.58200357
-2024-07-07 18:41:47,055 -   Adv Test MulticlassAccuracy: 15.6800
-2024-07-07 18:41:47,055 -   Adv Test MulticlassPrecision: 16.6685
-2024-07-07 18:41:47,055 -   Adv Test MulticlassRecall: 15.6800
-2024-07-07 18:41:47,055 - Finished testing for alpha set to 9.
-2024-07-07 18:41:49,565 - Alpha set to 10.
-2024-07-07 18:41:51,999 -   Adv Test Time: 2.433
-2024-07-07 18:41:51,999 -   Adv Test Loss: 8.93153493
-2024-07-07 18:41:51,999 -   Adv Test MulticlassAccuracy: 14.5400
-2024-07-07 18:41:51,999 -   Adv Test MulticlassPrecision: 15.5120
-2024-07-07 18:41:51,999 -   Adv Test MulticlassRecall: 14.5400
-2024-07-07 18:41:51,999 - Finished testing for alpha set to 10.
-2024-07-07 18:41:54,307 - Testing on original dataset.
-2024-07-07 18:41:54,307 - Starting testing on original (not transformed) test set...
-2024-07-07 18:41:55,302 -   Test Time: 0.993
-2024-07-07 18:41:55,302 -   Test Loss: 5.13838165
-2024-07-07 18:41:55,302 -   Test MulticlassAccuracy: 21.1100
-2024-07-07 18:41:55,302 -   Test MulticlassPrecision: 39.6434
-2024-07-07 18:41:55,302 -   Test MulticlassRecall: 21.1100
-2024-07-07 18:41:55,302 - Finished testing.
-2024-07-07 18:41:56,129 - Finished run.
-2024-07-07 18:41:56,129 - Closing experiment.
+2024-09-12 19:51:51,821 - Initializing AdamW optimizer.
+2024-09-12 19:51:51,821 - Optimizer initialized.
+2024-09-12 19:51:51,831 - Loading model from "/data01/dl24aleboe/DLA/Lab4 - Ex 1/results/OOD - CNN - 9 Conv Layers - Test/model.pth.tar".
+2024-09-12 19:51:51,900 - Model loaded.
+2024-09-12 19:51:51,900 - Plotting original and adversarial images...
+2024-09-12 19:53:10,553 - Finished plotting images.
+2024-09-12 19:53:10,553 - Testing.
+2024-09-12 19:53:10,553 - Starting testing on test set...
+2024-09-12 19:53:11,885 -   Test Time: 1.330
+2024-09-12 19:53:11,885 -   Test Loss: 0.99800970
+2024-09-12 19:53:11,885 -   Test MulticlassAccuracy: 76.8200
+2024-09-12 19:53:11,885 -   Test MulticlassPrecision: 76.7819
+2024-09-12 19:53:11,885 -   Test MulticlassRecall: 76.8200
+2024-09-12 19:53:11,885 - Finished testing.
+2024-09-12 19:53:12,624 - Testing on adversarial examples.
+2024-09-12 19:53:12,624 - Starting testing on adversarial test set with multiple alpha values...
+2024-09-12 19:53:12,624 - Alpha set to 1.
+2024-09-12 19:53:17,215 -   Adv Test Time: 4.589
+2024-09-12 19:53:17,215 -   Adv Test Loss: 1.90210922
+2024-09-12 19:53:17,215 -   Adv Test MulticlassAccuracy: 62.4500
+2024-09-12 19:53:17,215 -   Adv Test MulticlassPrecision: 62.6136
+2024-09-12 19:53:17,215 -   Adv Test MulticlassRecall: 62.4500
+2024-09-12 19:53:17,215 - Finished testing for alpha set to 1.
+2024-09-12 19:53:19,654 - Alpha set to 2.
+2024-09-12 19:53:24,129 -   Adv Test Time: 4.474
+2024-09-12 19:53:24,129 -   Adv Test Loss: 2.95909020
+2024-09-12 19:53:24,129 -   Adv Test MulticlassAccuracy: 49.2900
+2024-09-12 19:53:24,129 -   Adv Test MulticlassPrecision: 49.7866
+2024-09-12 19:53:24,129 -   Adv Test MulticlassRecall: 49.2900
+2024-09-12 19:53:24,129 - Finished testing for alpha set to 2.
+2024-09-12 19:53:26,426 - Alpha set to 3.
+2024-09-12 19:53:31,037 -   Adv Test Time: 4.609
+2024-09-12 19:53:31,037 -   Adv Test Loss: 4.01773450
+2024-09-12 19:53:31,037 -   Adv Test MulticlassAccuracy: 39.6700
+2024-09-12 19:53:31,037 -   Adv Test MulticlassPrecision: 40.7327
+2024-09-12 19:53:31,037 -   Adv Test MulticlassRecall: 39.6700
+2024-09-12 19:53:31,037 - Finished testing for alpha set to 3.
+2024-09-12 19:53:33,333 - Alpha set to 4.
+2024-09-12 19:53:37,799 -   Adv Test Time: 4.465
+2024-09-12 19:53:37,799 -   Adv Test Loss: 4.98302195
+2024-09-12 19:53:37,799 -   Adv Test MulticlassAccuracy: 32.2600
+2024-09-12 19:53:37,799 -   Adv Test MulticlassPrecision: 33.6102
+2024-09-12 19:53:37,799 -   Adv Test MulticlassRecall: 32.2600
+2024-09-12 19:53:37,799 - Finished testing for alpha set to 4.
+2024-09-12 19:53:40,262 - Alpha set to 5.
+2024-09-12 19:53:44,769 -   Adv Test Time: 4.506
+2024-09-12 19:53:44,769 -   Adv Test Loss: 5.84575725
+2024-09-12 19:53:44,769 -   Adv Test MulticlassAccuracy: 27.0100
+2024-09-12 19:53:44,769 -   Adv Test MulticlassPrecision: 28.4906
+2024-09-12 19:53:44,769 -   Adv Test MulticlassRecall: 27.0100
+2024-09-12 19:53:44,769 - Finished testing for alpha set to 5.
+2024-09-12 19:53:47,215 - Alpha set to 6.
+2024-09-12 19:53:51,715 -   Adv Test Time: 4.498
+2024-09-12 19:53:51,716 -   Adv Test Loss: 6.58253239
+2024-09-12 19:53:51,716 -   Adv Test MulticlassAccuracy: 23.1800
+2024-09-12 19:53:51,716 -   Adv Test MulticlassPrecision: 24.6806
+2024-09-12 19:53:51,716 -   Adv Test MulticlassRecall: 23.1800
+2024-09-12 19:53:51,716 - Finished testing for alpha set to 6.
+2024-09-12 19:53:54,019 - Alpha set to 7.
+2024-09-12 19:53:58,535 -   Adv Test Time: 4.515
+2024-09-12 19:53:58,535 -   Adv Test Loss: 7.20646063
+2024-09-12 19:53:58,535 -   Adv Test MulticlassAccuracy: 19.8800
+2024-09-12 19:53:58,535 -   Adv Test MulticlassPrecision: 21.4121
+2024-09-12 19:53:58,535 -   Adv Test MulticlassRecall: 19.8800
+2024-09-12 19:53:58,535 - Finished testing for alpha set to 7.
+2024-09-12 19:54:00,987 - Alpha set to 8.
+2024-09-12 19:54:05,562 -   Adv Test Time: 4.573
+2024-09-12 19:54:05,562 -   Adv Test Loss: 7.71800605
+2024-09-12 19:54:05,562 -   Adv Test MulticlassAccuracy: 17.4600
+2024-09-12 19:54:05,562 -   Adv Test MulticlassPrecision: 18.9393
+2024-09-12 19:54:05,562 -   Adv Test MulticlassRecall: 17.4600
+2024-09-12 19:54:05,562 - Finished testing for alpha set to 8.
+2024-09-12 19:54:08,014 - Alpha set to 9.
+2024-09-12 19:54:12,574 -   Adv Test Time: 4.559
+2024-09-12 19:54:12,574 -   Adv Test Loss: 8.13619006
+2024-09-12 19:54:12,574 -   Adv Test MulticlassAccuracy: 15.5900
+2024-09-12 19:54:12,574 -   Adv Test MulticlassPrecision: 17.0692
+2024-09-12 19:54:12,574 -   Adv Test MulticlassRecall: 15.5900
+2024-09-12 19:54:12,574 - Finished testing for alpha set to 9.
+2024-09-12 19:54:14,864 - Alpha set to 10.
+2024-09-12 19:54:19,404 -   Adv Test Time: 4.538
+2024-09-12 19:54:19,404 -   Adv Test Loss: 8.47422843
+2024-09-12 19:54:19,404 -   Adv Test MulticlassAccuracy: 14.3700
+2024-09-12 19:54:19,405 -   Adv Test MulticlassPrecision: 15.7822
+2024-09-12 19:54:19,405 -   Adv Test MulticlassRecall: 14.3700
+2024-09-12 19:54:19,405 - Finished testing for alpha set to 10.
+2024-09-12 19:54:21,849 - Testing on original dataset.
+2024-09-12 19:54:21,850 - Starting testing on original (not transformed) test set...
+2024-09-12 19:54:23,265 -   Test Time: 1.414
+2024-09-12 19:54:23,265 -   Test Loss: 4.58395890
+2024-09-12 19:54:23,265 -   Test MulticlassAccuracy: 22.6100
+2024-09-12 19:54:23,265 -   Test MulticlassPrecision: 29.0910
+2024-09-12 19:54:23,265 -   Test MulticlassRecall: 22.6100
+2024-09-12 19:54:23,265 - Finished testing.
+2024-09-12 19:54:24,083 - Finished run.
+2024-09-12 19:54:24,083 - Closing experiment.

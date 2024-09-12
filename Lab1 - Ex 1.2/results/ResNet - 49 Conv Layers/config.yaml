@@ -27,7 +27,7 @@ config:
   log_file: "log.txt"
   # hf_cache_dir: "../hf"
 
-  model_type: "CNN"
+  model_type: "ResNet"
   model:
     in_channels: 3
     depth: 49
