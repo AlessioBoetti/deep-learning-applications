@@ -1,7 +1,7 @@
 #### Weight & Biases settings
 
 wandb:
-  name: "Adv & OOD & Post - CNN - 9 Conv Layers - Test"
+  name: "Adv & OOD & Post - CNN - 9 Conv Layers"
   resume: False
   job_type: "OOD"
   group: "Exercise 3.1"
@@ -101,7 +101,7 @@ config:
   postprocess: ["ODINPostprocessor"]
   odin_gridsearch: True
   odin_temperatures: [1, 5, 10, 50, 100, 500, 1000]
-  odin_alphas: [0, 5, 1]
+  odin_alphas: [0, 1, 2, 3, 4, 5]
 
   cea:
     percentile_top: 99
@@ -109,7 +109,7 @@ config:
   cea_postprocess: ["MaxLogitsPostprocessor", "MaxSoftmaxPostprocessor", "ODINPostprocessor"]
   cea_odin_gridsearch: True
   cea_odin_temperatures: [1, 5, 10, 50, 100, 500, 1000]
-  cea_odin_alphas: [0, 5, 1]
+  cea_odin_alphas: [0, 1, 2, 3, 4, 5]
   
   adversarial:
     epsilon: 8
